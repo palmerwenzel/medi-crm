@@ -66,11 +66,11 @@ CREATE TRIGGER update_users_updated_at
     EXECUTE PROCEDURE update_updated_at_column();
 
 -- Create RLS policies
--- 1. Users can view their own profile
-CREATE POLICY "Users can view own profile"
+-- 1. Any authenticated user can view basic user info
+CREATE POLICY "Anyone authenticated can view users"
   ON public.users
   FOR SELECT
-  USING (auth.uid() = id);
+  USING (auth.jwt() IS NOT NULL);
 
 -- 2. Users can update their own profile (except role)
 CREATE POLICY "Users can update own profile"
@@ -78,15 +78,7 @@ CREATE POLICY "Users can update own profile"
   FOR UPDATE
   USING (auth.uid() = id);
 
--- 3. Staff and admins can view all profiles
-CREATE POLICY "Staff and admins can view all profiles"
-  ON public.users
-  FOR SELECT
-  USING (
-    get_user_role(auth.uid()) IN ('staff', 'admin')
-  );
-
--- 4. Admins can update all profiles
+-- 3. Admins can update all profiles
 CREATE POLICY "Admins can update all profiles"
   ON public.users
   FOR UPDATE
@@ -94,7 +86,7 @@ CREATE POLICY "Admins can update all profiles"
     get_user_role(auth.uid()) = 'admin'
   );
 
--- 5. Allow users to insert their own profile during signup
+-- 4. Allow users to insert their own profile during signup
 CREATE POLICY "Users can insert own profile during signup"
   ON public.users
   FOR INSERT

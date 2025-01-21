@@ -31,6 +31,12 @@ export async function createClient() {
           cookieStore.set({ name, value: '', ...options })
         },
       },
+      global: {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      }
     }
   )
 } 
