@@ -10,7 +10,10 @@ import { createApiClient, handleApiError } from '@/lib/supabase/api'
  */
 export async function GET() {
   try {
-    const { supabase } = await createApiClient()
+    const { supabase, session } = await createApiClient()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const { data: cases, error: casesError } = await supabase
       .from('cases')
@@ -28,24 +31,33 @@ export async function GET() {
 /**
  * POST /api/cases
  * Create a new case. Access control handled by:
- * - Middleware: Ensures user is authenticated
- * - Layout: Ensures user has patient role
- * - RLS: Ensures data access rules
+ * - Server-side auth in layout
+ * - RLS policies for data access
  */
 export async function POST(request: Request) {
   try {
     const { supabase, session } = await createApiClient()
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Parse and validate request body
     const json = await request.json()
     const validatedData = createCaseSchema.parse(json)
+
+    // Get user role
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+
+    if (userData?.role !== 'patient') {
+      return NextResponse.json(
+        { error: 'Only patients can create cases' },
+        { status: 403 }
+      )
+    }
 
     // Create the case (RLS will enforce access rules)
     const { data: newCase, error: createError } = await supabase
