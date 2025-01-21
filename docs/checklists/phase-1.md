@@ -1,20 +1,24 @@
-# Phase 2: Authentication & RBAC
+# Phase 1: Authentication & RBAC
 
-Below is a flattened list of tasks for user login, registration, and basic role-based access control. Overlaps with Supabase setup (project creation) were handled in Phase 0, so we focus on enabling Auth and handling roles.
+In this phase, we'll set up user roles (patient, staff, admin), secure access to resources, and ensure we have the appropriate row-level security (RLS) or equivalent in place to protect patient data. This reflects the need for a centralized "Users" table and verifies each role's capabilities as described in our project overview and user-flow documents.
 
 ---
 
-## Phase 2: Flattened Checklist
+[✓] BACKEND: Enable Supabase Auth in your existing Supabase project.  
+[✓] BACKEND: Create or update a "Users" table with columns for:  
+   - role (patient, staff, admin)  
+   - relevant user info (name, email, specialty if staff, etc.)  
 
-[ ] BACKEND: Enable Supabase Auth in your existing Supabase project.  
-[ ] BACKEND: Create a “Users” table with columns for role (patient, staff, admin) and relevant user info.  
-[ ] BACKEND: (Optional) Configure row-level security (RLS) policies or access policies if you require fine-grained data control at this stage.
+[✓] BACKEND: Ensure row-level security (RLS) or equivalent is configured for user-related data.  
+[ ] BACKEND: (Optional) Configure more granular access policies if needed for compliance or future expansions (e.g., specialized permissions for "Doctor," "Nurse," etc.).  
 
-[ ] FRONTEND: Install and configure the Supabase client in the Next.js project (if not done in Phase 0).  
-[ ] FRONTEND: Build a registration page (Shadcn UI form) for new user sign-up, hooking into Supabase Auth.  
-[ ] FRONTEND: Build a login page (Shadcn UI form) to handle user sign-in with Supabase Auth.  
-[ ] FRONTEND: Use Tailwind classes for responsive design per ui-rules.md.
+[✓] FRONTEND: Install and configure the Supabase client in the Next.js project (if not done in Phase 0).  
+[✓] FRONTEND: Build a registration page (Shadcn UI form) for new user sign-up, hooking into Supabase Auth.  
+[✓] FRONTEND: Build a login page (Shadcn UI form) to handle user sign-in with Supabase Auth.  
+[✓] FRONTEND: Use Tailwind classes for responsive design per our guidelines.
 
-[ ] FRONTEND: Display dynamic UI elements based on role (e.g., hide certain nav links for non-admins).  
-[ ] BACKEND: Add minimal checks for role-based access in Next.js server components or middleware (tech-stack-rules.md reference).  
-[ ] GENERAL: Test end-to-end (login, registration, role validation) to ensure all flows function correctly.
+[✓] FRONTEND: Conditionally render UI based on role (patient vs. staff vs. admin) to ensure correct access to future pages (dashboards, admin panel, etc.).  
+[✓] BACKEND: Validate user identities in Next.js server components/middleware.  
+
+[ ] GENERAL: Test end-to-end (login, registration, role-specific UIs) and confirm that only authorized roles can see restricted pages or actions.  
+[ ] GENERAL: Check for adherence to healthcare privacy considerations (e.g., storing minimal user info publicly, enabling encryption in Supabase).

@@ -1,21 +1,67 @@
-# Phase 4: Staff & Patient Dashboards
+# Phase 3: Staff & Patient Dashboards
 
-This phase focuses on building more robust dashboards for patients and staff. Partial AI triage stubbing appears here but full AI integration is in a later phase.
+This phase enhances the basic case management with improved UX and additional features. Items are marked as either MVP (required for initial release) or Enhancement (can be deferred).
 
 ---
 
-## Phase 4: Flattened Checklist
+## MVP Requirements
 
-[ ] FRONTEND: Implement “My Cases” overview for patients, including quick actions (view or update case).  
-[ ] FRONTEND: Add filtering options (e.g., by status) and a mobile-friendly layout (ui-rules.md).  
-[ ] FRONTEND: Create an AI Triage widget (embedded chat UI) to handle basic or placeholder triage queries.  
-[ ] FRONTEND: Enhance staff dashboard with a “Case Details” page (status changes, internal notes, attachments).
+[ ] FRONTEND: Basic patient case overview:
+   - List of cases with status
+   - Simple view/edit actions
+   - Basic mobile responsiveness
 
-[ ] BACKEND: Allow staff to store internal notes in Supabase separate from patient-facing chat.  
-[ ] BACKEND: Create or extend an API endpoint for saving internal notes or attachments.  
-[ ] BACKEND: Prototype an /api/ai/triage route that simply logs or stubs AI requests (full integration in Phase 5).  
-[ ] GENERAL: Confirm real-time updates to dashboards (staff sees new cases, patient sees updated statuses).
+[ ] FRONTEND: Essential staff case queue:
+   - List all cases
+   - Basic status updates
+   - Simple case details view
 
-[ ] FRONTEND: Animate transitions (opening/closing detail panels) using Tailwind transitions.  
-[ ] GENERAL: Test these new dashboard flows from both staff and patient perspectives.  
-[ ] GENERAL: Commit, push, and verify CI passes with no errors.
+[ ] BACKEND: Basic data fetching:
+   - Efficient case listing queries
+   - Simple status updates
+   - Basic error handling
+
+---
+
+## Enhancements (Post-MVP)
+
+[ ] FRONTEND: Enhanced patient dashboard:
+   - Advanced sorting and filtering
+   - File attachments
+   - Message threading
+   - Rich case history
+
+[ ] FRONTEND: Advanced staff features:
+   - Priority-based filtering
+   - Specialty/tag filtering
+   - Bulk operations
+   - Performance metrics
+   - SLA indicators
+
+[ ] FRONTEND: Staff collaboration tools:
+   - Internal notes system
+   - Case assignment
+   - Team communication
+
+[ ] FRONTEND: AI/Chat features:
+   - AI Triage widget
+   - Live chat placeholder
+   - Smart suggestions
+
+[ ] BACKEND: Advanced features:
+   - Real-time updates
+   - Webhook integrations
+   - Advanced metrics
+   - Performance tracking
+
+[ ] FRONTEND: UX improvements:
+   - Advanced animations
+   - Loading states
+   - Error boundaries
+   - Toast notifications
+
+[ ] GENERAL: Advanced testing:
+   - E2E test suites
+   - Performance testing
+   - Load testing
+   - Cross-browser testing

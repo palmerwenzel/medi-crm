@@ -103,16 +103,7 @@ These guidelines define how we build MediCRM’s user interface, incorporating d
 
 ## 7. Testing & Validation
 
-1. UI Testing  
-   - Use React Testing Library and Jest to confirm key UI states and interactions.  
-   - Incorporate end-to-end tests with Cypress or Playwright for multi-role scenarios.
-
-2. Automated Linting & Checks  
-   - Integrate ESLint + Prettier checks to catch styling and accessibility issues early.  
-   - Enforce a style consistent with [tech-stack-rules.md] for code quality.
-
-3. Continuous Integration  
-   - Hook up GitHub Actions to run tests on pull requests, ensuring no regression in UI behaviors or styling.
+## All UI testing should be conducted by the user in the browser.
 
 ---
 

@@ -85,7 +85,7 @@ This document outlines best practices, limitations, and conventions for each maj
 3. Organize Components  
    - Group UI elements logically (e.g., inputs, modals, form elements) in a shared directory.  
    - Follow consistent naming patterns to quickly locate and reuse components.
-4. Mobile-First Responsiveness  
+4. Mobile-Minded Responsiveness  
    - Start styling from a small screen perspective, then layer on desktop breakpoints.  
    - Use Tailwind’s responsive utility classes (md:, lg:, xl:) for layout changes.
 
