@@ -1,3 +1,9 @@
+--
+-- Name: 20250121134908_create_cases_table; Type: MIGRATION
+-- Description: Sets up the case management system with status tracking and RLS
+-- Dependencies: Requires users table and get_user_role function from previous migration
+--
+
 -- Create enum for case status
 CREATE TYPE case_status AS ENUM ('open', 'in_progress', 'resolved');
 
@@ -20,7 +26,13 @@ CREATE TABLE public.cases (
 -- Enable Row Level Security
 ALTER TABLE public.cases ENABLE ROW LEVEL SECURITY;
 
--- Create policies
+-- Create trigger for updated_at timestamp
+CREATE TRIGGER update_cases_updated_at
+    BEFORE UPDATE ON public.cases
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_updated_at_column();
+
+-- Create RLS policies
 -- 1. Patients can create their own cases
 CREATE POLICY "Patients can create own cases"
   ON public.cases
@@ -53,10 +65,4 @@ CREATE POLICY "Staff and admins can update cases"
   FOR UPDATE
   USING (
     get_user_role(auth.uid()) IN ('staff', 'admin')
-  );
-
--- Create trigger for updated_at
-CREATE TRIGGER update_cases_updated_at
-    BEFORE UPDATE ON public.cases
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_updated_at_column(); 
+  ); 

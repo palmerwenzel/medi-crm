@@ -31,7 +31,7 @@ This document outlines best practices, limitations, and conventions for each maj
 ### Best Practices
 1. Functional Components  
    - Use React function components with hooks rather than class components.  
-   - Encourages a more straightforward, declarative style and pairs well with TypeScript’s functional approach.
+   - Encourages a more straightforward, declarative style and pairs well with TypeScript's functional approach.
 2. Keep Components Small and Reusable  
    - Prefer modular, composable pieces over monolithic components.  
    - This improves maintainability and reusability.
@@ -61,7 +61,7 @@ This document outlines best practices, limitations, and conventions for each maj
 3. Data Fetching  
    - Use built-in async server components or React Server Components to fetch data closer to the server layer for performance benefits.
 4. API Routes for Microservices  
-   - Keep small, focused API routes that align with your application’s domain (e.g., /api/cases, /api/auth).  
+   - Keep small, focused API routes that align with your application's domain (e.g., /api/cases, /api/auth).  
    - This helps maintain a clear boundary between frontend pages and backend logic.
 5. Middleware for Auth  
    - Use Next.js middleware to handle global authentication checks or route guards.
@@ -81,13 +81,13 @@ This document outlines best practices, limitations, and conventions for each maj
    - Extract repetitive configurations into @apply statements or reusable components.
 2. Use shadcn UI Components  
    - Leverage pre-built components (buttons, modals, popovers, etc.) for speed and accessibility.  
-   - Customize theme tokens to align with MediCRM’s branding.
+   - Customize theme tokens to align with MediCRM's branding.
 3. Organize Components  
    - Group UI elements logically (e.g., inputs, modals, form elements) in a shared directory.  
    - Follow consistent naming patterns to quickly locate and reuse components.
 4. Mobile-Minded Responsiveness  
    - Start styling from a small screen perspective, then layer on desktop breakpoints.  
-   - Use Tailwind’s responsive utility classes (md:, lg:, xl:) for layout changes.
+   - Use Tailwind's responsive utility classes (md:, lg:, xl:) for layout changes.
 
 ### Limitations & Pitfalls
 1. Class Name Bloat  
@@ -102,14 +102,62 @@ This document outlines best practices, limitations, and conventions for each maj
 1. Schema-Driven Approach  
    - Model your data with Postgres tables for clarity and performance.  
    - Use foreign keys judiciously to maintain relational integrity (e.g., user_id referencing Users table).
-2. Role-Based Access with Supabase Policies  
+
+2. Database Migrations  
+   - Keep migrations atomic and feature-focused (e.g., one migration for complete user system).
+   - Include all related objects in a single migration (enums, tables, functions, triggers, policies).
+   - Document dependencies and purpose in migration headers.
+   - Order objects within migrations:
+     1. Types/Enums
+     2. Tables
+     3. Functions
+     4. Triggers
+     5. Policies
+   - Never split related objects across migrations to avoid dependency issues.
+
+3. Role-Based Access with Supabase Policies  
    - Enforce row-level security (RLS) to ensure each user only sees data relevant to their role or ownership.  
-   - Keep a clean mapping of “Staff,” “Patient,” and “Admin” roles.
-3. Functions & Triggers  
-   - Use Supabase’s Postgres functions or triggers for advanced logic (e.g., auditing changes, anonymizing data).
-4. Authentication & JWTs  
+   - Keep a clean mapping of "Staff," "Patient," and "Admin" roles.
+4. Functions & Triggers  
+   - Use Supabase's Postgres functions or triggers for advanced logic (e.g., auditing changes, anonymizing data).
+5. Authentication & JWTs  
    - Use Supabase Auth for sign-ups/logins.  
    - Store role attributes in JWT claims for quick checks in Next.js middleware or API routes.
+
+### Migration Workflow
+1. Local Development  
+   - Use `npx supabase db reset` for clean slate testing
+   - This runs all migrations in order and resets data
+   - Perfect for development but not for production
+
+2. Production Deployment  
+   - Use `npx supabase db push` to apply new migrations
+   - Migrations must be forward-only and never modified after push
+   - Test migrations locally first with `db reset`
+
+3. Migration Structure  
+   ```sql
+   --
+   -- Name: [timestamp]_[feature_name]; Type: MIGRATION
+   -- Description: Brief explanation of what this migration does
+   -- Dependencies: List any dependencies on other migrations
+   --
+
+   -- Types/Enums first
+   CREATE TYPE status AS ENUM (...);
+
+   -- Then tables
+   CREATE TABLE my_table (...);
+
+   -- Functions next
+   CREATE OR REPLACE FUNCTION my_function() ...
+
+   -- Triggers after that
+   CREATE TRIGGER my_trigger ...
+
+   -- Finally, policies
+   CREATE POLICY "My policy" ON my_table ...
+   ```
 
 ### Limitations & Pitfalls
 1. Permission Complexity  
