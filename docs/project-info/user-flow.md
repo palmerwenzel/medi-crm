@@ -13,7 +13,7 @@ This document defines the user journey through MediCRM, showing how distinct use
 
 ## 2. Authentication & Onboarding
 1. A new user (patient or staff) arrives at the MediCRM landing page.  
-2. User selects “Create Account” or “Sign In.”  
+2. User selects “Create Account” or “Log In.”  
 3. On successful registration, the system creates a record in the “Users” table and assigns a role (e.g., “Patient,” “Staff,” or “Admin”).  
 4. If needed, additional data specific to each role is stored in role-specific tables (e.g., “Patients,” “Staff”).
 

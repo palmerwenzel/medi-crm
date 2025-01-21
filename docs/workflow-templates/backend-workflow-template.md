@@ -31,7 +31,7 @@ Description: [Feature Description]
     - [ ] Data models (`lib/types`)
     - [ ] Integration points (endpoints, auth boundaries)
     - [ ] Real-time features (presence, typing, notifications)
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Planning Phase
 - [ ] Architecture
@@ -41,14 +41,14 @@ Description: [Feature Description]
     - [ ] Real-time requirements
     - [ ] Test specifications (per `test-rules.md`)
     - [ ] PAUSE, Check in with user
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Implementation Phase
 - [ ] Setup
     - [ ] Verify data types and shapes
     - [ ] Confirm UI integration points
     - [ ] Review file structure requirements
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 - [ ] Development
     - [ ] Create route handlers/server actions
@@ -57,13 +57,13 @@ Description: [Feature Description]
     - [ ] Implement data validation
     - [ ] Add real-time features if needed
     - [ ] Write and maintain tests
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 - [ ] Integration
     - [ ] Connect with UI components
     - [ ] Document API endpoints
     - [ ] Configure state management
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Verification Phase
 - [ ] Quality Check
@@ -74,7 +74,7 @@ Description: [Feature Description]
     - [ ] Type safety
     - [ ] Test coverage
     - [ ] Documentation
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Completion
 - [ ] User sign-off

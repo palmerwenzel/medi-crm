@@ -1,4 +1,4 @@
-# UI Workflow
+# UI Workflow Template
 Strictly adhere to this workflow.
 Items should be addressed one-by-one, in order.
 Always reference `ui-rules.md`, `theme-rules.md`, and `codebase-best-practices.md`.
@@ -37,31 +37,32 @@ Description: [Feature Description]
   - [ ] Theming approach
   - [ ] Accessibility requirements
   - [ ] Animation/transition needs
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Planning Phase
 - [ ] Component Architecture
+  - [ ] List existing relevant files: [ Component List ]
   - [ ] Define component tree/wireframes
         [ Component Tree or Wireframe goes here ]
   - [ ] List styling requirements
   - [ ] Define file structure (per `codebase-best-practices.md`)
   - [ ] PAUSE, Check in with user
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 ### Implementation Phase
 - [ ] Setup
   - [ ] Verify layout in Next.js App Router
   - [ ] Check shared states (Zustand)
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
 - [ ] Development
   - [ ] Create/update component files
   - [ ] Implement styling and interactions
   - [ ] Add accessibility features
   - [ ] Integrate placeholder data and loading states
-- Notes: [ Notes ]
+- Findings: [ Findings ]
 
-### Verification Phase
+### CRITICAL: Verification Phase
 - [ ] Quality Check
   - [ ] Design compliance
   - [ ] Animation/transition behavior
@@ -69,7 +70,7 @@ Description: [Feature Description]
   - [ ] Accessibility
   - [ ] Code organization
   - [ ] Documentation
-- Notes: [ Notes ]
+- Evidence: [ Snippets or line numbers ]
 
 ### Completion
 - [ ] User sign-off

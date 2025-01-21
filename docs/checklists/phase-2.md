@@ -1,22 +1,75 @@
-# Phase 3: Database Schema & Case Management
+# Phase 2: Database Schema & Case Management
 
-Below is a flattened list of tasks. Any general Supabase setup is already covered in earlier phases. This phase focuses on creating/modifying the “Cases” table and building basic CRUD around patient case tickets.
+This phase implements the core case/ticket functionality. Items are marked as either MVP (required for initial release) or Enhancement (can be deferred).
 
 ---
 
-## Phase 3: Flattened Checklist
+## MVP Requirements
 
-[ ] BACKEND: Define the “Cases” table in Supabase (id, patient_id, status, priority, timestamps, etc.).  
-[ ] BACKEND: Write or refine row-level security (RLS) policies so that:  
-   - Patients can see/edit their own cases.  
-   - Staff can manage cases for all patients.  
-[ ] BACKEND: Create Next.js API routes (/api/cases) for creating, reading, updating, and deleting cases.
+[x] BACKEND: Define the "Cases" table in Supabase with essential fields:  
+   - id (primary key)  
+   - patient_id (references Users table)  
+   - title (string)
+   - description (text)
+   - status (e.g., "Open," "In Progress," "Resolved")  
+   - created_at, updated_at timestamps
 
-[ ] FRONTEND: Build a “New Case” page for patients, using Shadcn UI (title, description, attachments).  
-[ ] FRONTEND: Implement a “Case Queue” page for staff, listing open cases (with sorting/filtering by status, priority).  
-[ ] FRONTEND: Ensure dark-mode and glassmorphic styling from theme-rules.md.  
-[ ] FRONTEND: Add basic validation and user feedback (e.g., toast or alert on success/failure).
+[x] BACKEND: Implement essential RLS policies:  
+   - Patients can create cases and view their own
+   - Staff can view all cases
 
-[ ] GENERAL: Test role-based logic (patients restricted to their own cases, staff can update statuses).  
-[ ] GENERAL: Verify that no single file exceeds 250 lines (codebase-best-practices.md).  
-[ ] GENERAL: Commit, push, and review in GitHub for continuous integration checks.
+[x] BACKEND: Create basic Next.js API routes (/api/cases):  
+   - Create new case
+   - List cases (filtered by role)
+   - Get single case
+   - Update case status
+
+[x] FRONTEND: Build minimal "New Case" page:  
+   - Title and description fields
+   - Basic form validation
+   - Success/error feedback
+
+[x] FRONTEND: Implement basic case listing:  
+   - Simple table/card view of cases
+   - Basic status indicators
+   - Link to case details
+
+[x] GENERAL: Test core case functionality:
+   - Case creation flow
+   - Role-based access (patients see only their cases)
+   - Basic error handling
+
+---
+
+## Enhancements (Post-MVP)
+
+[ ] BACKEND: Add advanced case fields:  
+   - priority ("Low," "Medium," "High," "Urgent")  
+   - metadata (JSON for custom fields/tags)  
+   - internal_notes (staff collaboration)
+   - attachments
+
+[ ] BACKEND: Implement advanced RLS policies:  
+   - Staff specialties and assignments
+   - Department-based access
+   - Admin override capabilities
+
+[ ] BACKEND: Create webhook endpoints:  
+   - Notifications on case updates
+   - Integration points for future features
+
+[ ] FRONTEND: Add advanced case features:  
+   - File attachments
+   - Rich text editor for descriptions
+   - Advanced filtering/sorting
+   - Bulk operations
+
+[ ] FRONTEND: Implement staff tools:  
+   - Case assignment interface
+   - Internal notes system
+   - Priority management
+
+[ ] GENERAL: Add advanced validation:
+   - File type/size checks
+   - Rate limiting
+   - Input sanitization
