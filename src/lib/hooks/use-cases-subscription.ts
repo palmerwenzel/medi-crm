@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { subscribeToCases } from '@/lib/supabase/realtime'
 import type { CaseResponse } from '@/lib/validations/case'
+import { useAuth } from '@/components/auth/auth-provider'
 
 type UseCasesSubscriptionProps = {
   onUpdate?: (updatedCase: CaseResponse) => void
@@ -12,7 +13,11 @@ type UseCasesSubscriptionProps = {
  * @param props - Callbacks for case updates and new cases
  */
 export function useCasesSubscription({ onUpdate, onNew }: UseCasesSubscriptionProps) {
+  const { user, loading } = useAuth()
+
   useEffect(() => {
+    if (loading || !user) return
+
     // Set up subscription
     const cleanup = subscribeToCases(onUpdate, onNew)
 
@@ -20,5 +25,5 @@ export function useCasesSubscription({ onUpdate, onNew }: UseCasesSubscriptionPr
     return () => {
       cleanup()
     }
-  }, [onUpdate, onNew])
+  }, [onUpdate, onNew, user, loading])
 } 

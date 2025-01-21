@@ -7,6 +7,7 @@ import type { CaseResponse } from '@/lib/validations/case'
 interface CasesListProps {
   cases: CaseResponse[]
   error?: string
+  loading?: boolean
 }
 
 function CaseCardSkeleton() {
@@ -31,7 +32,11 @@ function LoadingCases() {
   )
 }
 
-export function CasesList({ cases, error }: CasesListProps) {
+export function CasesList({ cases, error, loading }: CasesListProps) {
+  if (loading) {
+    return <LoadingCases />
+  }
+
   if (error) {
     return (
       <Alert variant="destructive" role="alert">
@@ -51,12 +56,10 @@ export function CasesList({ cases, error }: CasesListProps) {
   }
 
   return (
-    <Suspense fallback={<LoadingCases />}>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cases.map((caseData) => (
-          <CaseCard key={caseData.id} case={caseData} />
-        ))}
-      </div>
-    </Suspense>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {cases.map((caseData) => (
+        <CaseCard key={caseData.id} case={caseData} />
+      ))}
+    </div>
   )
 } 

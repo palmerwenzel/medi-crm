@@ -1,36 +1,38 @@
 'use client'
 
 import { useAuth } from './auth-provider'
-import { type ReactNode } from 'react'
+import type { Database } from '@/types/supabase'
+import { Skeleton } from '@/components/ui/skeleton'
 
-type RoleGuardProps = {
-  children: ReactNode
-  allowedRoles: Array<'admin' | 'staff' | 'patient'>
-  fallback?: ReactNode
+type Role = Database['public']['Tables']['users']['Row']['role']
+
+interface RoleGuardProps {
+  children: React.ReactNode
+  allowedRoles: Role[]
 }
 
 /**
  * Component-level role-based access control
  * @param children - The protected content
  * @param allowedRoles - Array of roles that can access the content
- * @param fallback - Optional component to show when access is denied
  */
-export function RoleGuard({ 
-  children, 
-  allowedRoles, 
-  fallback = null 
-}: RoleGuardProps) {
+export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const { user, loading } = useAuth()
-  
-  // Show nothing while loading
-  if (loading) return null
-  
-  // If no user or role doesn't match, show fallback
-  if (!user?.role || !allowedRoles.includes(user.role)) {
-    return fallback
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-8 w-2/3" />
+      </div>
+    )
   }
 
-  // User has permission, show protected content
+  if (!user?.role || !allowedRoles.includes(user.role)) {
+    return null
+  }
+
   return <>{children}</>
 }
 
@@ -43,11 +45,11 @@ export function RoleGuard({
 export function withRoleGuard<P extends object>(
   Component: React.ComponentType<P>,
   allowedRoles: Array<'admin' | 'staff' | 'patient'>,
-  fallback?: ReactNode
+  fallback?: React.ReactNode
 ) {
   return function WrappedComponent(props: P) {
     return (
-      <RoleGuard allowedRoles={allowedRoles} fallback={fallback}>
+      <RoleGuard allowedRoles={allowedRoles}>
         <Component {...props} />
       </RoleGuard>
     )

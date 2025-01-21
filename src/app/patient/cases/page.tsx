@@ -12,6 +12,8 @@ export const metadata = {
 
 export default async function PatientCasesPage() {
   const supabase = await createClient()
+
+  // The middleware ensures we have auth and correct role
   const { data: cases, error } = await supabase
     .from('cases')
     .select('*')
@@ -36,7 +38,7 @@ export default async function PatientCasesPage() {
       </div>
 
       <CasesList 
-        cases={cases as CaseResponse[]} 
+        cases={cases as CaseResponse[] || []}
         error={error?.message}
       />
     </div>

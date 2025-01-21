@@ -34,39 +34,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Fetch user role from our users table
-        supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUser({ ...session.user, role: data?.role })
-          })
+    async function initializeAuth() {
+      try {
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // Fetch user role from our users table
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          
+          setUser({ ...session.user, role: userData?.role })
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    }
+
+    // Initialize auth state
+    initializeAuth()
 
     // Listen for auth changes
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // Fetch user role when auth state changes
-        const { data } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-        
-        setUser({ ...session.user, role: data?.role })
-      } else {
+      try {
+        if (session?.user) {
+          // Fetch user role when auth state changes
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          
+          setUser({ ...session.user, role: userData?.role })
+        } else {
+          setUser(null)
+        }
+      } catch (error) {
+        console.error('Error handling auth change:', error)
         setUser(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => {

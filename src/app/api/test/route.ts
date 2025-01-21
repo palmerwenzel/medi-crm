@@ -1,25 +1,24 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { createApiClient, handleApiError } from '@/lib/supabase/api'
 
 export async function GET() {
   try {
+    const { supabase } = await createApiClient()
+
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, email, role')
       .limit(1)
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    if (error) throw error
 
     return NextResponse.json({ 
-      message: 'Supabase connection successful',
+      message: data?.length 
+        ? `Successfully connected! Found user with role: ${data[0].role}`
+        : 'Connected successfully! No users found yet.',
       data 
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to connect to Supabase' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 } 
