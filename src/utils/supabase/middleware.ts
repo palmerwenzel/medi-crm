@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
 
 // Define route access patterns
-const publicRoutes = ['/auth/login', '/auth/signup', '/auth/verify-email']
+const publicRoutes = ['/login', '/signup']
 const patientRoutes = ['/patient', '/profile']
 const staffRoutes = ['/staff', '/cases', '/patients']
 const adminRoutes = ['/admin', '/settings']
@@ -98,7 +98,7 @@ export async function updateSession(request: NextRequest) {
 
   // Check authentication
   if (!user) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   if (!userRole) {
