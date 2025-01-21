@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createApiClient, handleApiError } from '@/lib/supabase/api'
 
+// Mark route as dynamic
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const { supabase } = await createApiClient()
