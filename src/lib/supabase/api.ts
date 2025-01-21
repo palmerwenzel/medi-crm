@@ -21,6 +21,7 @@ export async function createApiClient() {
           },
           set(name: string, value: string, options: CookieOptions) {
             try {
+              // Let Supabase handle cookie options
               cookieStore.set({ name, value, ...options })
             } catch (error) {
               console.error('Error setting cookie:', error)
@@ -28,6 +29,7 @@ export async function createApiClient() {
           },
           remove(name: string, options: CookieOptions) {
             try {
+              // Let Supabase handle cookie options
               cookieStore.set({ name, value: '', ...options })
             } catch (error) {
               console.error('Error removing cookie:', error)

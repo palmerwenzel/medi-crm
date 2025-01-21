@@ -17,10 +17,15 @@ export function createClient() {
     supabaseUrl,
     supabaseKey,
     {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true
+      },
       global: {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
         }
       }
     }

@@ -31,10 +31,11 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
+          // Let Supabase handle cookie options
           request.cookies.set({
             name,
             value,
-            ...options,
+            ...options
           })
           response = NextResponse.next({
             request: {
@@ -44,14 +45,15 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value,
-            ...options,
+            ...options
           })
         },
         remove(name: string, options: CookieOptions) {
+          // Let Supabase handle cookie options
           request.cookies.set({
             name,
             value: '',
-            ...options,
+            ...options
           })
           response = NextResponse.next({
             request: {
@@ -61,7 +63,7 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value: '',
-            ...options,
+            ...options
           })
         },
       },
