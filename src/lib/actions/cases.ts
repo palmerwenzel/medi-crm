@@ -127,4 +127,106 @@ export async function createCase(input: CreateCaseInput): Promise<ActionResponse
       error: err instanceof Error ? err.message : 'Failed to create case',
     }
   }
+}
+
+/**
+ * Update status for multiple cases
+ * Only staff and admin can perform bulk updates
+ */
+export async function updateCaseStatuses(
+  caseIds: string[],
+  status: 'open' | 'in_progress' | 'resolved'
+): Promise<ActionResponse> {
+  try {
+    // Verify user has permission
+    const role = await verifyRoleOrRedirect(['staff', 'admin'])
+    
+    const supabase = await createClient()
+    
+    // Update all cases
+    const { error } = await supabase
+      .from('cases')
+      .update({ status })
+      .in('id', caseIds)
+    
+    if (error) {
+      console.error('Failed to update case statuses:', error)
+      return {
+        success: false,
+        error: 'Failed to update case statuses',
+      }
+    }
+
+    // Revalidate cases pages
+    revalidatePath('/cases')
+    revalidatePath('/dashboard/cases')
+
+    return {
+      success: true,
+    }
+  } catch (err) {
+    console.error('Update case statuses error:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update case statuses',
+    }
+  }
+}
+
+/**
+ * Assign multiple cases to a staff member
+ * Only staff and admin can perform bulk assignments
+ */
+export async function assignCases(
+  caseIds: string[],
+  staffId: string
+): Promise<ActionResponse> {
+  try {
+    // Verify user has permission
+    const role = await verifyRoleOrRedirect(['staff', 'admin'])
+    
+    const supabase = await createClient()
+    
+    // First verify the staff member exists
+    const { data: staffMember, error: staffError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('id', staffId)
+      .single()
+    
+    if (staffError || !staffMember || staffMember.role !== 'staff') {
+      return {
+        success: false,
+        error: 'Invalid staff member',
+      }
+    }
+    
+    // Update all cases
+    const { error } = await supabase
+      .from('cases')
+      .update({ assigned_to: staffId })
+      .in('id', caseIds)
+    
+    if (error) {
+      console.error('Failed to assign cases:', error)
+      return {
+        success: false,
+        error: 'Failed to assign cases',
+      }
+    }
+
+    // Revalidate cases pages
+    revalidatePath('/cases')
+    revalidatePath('/dashboard/cases')
+
+    return {
+      success: true,
+    }
+  } catch (err) {
+    console.error('Assign cases error:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to assign cases',
+    }
+  }
 } 

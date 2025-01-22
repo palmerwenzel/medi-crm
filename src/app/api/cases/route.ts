@@ -17,14 +17,28 @@ export async function GET() {
 
     const { data: cases, error: casesError } = await supabase
       .from('cases')
-      .select('*')
+      .select('*, patient:users(first_name, last_name)')
       .order('created_at', { ascending: false })
 
-    if (casesError) throw casesError
+    if (casesError) {
+      return NextResponse.json(
+        { error: casesError.message },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(cases)
   } catch (error) {
-    return handleApiError(error)
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -67,7 +81,12 @@ export async function POST(request: Request) {
           patient_id: user.id,
           title: validatedData.title,
           description: validatedData.description,
-          status: 'open'
+          status: 'open',
+          priority: validatedData.priority || 'medium',
+          category: validatedData.category || 'general',
+          metadata: validatedData.metadata || {},
+          internal_notes: null,
+          attachments: []
         }
       ])
       .select()

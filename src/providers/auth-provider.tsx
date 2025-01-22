@@ -9,14 +9,13 @@
 import * as React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import type { User, Session } from "@supabase/supabase-js"
+import type { User } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
 type Role = Database['public']['Tables']['users']['Row']['role']
 
 interface AuthState {
   user: User | null
-  session: Session | null
   userRole: Role | null
   loading: boolean
 }
@@ -27,7 +26,6 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  session: null,
   userRole: null,
   loading: true
 })
@@ -37,9 +35,10 @@ const AuthContext = createContext<AuthContextType>({
  * child component that calls useAuth().
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('[AuthProvider] Initializing')
+  
   const [state, setState] = useState<AuthState>({
     user: null,
-    session: null,
     userRole: null,
     loading: true
   })
@@ -47,61 +46,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   useEffect(() => {
-    // Get current session and user role
-    async function getInitialSession() {
+    console.log('[AuthProvider] Setting up auth subscriptions')
+    
+    // Get current user and role
+    async function getInitialUser() {
+      console.log('[AuthProvider] Getting initial user')
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
         
-        if (session?.user) {
+        if (user) {
+          console.log('[AuthProvider] Found user:', user.id)
           // Get user role from the users table
           const { data: userData } = await supabase
             .from('users')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single()
 
+          console.log('[AuthProvider] User role:', userData?.role)
           setState({
-            session,
-            user: session.user,
+            user,
             userRole: userData?.role ?? null,
             loading: false
           })
         } else {
+          console.log('[AuthProvider] No user found')
           setState({
-            session: null,
             user: null,
             userRole: null,
             loading: false
           })
         }
       } catch (error) {
-        console.error('Error:', error)
+        console.error('[AuthProvider] Error getting initial user:', error)
         setState(prev => ({ ...prev, loading: false }))
       }
     }
 
-    getInitialSession()
+    getInitialUser()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
+        console.log('[AuthProvider] Auth state changed:', event)
+        const user = session?.user ?? null
+        
+        if (user) {
+          console.log('[AuthProvider] Session user:', user.id)
           // Get user role when auth state changes
           const { data: userData } = await supabase
             .from('users')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single()
 
+          console.log('[AuthProvider] Updated user role:', userData?.role)
           setState({
-            session,
-            user: session.user,
+            user,
             userRole: userData?.role ?? null,
             loading: false
           })
         } else {
+          console.log('[AuthProvider] No session user')
           setState({
-            session: null,
             user: null,
             userRole: null,
             loading: false
@@ -111,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => {
+      console.log('[AuthProvider] Cleaning up subscriptions')
       subscription.unsubscribe()
     }
   }, [supabase])
@@ -118,13 +126,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     ...state,
     signOut: async () => {
+      console.log('[AuthProvider] Signing out')
       await supabase.auth.signOut()
       setState({
-        session: null,
         user: null,
         userRole: null,
         loading: false
       })
+      console.log('[AuthProvider] Sign out complete')
     }
   }
 
@@ -143,5 +152,10 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
+  console.log('[useAuth] Current state:', {
+    user: context.user?.id,
+    role: context.userRole,
+    loading: context.loading
+  })
   return context
 } 

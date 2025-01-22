@@ -76,10 +76,10 @@ export async function signUpUser(formData: SignUpFormData) {
     }
 
     // Revalidate all pages that depend on auth state
-    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard', 'layout')
 
     // Redirect to main dashboard
-    redirect('/')
+    redirect('/dashboard')
   } catch (error: any) {
     // Don't treat redirects as errors
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {
@@ -125,10 +125,10 @@ export async function loginUser(formData: LoginFormData) {
     }
 
     // Revalidate all pages that depend on auth state
-    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard', 'layout')
 
     // Redirect to main dashboard
-    redirect('/')
+    redirect('/dashboard')
   } catch (error: any) {
     // Don't treat redirects as errors
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {

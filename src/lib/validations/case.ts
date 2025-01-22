@@ -9,10 +9,36 @@ import type { Database } from '@/types/supabase'
 export const caseStatusEnum = ['open', 'in_progress', 'resolved'] as const
 export type CaseStatus = (typeof caseStatusEnum)[number]
 
+export const casePriorityEnum = ['low', 'medium', 'high', 'urgent'] as const
+export type CasePriority = (typeof casePriorityEnum)[number]
+
+export const caseCategoryEnum = ['general', 'followup', 'prescription', 'test_results', 'emergency'] as const
+export type CaseCategory = (typeof caseCategoryEnum)[number]
+
+export const departmentEnum = ['primary_care', 'specialty_care', 'emergency', 'surgery', 'mental_health', 'admin'] as const
+export type Department = (typeof departmentEnum)[number]
+
+export const staffSpecialtyEnum = [
+  'general_practice',
+  'pediatrics',
+  'cardiology',
+  'neurology',
+  'orthopedics',
+  'dermatology',
+  'psychiatry',
+  'oncology'
+] as const
+export type StaffSpecialty = (typeof staffSpecialtyEnum)[number]
+
 // Schema for creating a new case
 export const createCaseSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100),
-  description: z.string().min(1, 'Description is required').max(1000),
+  description: z.string().min(1, 'Description is required').max(10000),
+  priority: z.enum(casePriorityEnum).optional(),
+  category: z.enum(caseCategoryEnum).optional(),
+  department: z.enum(departmentEnum).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  attachments: z.array(z.string()).optional(),
 })
 
 export type CreateCaseInput = z.infer<typeof createCaseSchema>
@@ -30,6 +56,12 @@ export const updateCaseSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100).optional(),
   description: z.string().min(1, 'Description is required').max(1000).optional(),
   status: z.enum(caseStatusEnum).optional(),
+  priority: z.enum(casePriorityEnum).optional(),
+  category: z.enum(caseCategoryEnum).optional(),
+  department: z.enum(departmentEnum).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  internal_notes: z.string().max(2000).nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(),
 })
 
 export type UpdateCaseInput = z.infer<typeof updateCaseSchema>
@@ -42,4 +74,24 @@ export const updateCaseStatusSchema = z.object({
   }),
 })
 
-export type UpdateCaseStatusInput = z.infer<typeof updateCaseStatusSchema> 
+// Schema for updating internal notes (staff/admin only)
+export const updateCaseInternalNotesSchema = z.object({
+  internal_notes: z.string().max(2000).nullable(),
+})
+
+// Schema for updating case metadata
+export const updateCaseMetadataSchema = z.object({
+  metadata: z.record(z.string(), z.any()),
+})
+
+// Schema for updating case department (admin only)
+export const updateCaseDepartmentSchema = z.object({
+  department: z.enum(departmentEnum),
+})
+
+// Schema for assigning a case
+export const assignCaseSchema = z.object({
+  assigned_to: z.string().uuid().nullable(),
+})
+
+export type AssignCaseInput = z.infer<typeof assignCaseSchema> 

@@ -54,7 +54,7 @@ export async function createClient() {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'
         }
       }
     }

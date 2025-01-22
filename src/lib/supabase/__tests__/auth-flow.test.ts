@@ -108,11 +108,13 @@ describe('Auth Flow', () => {
       if (!auth.user) throw new Error('Failed to create test user')
 
       testUser = {
-        id: auth.user.id,
-        email: testEmail,
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        email: 'test@example.com',
         role: 'patient',
         first_name: null,
         last_name: null,
+        specialty: null,
+        department: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }

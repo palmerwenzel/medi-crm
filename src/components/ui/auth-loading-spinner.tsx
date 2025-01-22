@@ -7,6 +7,7 @@
 
 import { useAuth } from '@/providers/auth-provider'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/components/ui/logo'
 
 interface AuthLoadingSpinnerProps {
   children: React.ReactNode
@@ -27,7 +28,10 @@ export function AuthLoadingSpinner({ children, className }: AuthLoadingSpinnerPr
         aria-label="Loading"
       >
         <div className="glass space-y-4 rounded-lg p-6 text-center shadow-lg">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent transition-colors"></div>
+          <div className="flex flex-col items-center gap-4">
+            <Logo size="lg" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent transition-colors"></div>
+          </div>
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>

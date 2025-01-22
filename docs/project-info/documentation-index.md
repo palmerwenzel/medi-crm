@@ -64,7 +64,7 @@ We have a variety of “rules” documents spanning code organization, theming, 
 1. @agent-rules.md
    - Defines the AI assistant’s operational rules, including how to classify tasks (new feature, bugfix, etc.) and update the master workflow.
 
-2. @codebase-best-practices.md
+2. @codebase-organization-rules.md
    - Explains organization conventions, TDD structure, Next.js App Router usage.  
    - Provides an example directory layout and line limit guidelines.
 

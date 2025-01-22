@@ -1,9 +1,9 @@
-import { supabase, adminClient, generateTestEmail, cleanupTestUsers, verifyDatabaseConnection } from './setup'
+import { supabase, adminClient, generateTestEmail, cleanupTestUsers, verifyDatabaseConnection } from '../setup'
 import { Database } from '@/types/supabase'
 
 type User = Database['public']['Tables']['users']['Row']
 
-describe('Supabase RLS Policies', () => {
+describe('User RLS Policies', () => {
   let testUsers: { email: string }[] = []
   let patientUser: User
   let staffUser: User
@@ -30,6 +30,8 @@ describe('Supabase RLS Policies', () => {
       role: 'patient',
       first_name: 'Test',
       last_name: 'Patient',
+      specialty: null,
+      department: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -62,6 +64,8 @@ describe('Supabase RLS Policies', () => {
       role: 'staff',
       first_name: 'Test',
       last_name: 'Staff',
+      specialty: 'general_practice',
+      department: 'primary_care',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -72,6 +76,8 @@ describe('Supabase RLS Policies', () => {
       role: 'admin',
       first_name: 'Test',
       last_name: 'Admin',
+      specialty: null,
+      department: 'admin',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -145,6 +151,15 @@ describe('Supabase RLS Policies', () => {
 
       expect(error).toBeDefined()
     })
+
+    it('prevents users from updating their specialty if not staff', async () => {
+      const { error } = await supabase
+        .from('users')
+        .update({ specialty: 'cardiology' })
+        .eq('id', patientUser.id)
+
+      expect(error).toBeDefined()
+    })
   })
 
   describe('Staff View-All Policy', () => {
@@ -165,6 +180,15 @@ describe('Supabase RLS Policies', () => {
       expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data?.length).toBeGreaterThan(0)
+    })
+
+    it('allows staff to update their specialty', async () => {
+      const { error } = await supabase
+        .from('users')
+        .update({ specialty: 'cardiology' })
+        .eq('id', staffUser.id)
+
+      expect(error).toBeNull()
     })
   })
 
@@ -230,6 +254,21 @@ describe('Supabase RLS Policies', () => {
       expect(verifyError).toBeNull()
       expect(updatedState?.first_name).toBe(newFirstName)
       expect(updatedState?.first_name).not.toBe(initialState?.first_name)
+    })
+
+    it('allows admins to update user roles', async () => {
+      const { error } = await supabase
+        .from('users')
+        .update({ role: 'staff' })
+        .eq('id', patientUser.id)
+
+      expect(error).toBeNull()
+
+      // Reset role back to patient
+      await adminClient
+        .from('users')
+        .update({ role: 'patient' })
+        .eq('id', patientUser.id)
     })
   })
 }) 

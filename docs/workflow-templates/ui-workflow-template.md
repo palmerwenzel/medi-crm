@@ -1,83 +1,119 @@
 # UI Workflow Template
-Strictly adhere to this workflow.
-Items should be addressed one-by-one, in order.
-Always reference `ui-rules.md`, `theme-rules.md`, and `codebase-best-practices.md`.
 
 ## Project State
 Project Phase: [Phase Number/Name]
-UI-Focused
+Current Task: [Task Description]
 
-## Task Management
-- [ ] Identify current UI tasks from docs/living/checklists or relevant phase file
-- [ ] Copy task details to "Primary Feature" section
-- [ ] Break down into "Component Features" if needed
-
----
+## Task Breakdown
+1. [ ] Identify task from phase checklist
+2. [ ] Break down into components
+3. [ ] Document primary feature below
 
 ## Primary Feature
 Name: [Feature Name]
 Description: [Feature Description]
-
-### Component Features
-- [ ] [Component Feature Name]
-  - [ ] [UI Task 1]
-  - [ ] [UI Task 2]
+Components:
+- [ ] [Component 1]
+- [ ] [Component 2]
 
 ---
 
-## Progress Checklist
+## Implementation Workflow
 
-### Understanding Phase
-- [ ] Documentation Review
-    - [ ] UI guidelines from `ui-rules.md`
-    - [ ] Theming guidelines from `theme-rules.md`
-    - [ ] Relevant component strategies (shadcn@latest, Radix, Tailwind)
-    - [ ] UX directives (glassmorphism, transitions, presence)
-- [ ] Implementation Plan
-  - [ ] Theming approach
-  - [ ] Accessibility requirements
-  - [ ] Animation/transition needs
-- Findings: [ Findings ]
+### 1. Understanding Phase
+1. [ ] Review Documentation
+    - [ ] UI guidelines & theme rules
+    - [ ] Component strategies
+    - [ ] UX patterns
+    - [ ] Integration points
+2. [ ] Document Findings
+    ```
+    Guidelines: [UI/UX requirements]
+    Components: [Existing/needed]
+    Theme: [Style requirements]
+    Patterns: [Interaction patterns]
+    ```
+3. [ ] CHECKPOINT: Share Understanding
 
-### Planning Phase
-- [ ] Component Architecture
-  - [ ] List existing relevant files: [ Component List ]
-  - [ ] Define component tree/wireframes
-        [ Component Tree or Wireframe goes here ]
-  - [ ] List styling requirements
-  - [ ] Define file structure (per `codebase-best-practices.md`)
-  - [ ] PAUSE, Check in with user
-- Findings: [ Findings ]
+### 2. Planning Phase
+1. [ ] Design Architecture
+    - [ ] Component tree
+    - [ ] State management
+    - [ ] Styling approach
+    - [ ] Accessibility plan
+2. [ ] Document Plan
+    ```
+    Components: [Tree/wireframe]
+    State: [Management strategy]
+    Styling: [Theme integration]
+    A11y: [Requirements]
+    ```
+3. [ ] CHECKPOINT: Review Plan
 
-### Implementation Phase
-- [ ] Setup
-  - [ ] Verify layout in Next.js App Router
-  - [ ] Check shared states (Zustand)
-- Findings: [ Findings ]
+### 3. Implementation Phase
+1. [ ] Setup & Verification
+    ```
+    Layout: [Route structure]
+    State: [Store setup]
+    Theme: [Variables/classes]
+    ```
+2. [ ] CHECKPOINT: Verify Setup
 
-- [ ] Development
-  - [ ] Create/update component files
-  - [ ] Implement styling and interactions
-  - [ ] Add accessibility features
-  - [ ] Integrate placeholder data and loading states
-- Findings: [ Findings ]
+3. [ ] Development
+    - [ ] Component structure
+    - [ ] Styling implementation
+    - [ ] Interactions/animations
+    - [ ] Loading states
+    - [ ] A11y features
+    Document each step:
+    ```
+    [Component Name]:
+    Location: [file:line]
+    Implementation: [Key points]
+    ```
+4. [ ] CHECKPOINT: Review Progress
 
-### CRITICAL: Verification Phase
-- [ ] Quality Check
-  - [ ] Design compliance
-  - [ ] Animation/transition behavior
-  - [ ] Theme compatibility
-  - [ ] Accessibility
-  - [ ] Code organization
-  - [ ] Documentation
-- Evidence: [ Snippets or line numbers ]
+5. [ ] Integration
+    - [ ] Connect data
+    - [ ] Hook up actions
+    - [ ] Polish transitions
+    ```
+    Data: [Connections]
+    Actions: [Event handlers]
+    Polish: [Animations/transitions]
+    ```
+6. [ ] CHECKPOINT: Verify Integration
 
-### Completion
-- [ ] User sign-off
-- [ ] Update task tracking
-- [ ] Document learnings
+### 4. Verification
+1. [ ] Quality Checks
+    ```
+    Design:
+    - [Requirement] -> [Implementation]
 
-## Notes
-Key decisions and learnings:
-1. [ ]
-2. [ ]
+    Interactions:
+    - [Pattern] -> [Implementation]
+
+    A11y:
+    - [Feature] -> [Implementation]
+
+    Theme:
+    - [Style] -> [Implementation]
+    ```
+2. [ ] CHECKPOINT: Final Review
+
+### 5. Completion
+1. [ ] Get sign-off
+2. [ ] Update checklists
+3. [ ] Reset workflow
+
+## Checkpoint Log
+- [ ] 1.3 Understanding
+- [ ] 2.3 Planning
+- [ ] 3.2 Setup
+- [ ] 3.4 Progress
+- [ ] 3.6 Integration
+- [ ] 4.2 Final
+
+## Key Decisions
+1. [ ] [Decision/Learning]
+2. [ ] [Decision/Learning]

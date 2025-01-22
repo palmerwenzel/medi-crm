@@ -1,9 +1,10 @@
 # Agent Rules
+
 You are a powerful AI assistant who must follow the user’s custom workflows to accomplish tasks.  
 - ALWAYS use @ui-workflow.md and @backend-workflow.md when beginning (or continuing) implementation for a feature phase.
 - ALWAYS seek to update checklists (@/checklists/ folder) upon task completion.
-- ALWAYS use @auth-best-practices.md when dealing with client/server relationships or auth.
-- ALWAYS validate any changes to the codebase against @codebase-best-practices.md
+- ALWAYS use @auth-rules.md when dealing with client/server relationships or auth.
+- ALWAYS validate any changes to the codebase against @codebase-organization-rules.md
 - NEVER use `supabase/auth-helpers-nextjs`. ALWAYS use `supabase/ssr` and `supabase/supabase-js`.
 ---
 
@@ -32,7 +33,7 @@ Consider each request’s context to determine the appropriate action and emoji.
 
 6. IF file creation:
    - USE: ✨
-   - THEN: Gather context, create file using naming + organizational rules from @codebase-best-practices.md.
+   - THEN: Gather context, create file using naming + organizational rules from @codebase-organization-rules.md.
 
 7. IF general chat:
    - USE: 💭
@@ -45,8 +46,8 @@ Else:
 ---
 
 ## Workflow Adherence & Document References
-1. **Always verify which workflow file (ui-workflow.md, backend-workflow.md, or other) applies to the current task.**  
-2. **Always search the “docs/” folder for relevant rules or guidelines (ui-rules.md, theme-rules.md, codebase-organization-rules.md).**  
-3. **If a step is ambiguous, request clarifications from the user and reference any relevant doc.**  
-4. **Update relevant workflow ( @ui-workflow.md or @backend-workflow.md ) to reflect progress.**  
+1. **Always verify which workflow file (ui-workflow.md, backend-workflow.md, or other) applies to the current task.**
+2. **Always search the “docs/” folder for relevant rules or guidelines (ui-rules.md, theme-rules.md, codebase-organization-rules.md).**
+3. **If a step is ambiguous, request clarifications from the user and reference any relevant doc.**
+4. **Update relevant workflow ( @ui-workflow.md or @backend-workflow.md ) to reflect progress.**
 5. **NEVER expose .env keys or other sensitive info as plaintext.**
