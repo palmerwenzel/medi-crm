@@ -38,61 +38,128 @@ By following these practices, we ensure that all contributors (including AI-base
 
 ## 2. Project Folder Structure
 
-Below is the folder structure for Next.js (App Router) + Supabase + Shadcn UI. It reflects our actual organization for maximum clarity and maintainability.
+Below is the recommended folder structure for Next.js (App Router) + Supabase + Shadcn UI applications, emphasizing clear separation of concerns and route organization:
+
 ```
-my-app
-├── app
-│   ├── (auth)                # Authentication-related routes
-│   │   ├── login
-│   │   │   ├── page.tsx      # Page for login
-│   │   │   ├── actions.ts    # Server actions for login flows
-│   │   │   └── login-form.tsx # Client-side form or UI component
-│   │   └── signup
-│   │       ├── page.tsx
-│   │       ├── actions.ts
-│   │       └── signup-form.tsx
-│   ├── (dashboard)           # Example feature area (e.g., main user dashboard)
-│   │   ├── page.tsx          # Main dashboard page
-│   │   ├── actions.ts        # Any server actions for dashboard operations
-│   │   └── widgets
-│   │       ├── stats-panel.tsx   # Client-side UI component
-│   │       └── data-fetch.ts     # (Optional) utility or server action
-│   └── layout.tsx            # Root-level layout (header, footer, etc.)
-├── components                # Shared, reusable UI components
-│   ├── forms
-│   │   └── basic-form.tsx    # Example form UI
-│   ├── ui                    # Reusable building blocks / Shadcn-based wrappers
-│   └── ...                   # Additional shared or feature-specific components
-├── lib
-│   ├── supabase
-│   │   ├── client.ts         # Browser-based Supabase client
-│   │   └── server.ts         # Server-based Supabase client
-│   ├── hooks
-│   │   └── use-something.ts  # Example hook (e.g., custom data fetching)
-│   ├── utils
-│   │   └── format-something.ts # Example utility function
-│   └── ...                   # Further utility modules or subfolders
-├── middleware
-│   └── auth.ts               # Example Next.js middleware for auth or route protection
-├── types
-│   └── supabase.ts           # Generated Supabase types or general type definitions
-├── styles
-│   ├── globals.css           # Tailwind base, global overrides
-│   ├── theme.css             # Theme-specific CSS tokens
-│   └── ...
-├── docs
-│   ├── rules
-│   │   ├── codebase-best-practices.md   # Best practices
-│   │   ├── auth-best-practices.md       # Auth patterns
-│   │   └── tech-stack-rules.md          # Technology usage guidelines
-│   └── project-info
-│       └── tech-stack.md               # Overview of chosen technologies
-├── .eslintrc.js
-├── tailwind.config.js
-├── tsconfig.json
-├── package.json
-└── README.md
+my-app/
+├── app/
+│   ├── (auth)/                    # Auth route group (doesn't affect URL)
+│   │   ├── login/
+│   │   │   ├── page.tsx          # /login
+│   │   │   ├── actions.ts        # Server actions
+│   │   │   └── login-form.tsx    # Client component
+│   │   └── signup/
+│   │       ├── page.tsx          # /signup
+│   │       └── components/       # Route-specific components
+│   │
+│   ├── main-feature/             # Direct route with layout (e.g., dashboard)
+│   │   ├── layout.tsx           # Basic auth + shared UI shell
+│   │   └── page.tsx             # /main-feature - Main view with role handling
+│   │
+│   └── (features)/              # Feature route group
+│       └── (protected)/         # Protected routes group
+│           ├── layout.tsx       # Role/permission validation
+│           ├── feature-a/       # e.g., cases, patients
+│           │   ├── page.tsx     # /feature-a
+│           │   └── new/
+│           │       └── page.tsx # /feature-a/new
+│           └── feature-b/
+│               ├── page.tsx     # /feature-b
+│               └── [id]/
+│                   └── page.tsx # /feature-b/[id]
+│
+├── components/                   # Shared components
+│   ├── feature-a/               # Feature-specific components
+│   ├── feature-b/
+│   └── ui/                      # Shared UI components
+│
+├── lib/                         # Shared utilities
+│   ├── supabase/
+│   │   ├── client.ts           # Browser client
+│   │   └── server.ts           # Server client
+│   └── utils/
+│
+├── types/                       # TypeScript types
+├── styles/                      # Global styles
+└── docs/                        # Documentation
 ```
+
+Key organizational principles:
+
+1. **Route Groups & Layouts**
+   - Use route groups (in parentheses) for logical organization without URL impact
+   - Separate auth routes `(auth)` from main features
+   - Place shared layouts at the appropriate level for inheritance
+   - Use nested route groups for protected features
+
+2. **Authentication Layers**
+   - Main feature layout (`main-feature/layout.tsx`): Basic auth + UI shell
+   - Protected routes layout (`(features)/(protected)/layout.tsx`): Role validation
+   - Clear separation between authentication and authorization
+
+3. **Component Organization**
+   - Route-specific components live alongside their routes
+   - Shared components go in the top-level `components` directory
+   - Feature-specific shared components go in feature-named folders
+
+4. **File Naming & Location**
+   - Use `page.tsx` for route endpoints
+   - Use `layout.tsx` for shared UI and auth boundaries
+   - Use `actions.ts` for server actions
+   - Group related components in descriptive folders
+
+This structure provides:
+- Clear authentication boundaries
+- Logical feature organization
+- Proper layout inheritance
+- Clean URLs despite complex organization
+- Scalability for new features
+
+### Role-Based Routing Pattern
+
+The application uses a shared-route pattern with role-based views for better maintainability and security:
+
+1. **Authentication Boundaries**
+   ```
+   app/
+   ├── dashboard/                 # First auth boundary
+   │   ├── layout.tsx            # Basic auth + UI shell
+   │   └── page.tsx              # Role-specific dashboard views
+   └── (dashboard)/              # Feature organization (URL unaffected)
+       └── (role-routes)/        # Second auth boundary
+           ├── layout.tsx        # Role validation
+           └── [feature]/        # Protected features
+   ```
+
+2. **Auth Layer Responsibilities**
+   - `dashboard/layout.tsx`: Basic authentication, UI shell
+   - `(role-routes)/layout.tsx`: Role validation, feature access
+
+3. **Component Organization for Role-Based Features**
+   ```
+   components/
+   ├── [feature]/
+   │   ├── views/               # Role-specific views
+   │   │   ├── patient-view.tsx
+   │   │   ├── staff-view.tsx
+   │   │   └── admin-view.tsx
+   │   └── shared/             # Shared components
+   └── ui/                     # Generic UI components
+   ```
+
+4. **Route Access Patterns**
+   - Shared routes with role-based filtering
+   - Role-aware components and actions
+   - Centralized authorization
+   - Clean URLs regardless of role
+
+This pattern ensures:
+- Secure authentication boundaries
+- DRY (Don't Repeat Yourself) code
+- Clear separation of concerns
+- Maintainable role-based features
+- Scalable architecture for new roles/features
+
 ---
 
 ## 3. Code Organization & Conventions

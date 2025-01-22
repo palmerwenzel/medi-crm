@@ -6,25 +6,25 @@ import { AdminDashboard } from "@/components/dashboard/views/admin-dashboard"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect("/login")
-  }
-
-  // Get user role and profile from the users table
-  const { data: user } = await supabase
-    .from("users")
-    .select("*")  // Get all user fields for the profile section
-    .eq("id", session.user.id)
-    .single()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     redirect("/login")
   }
 
+  // Get user role and profile from the users table
+  const { data: userData } = await supabase
+    .from("users")
+    .select("*")  // Get all user fields for the profile section
+    .eq("id", user.id)
+    .single()
+
+  if (!userData) {
+    redirect("/login")
+  }
+
   // Render different dashboard based on role
-  switch (user.role) {
+  switch (userData.role) {
     case "patient":
       return <PatientDashboard />
     case "staff":
@@ -38,21 +38,21 @@ export default async function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">
-              Welcome to MediCRM. Your current role is: {user.role || "Not Set"}
+              Welcome to MediCRM. Your current role is: {userData.role || "Not Set"}
             </p>
           </div>
 
           <div className="rounded-lg border bg-card p-6">
             <h2 className="text-xl font-semibold mb-4">Your Profile</h2>
             <div className="space-y-2">
-              <p><strong>Name:</strong> {user.full_name}</p>
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Role:</strong> {user.role || "Not Set"}</p>
-              <p><strong>Account Created:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
+              <p><strong>Name:</strong> {userData.full_name}</p>
+              <p><strong>Email:</strong> {userData.email}</p>
+              <p><strong>Role:</strong> {userData.role || "Not Set"}</p>
+              <p><strong>Account Created:</strong> {new Date(userData.created_at).toLocaleDateString()}</p>
             </div>
           </div>
 
-          {!user.role && (
+          {!userData.role && (
             <div className="rounded-lg border bg-destructive/10 p-6">
               <h2 className="text-xl font-semibold mb-2 text-destructive">Role Not Set</h2>
               <p>Your user account does not have a role assigned. Please contact an administrator.</p>

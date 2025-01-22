@@ -19,28 +19,11 @@ interface RoleBasedNavProps {
 export function RoleBasedNav({ items, userRole }: RoleBasedNavProps) {
   const pathname = usePathname()
 
-  const roleBasedItems = items.filter(item => {
-    if (!userRole) return false
-    
-    // Admin can access all routes
-    if (userRole === 'admin') return true
-    
-    // Staff can access staff and patient routes
-    if (userRole === 'staff') {
-      return !item.href.startsWith('/admin')
-    }
-    
-    // Patients can only access patient routes
-    if (userRole === 'patient') {
-      return item.href.startsWith('/patient')
-    }
-
-    return false
-  })
+  if (!userRole || !items.length) return null
 
   return (
     <nav className="flex gap-2">
-      {roleBasedItems.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}

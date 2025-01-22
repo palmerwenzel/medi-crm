@@ -1,30 +1,38 @@
 import { RoleBasedNav } from './role-based-nav'
 
 // Navigation items by role
-const NAV_ITEMS = [
-  // Admin routes
-  { title: 'Admin Dashboard', href: '/admin' },
-  { title: 'User Management', href: '/admin/users' },
-  { title: 'System Settings', href: '/admin/settings' },
-  // Staff routes
-  { title: 'Staff Dashboard', href: '/staff' },
-  { title: 'Case Queue', href: '/cases' },
-  { title: 'Patients', href: '/patients' },
-  // Patient routes
-  { title: 'My Dashboard', href: '/patient' },
-  { title: 'My Cases', href: '/patient/cases' },
-  { title: 'My Profile', href: '/patient/profile' },
-]
+const NAV_ITEMS = {
+  admin: [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Cases', href: '/cases' },
+    { title: 'Patients', href: '/patients' },
+    { title: 'Users', href: '/users' },
+    { title: 'Settings', href: '/settings' }
+  ],
+  staff: [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Cases', href: '/cases' },
+    { title: 'Patients', href: '/patients' }
+  ],
+  patient: [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'My Cases', href: '/cases' },
+    { title: 'Profile', href: '/profile' }
+  ]
+}
 
 interface SiteHeaderProps {
   userRole: string | null
 }
 
 export function SiteHeader({ userRole }: SiteHeaderProps) {
+  // Get role-specific navigation items or empty array if role not found
+  const navItems = userRole ? NAV_ITEMS[userRole as keyof typeof NAV_ITEMS] || [] : []
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <RoleBasedNav items={NAV_ITEMS} userRole={userRole} />
+        <RoleBasedNav items={navItems} userRole={userRole} />
       </div>
     </header>
   )

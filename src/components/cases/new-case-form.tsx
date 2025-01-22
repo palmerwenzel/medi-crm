@@ -65,7 +65,7 @@ export function NewCaseForm() {
 
       // Optimistic update
       router.refresh()
-      router.push('/patient/cases')
+      router.push('/dashboard/cases')
     } catch (err) {
       toast({
         title: 'Error',

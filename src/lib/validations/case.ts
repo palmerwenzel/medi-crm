@@ -18,7 +18,12 @@ export const createCaseSchema = z.object({
 export type CreateCaseInput = z.infer<typeof createCaseSchema>
 
 // Full case type from database
-export type CaseResponse = Database['public']['Tables']['cases']['Row']
+export type CaseResponse = Database['public']['Tables']['cases']['Row'] & {
+  patient: {
+    first_name: string | null
+    last_name: string | null
+  } | null
+}
 
 // Schema for updating a case
 export const updateCaseSchema = z.object({

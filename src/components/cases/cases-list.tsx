@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CaseCard } from './case-card'
 import { getCases } from '@/lib/actions/cases'
+import type { CaseResponse } from '@/lib/validations/case'
 
 // Loading skeleton for cases
 function CaseCardSkeleton() {
@@ -55,7 +56,7 @@ function ErrorState({ message }: { message: string }) {
 }
 
 // Cases grid component
-function CasesGrid({ cases }: { cases: NonNullable<Awaited<ReturnType<typeof getCases>>['data']> }) {
+function CasesGrid({ cases }: { cases: CaseResponse[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cases.map((caseData) => (

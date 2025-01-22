@@ -7,6 +7,10 @@
 -- Create enum for case status
 CREATE TYPE case_status AS ENUM ('open', 'in_progress', 'resolved');
 
+-- Create additional enums
+CREATE TYPE case_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+CREATE TYPE case_category AS ENUM ('general', 'followup', 'prescription', 'test_results', 'emergency');
+
 -- Create cases table
 -- This table stores medical cases/tickets created by patients
 -- It will be used for:
@@ -16,9 +20,13 @@ CREATE TYPE case_status AS ENUM ('open', 'in_progress', 'resolved');
 CREATE TABLE public.cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  assigned_to UUID REFERENCES public.users(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   status case_status NOT NULL DEFAULT 'open',
+  priority case_priority NOT NULL DEFAULT 'medium',
+  category case_category NOT NULL DEFAULT 'general',
+  attachments JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -65,4 +73,32 @@ CREATE POLICY "Staff and admins can update cases"
   FOR UPDATE
   USING (
     get_user_role(auth.uid()) IN ('staff', 'admin')
-  ); 
+  );
+
+-- Create function to validate staff assignment
+CREATE OR REPLACE FUNCTION validate_case_assignment()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Check if assigned_to is NULL (allowing unassignment)
+  IF NEW.assigned_to IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Check if assigned user is staff/admin
+  IF EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = NEW.assigned_to 
+    AND role IN ('staff', 'admin')
+  ) THEN
+    RETURN NEW;
+  END IF;
+  
+  RAISE EXCEPTION 'Cases can only be assigned to staff or admin users';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for assignment validation
+CREATE TRIGGER validate_case_assignment_trigger
+  BEFORE INSERT OR UPDATE ON public.cases
+  FOR EACH ROW
+  EXECUTE FUNCTION validate_case_assignment(); 

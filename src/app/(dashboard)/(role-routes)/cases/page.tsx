@@ -1,5 +1,13 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
+import CasesList from "@/components/cases/cases-list"
+import { buttonVariants } from "@/components/ui/button"
+
+export const metadata = {
+  title: 'Cases - MediCRM',
+  description: 'View and manage medical cases.',
+}
 
 /**
  * Cases list page
@@ -10,52 +18,47 @@ import { createClient } from "@/lib/supabase/server"
  */
 export default async function CasesPage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!session) {
+  // The server client automatically handles cookie-based auth
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     redirect("/login")
   }
 
-  // Get user role and cases based on role
-  const { data: user } = await supabase
+  // Get user role
+  const { data: userData } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single()
 
-  if (!user?.role) {
+  if (!userData?.role) {
     redirect("/login")
   }
 
-  let casesQuery = supabase
-    .from("cases")
-    .select(`
-      *,
-      patient:users!cases_patient_id_fkey (
-        id,
-        full_name,
-        email
-      ),
-      assigned_to:users!cases_assigned_to_fkey (
-        id,
-        full_name
-      )
-    `)
-
-  // Filter cases based on role
-  if (user.role === "patient") {
-    casesQuery = casesQuery.eq("patient_id", session.user.id)
-  } else if (user.role === "staff") {
-    casesQuery = casesQuery.eq("assigned_to", session.user.id)
-  }
-  // Admin sees all cases
-
-  const { data: cases } = await casesQuery.order("created_at", { ascending: false })
-
   return (
-    <div>
-      {/* We'll create the CasesList component next */}
-      <pre>{JSON.stringify(cases, null, 2)}</pre>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Cases</h1>
+          <p className="text-muted-foreground">
+            {userData.role === 'patient' 
+              ? 'View and manage your medical cases.'
+              : 'View and manage all medical cases.'}
+          </p>
+        </div>
+        {userData.role === 'patient' && (
+          <Link 
+            href="/cases/new"
+            className={buttonVariants({ variant: "default" })}
+          >
+            Create New Case
+          </Link>
+        )}
+      </div>
+
+      <CasesList />
     </div>
   )
 } 

@@ -11,20 +11,20 @@ export default async function RoleBasedLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 
   // Get user role from the users table
-  const { data: user } = await supabase
+  const { data: userData } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single()
 
-  if (!user?.role) {
+  if (!userData?.role) {
     redirect("/login")
   }
 

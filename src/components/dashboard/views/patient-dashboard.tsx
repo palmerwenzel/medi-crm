@@ -5,32 +5,27 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarDays, FileText, MessageSquare, Plus } from 'lucide-react'
+import { CaseList } from '@/components/cases/shared/case-list'
 import Link from 'next/link'
 
 export function PatientDashboard() {
-  const [recentCases, setRecentCases] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
-    async function loadRecentCases() {
-      const { data: cases } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          assigned_to:users!cases_assigned_to_fkey (
-            full_name
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(3)
-
-      setRecentCases(cases || [])
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+      }
       setIsLoading(false)
     }
 
-    loadRecentCases()
+    loadUser()
   }, [])
+
+  if (isLoading || !user) return null
 
   return (
     <div className="space-y-8">
@@ -106,51 +101,16 @@ export function PatientDashboard() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Recent Cases</h2>
           <Button variant="outline" asChild>
-            <Link href="/cases">View All Cases</Link>
+            <Link href="/dashboard/cases">View All Cases</Link>
           </Button>
         </div>
 
-        <div className="space-y-4">
-          {isLoading ? (
-            // Loading skeleton
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-muted rounded-lg" />
-                </div>
-              ))}
-            </div>
-          ) : recentCases.length > 0 ? (
-            recentCases.map((case_) => (
-              <Link key={case_.id} href={`/cases/${case_.id}`}>
-                <Card className="hover:bg-accent/5 transition-colors">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium">{case_.title}</h3>
-                        <CardDescription className="mt-1">
-                          {case_.description?.slice(0, 100)}...
-                        </CardDescription>
-                        {case_.assigned_to && (
-                          <p className="text-sm mt-2">
-                            Assigned to: {case_.assigned_to.full_name}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(case_.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </Link>
-            ))
-          ) : (
-            <p className="text-muted-foreground text-center py-4">
-              No recent cases found. Create a new case to get started.
-            </p>
-          )}
-        </div>
+        <CaseList 
+          userRole="patient"
+          userId={user.id}
+          limit={3}
+          isDashboard={true}
+        />
       </div>
     </div>
   )

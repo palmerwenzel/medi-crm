@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { NewCaseForm } from "@/components/cases/new-case-form"
 
 /**
  * New case creation page
@@ -8,48 +9,45 @@ import { createClient } from "@/lib/supabase/server"
  * - Staff: Can create cases for any patient
  * - Admin: Full access
  */
+export const metadata = {
+  title: 'Create New Case - MediCRM',
+  description: 'Submit a new medical case for review.',
+}
+
 export default async function NewCasePage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 
   // Get user role
-  const { data: user } = await supabase
+  const { data: userData } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single()
 
-  if (!user?.role) {
+  if (!userData?.role) {
     redirect("/login")
   }
 
-  // If staff/admin, get list of patients for the dropdown
-  let patients = null
-  if (user.role === "staff" || user.role === "admin") {
-    const { data } = await supabase
-      .from("users")
-      .select("id, full_name, email")
-      .eq("role", "patient")
-      .order("full_name")
-    
-    patients = data
+  // Only patients can create cases
+  if (userData.role !== "patient") {
+    redirect("/dashboard")
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create New Case</h1>
         <p className="text-muted-foreground">
-          Submit a new medical case for review.
+          Submit a new case and we'll get back to you as soon as possible.
         </p>
       </div>
 
-      {/* We'll create the NewCaseForm component next */}
-      <pre>{JSON.stringify({ role: user.role, patients }, null, 2)}</pre>
+      <NewCaseForm />
     </div>
   )
 } 

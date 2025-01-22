@@ -3,21 +3,21 @@ import { createClient } from "@/lib/supabase/server"
 
 export default async function RootPage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // If not logged in, redirect to login
-  if (!session) {
+  if (!user) {
     redirect("/login")
   }
 
   // Get user role
-  const { data: user } = await supabase
+  const { data: userData } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single()
 
-  if (!user?.role) {
+  if (!userData?.role) {
     redirect("/login")
   }
 

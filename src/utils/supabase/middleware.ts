@@ -6,9 +6,16 @@ type Role = Database['public']['Tables']['users']['Row']['role']
 
 // Define route access patterns
 const publicRoutes = ['/login', '/signup']
-const patientRoutes = ['/patient', '/dashboard']
-const staffRoutes = ['/staff', '/cases', '/patients', '/dashboard']
-const adminRoutes = ['/admin', '/settings', '/dashboard']
+const patientRoutes = ['/dashboard']
+const staffRoutes = ['/dashboard']
+const adminRoutes = ['/dashboard']
+
+// Define route prefixes for protected features
+const protectedRoutes = {
+  patient: ['/dashboard/cases'],
+  staff: ['/dashboard/cases', '/dashboard/patients'],
+  admin: ['/dashboard/cases', '/dashboard/patients', '/dashboard/settings']
+}
 
 // Define home routes for each role
 const roleHomeRoutes = {
@@ -93,19 +100,22 @@ export async function updateSession(request: NextRequest) {
   // Handle role-based access
   switch (role) {
     case 'admin':
-      // Admins can access all routes
-      return response
+      // Admins can access all routes under /dashboard
+      if (pathname.startsWith('/dashboard')) {
+        return response
+      }
+      break
 
     case 'staff':
-      // Staff can access staff routes and patient routes
-      if ([...staffRoutes, ...patientRoutes].some(route => pathname.startsWith(route))) {
+      // Staff can access their routes and patient routes
+      if ([...protectedRoutes.staff, ...protectedRoutes.patient].some(route => pathname.startsWith(route))) {
         return response
       }
       break
 
     case 'patient':
       // Patients can only access patient routes
-      if (patientRoutes.some(route => pathname.startsWith(route))) {
+      if (protectedRoutes.patient.some(route => pathname.startsWith(route))) {
         return response
       }
       break
