@@ -63,8 +63,11 @@ This document outlines best practices, limitations, and conventions for each maj
 4. API Routes for Microservices  
    - Keep small, focused API routes that align with your application's domain (e.g., /api/cases, /api/auth).  
    - This helps maintain a clear boundary between frontend pages and backend logic.
-5. Middleware for Auth  
-   - Use Next.js middleware to handle global authentication checks or route guards.
+5. Authentication & Authorization  
+   - Follow the patterns defined in [@auth-best-practices.md] for implementing auth flows
+   - Use server actions for auth operations
+   - Keep auth-related components in the (auth) directory
+   - Leverage middleware for route protection and session management
 
 ### Limitations & Pitfalls
 1. Learning Curve  
@@ -99,11 +102,18 @@ This document outlines best practices, limitations, and conventions for each maj
 
 ## 5. Supabase (Database & Auth)
 ### Best Practices
-1. Schema-Driven Approach  
+1. Authentication Implementation
+   - Follow the detailed patterns in [@auth-best-practices.md] for auth implementation
+   - Use server-side auth operations via server actions
+   - Keep auth UI components separate from business logic
+   - Leverage the Supabase SSR package (@supabase/ssr) for Next.js App Router
+   - Store role attributes in JWT claims for middleware checks
+
+2. Schema-Driven Approach  
    - Model your data with Postgres tables for clarity and performance.  
    - Use foreign keys judiciously to maintain relational integrity (e.g., user_id referencing Users table).
 
-2. Database Migrations  
+3. Database Migrations  
    - Keep migrations atomic and feature-focused (e.g., one migration for complete user system).
    - Include all related objects in a single migration (enums, tables, functions, triggers, policies).
    - Document dependencies and purpose in migration headers.
@@ -115,14 +125,11 @@ This document outlines best practices, limitations, and conventions for each maj
      5. Policies
    - Never split related objects across migrations to avoid dependency issues.
 
-3. Role-Based Access with Supabase Policies  
+4. Role-Based Access with Supabase Policies  
    - Enforce row-level security (RLS) to ensure each user only sees data relevant to their role or ownership.  
    - Keep a clean mapping of "Staff," "Patient," and "Admin" roles.
-4. Functions & Triggers  
+5. Functions & Triggers  
    - Use Supabase's Postgres functions or triggers for advanced logic (e.g., auditing changes, anonymizing data).
-5. Authentication & JWTs  
-   - Use Supabase Auth for sign-ups/logins.  
-   - Store role attributes in JWT claims for quick checks in Next.js middleware or API routes.
 
 ### Migration Workflow
 1. Local Development  

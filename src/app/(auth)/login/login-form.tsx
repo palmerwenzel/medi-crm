@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
-import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
@@ -19,90 +18,74 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { loginUser } from './actions'
 
 // Form validation schema
-const signupSchema = z.object({
+const loginSchema = z.object({
   email: z
     .string()
+    .trim() // Prevent whitespace-based attacks
     .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
+    .max(255, 'Email is too long')
+    .email('Please enter a valid email address')
+    .transform(val => val.toLowerCase()), // Normalize email
   password: z
     .string()
     .min(1, 'Password is required')
     .min(6, 'Password must be at least 6 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    ),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
+    .max(72, 'Password is too long'), // bcrypt max length
 })
 
-type SignUpFormValues = z.infer<typeof signupSchema>
+type LoginFormValues = z.infer<typeof loginSchema>
 
-export function SignUpForm() {
+export function LoginForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [failedAttempts, setFailedAttempts] = useState(0)
 
-  const form = useForm<SignUpFormValues>({
-    resolver: zodResolver(signupSchema),
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
-      confirmPassword: '',
     },
   })
 
-  async function onSubmit(data: SignUpFormValues) {
+  async function onSubmit(data: LoginFormValues) {
     try {
+      // Prevent brute force by adding delay after failed attempts
+      if (failedAttempts > 3) {
+        await new Promise(resolve => setTimeout(resolve, Math.min(failedAttempts * 1000, 5000)))
+      }
+
       setIsLoading(true)
       setError(null)
 
-      // Sign up the user with Supabase Auth
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
+      // Use the server action directly with the form data
+      const result = await loginUser({
+        email: data.email, // Email is already normalized by Zod
         password: data.password,
-        options: {
-          data: {
-            role: 'patient' // Store role in auth metadata
-          }
-        }
       })
-
-      if (signUpError) throw signUpError
-      if (!authData.user) throw new Error('No user data returned')
-
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id: authData.user.id, // Important: Use the auth user's ID
-            email: data.email,
-            role: 'patient'
-          }
-        ])
-        .select()
-        .single()
-
-      if (profileError) {
-        // If profile creation fails, clean up the auth user
-        await supabase.auth.signOut()
-        throw profileError
+      
+      if (result?.error) {
+        setFailedAttempts(prev => prev + 1)
+        throw new Error(result.error)
       }
 
-      // Refresh the page to update auth state
-      router.refresh()
-      
-      // Redirect to patient dashboard (since all new signups are patients)
-      router.push('/patient')
+      // Reset failed attempts on success
+      setFailedAttempts(0)
+
+      // Router.refresh() and redirect are handled by the server action
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign up')
+      // Generic error message for security
+      setError('Invalid email or password')
     } finally {
       setIsLoading(false)
+      // Clear password field on error
+      if (error) {
+        form.setValue('password', '')
+      }
     }
   }
 
@@ -110,9 +93,9 @@ export function SignUpForm() {
     <div className="mx-auto w-full px-4 py-8 sm:px-0 md:py-12">
       <div className="relative w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-4 shadow-md transition-all hover:shadow-lg focus-within:shadow-lg focus-within:ring-2 focus-within:ring-ring sm:max-w-md sm:p-6">
         <div className="space-y-2 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Create an account</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Welcome back</h1>
           <p className="text-sm text-muted-foreground">
-            Enter your email below to create your account
+            Enter your email to log in to your account
           </p>
         </div>
         
@@ -120,7 +103,7 @@ export function SignUpForm() {
           <form 
             onSubmit={form.handleSubmit(onSubmit)} 
             className="space-y-4 animate-in fade-in-50"
-            aria-label="Sign up form"
+            aria-label="Login form"
           >
             <FormField
               control={form.control}
@@ -136,6 +119,7 @@ export function SignUpForm() {
                       disabled={isLoading}
                       aria-describedby="email-error"
                       className="w-full transition-colors focus-visible:ring-2 focus-visible:ring-ring hover:border-border/80"
+                      maxLength={255}
                       {...field}
                     />
                   </FormControl>
@@ -153,37 +137,16 @@ export function SignUpForm() {
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Create a password"
-                      autoComplete="new-password"
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
                       disabled={isLoading}
                       aria-describedby="password-error"
                       className="w-full transition-colors focus-visible:ring-2 focus-visible:ring-ring hover:border-border/80"
+                      maxLength={72}
                       {...field}
                     />
                   </FormControl>
                   <FormMessage id="password-error" className="text-sm" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Confirm your password"
-                      autoComplete="new-password"
-                      disabled={isLoading}
-                      aria-describedby="confirm-password-error"
-                      className="w-full transition-colors focus-visible:ring-2 focus-visible:ring-ring hover:border-border/80"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage id="confirm-password-error" className="text-sm" />
                 </FormItem>
               )}
             />
@@ -202,27 +165,27 @@ export function SignUpForm() {
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading}
-              aria-disabled={isLoading}
+              disabled={isLoading || failedAttempts > 10} // Prevent excessive attempts
+              aria-disabled={isLoading || failedAttempts > 10}
             >
               {isLoading ? (
                 <>
-                  <span className="sr-only">Creating account...</span>
+                  <span className="sr-only">Signing in...</span>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  <span aria-hidden="true">Creating account...</span>
+                  <span aria-hidden="true">Signing in...</span>
                 </>
               ) : (
-                'Create account'
+                'Log in'
               )}
             </Button>
 
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
+              <span className="text-muted-foreground">Don't have an account? </span>
               <Link 
-                href="/login" 
+                href="/signup" 
                 className="font-medium text-primary hover:text-primary/90 hover:underline focus-visible:underline"
               >
-                Log in
+                Sign up
               </Link>
             </div>
           </form>

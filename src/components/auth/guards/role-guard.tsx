@@ -1,14 +1,21 @@
+/**
+ * Role-based access control component and HOC
+ * Protects content based on user roles from Supabase
+ */
+
 'use client'
 
-import { useAuth } from './auth-provider'
+import { useAuth } from '@/providers/auth-provider'
 import type { Database } from '@/types/supabase'
 import { Skeleton } from '@/components/ui/skeleton'
+import { redirect } from "next/navigation"
 
 type Role = Database['public']['Tables']['users']['Row']['role']
 
 interface RoleGuardProps {
   children: React.ReactNode
-  allowedRoles: Role[]
+  allowedRoles: Array<'patient' | 'staff' | 'admin'>
+  fallbackUrl?: string
 }
 
 /**
@@ -16,21 +23,19 @@ interface RoleGuardProps {
  * @param children - The protected content
  * @param allowedRoles - Array of roles that can access the content
  */
-export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
-  const { user, loading } = useAuth()
+export function RoleGuard({
+  children,
+  allowedRoles,
+  fallbackUrl = '/dashboard'
+}: RoleGuardProps) {
+  const { user, userRole } = useAuth()
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-8 w-2/3" />
-      </div>
-    )
+  if (!user || !userRole) {
+    redirect('/login')
   }
 
-  if (!user?.role || !allowedRoles.includes(user.role)) {
-    return null
+  if (!allowedRoles.includes(userRole)) {
+    redirect(fallbackUrl)
   }
 
   return <>{children}</>

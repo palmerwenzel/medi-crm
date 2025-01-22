@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -34,25 +32,26 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+  
   .dark {
-    --background: 222 47% 11%;
+    --background: 0 0% 7%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+    --card: 0 0% 9%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 0 0% 9%;
     --popover-foreground: 210 40% 98%;
     --primary: 265 84% 45%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 0 0% 15%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 265 84% 45%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 265 84% 45%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -67,6 +66,31 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter antialiased;
+  }
+}
+
+@layer utilities {
+  /* Glassmorphic utilities */
+  .glass {
+    @apply bg-background/30 backdrop-blur-[8px] border border-white/10;
+  }
+  
+  .glass-hover {
+    @apply hover:bg-background/40 transition-colors duration-200;
+  }
+
+  /* Loading skeleton utilities */
+  .skeleton {
+    @apply animate-pulse bg-muted/50;
+  }
+
+  /* Transition utilities */
+  .fade-in {
+    @apply transition-opacity duration-200 ease-in-out;
+  }
+
+  .slide-in {
+    @apply transition-transform duration-200 ease-in-out;
   }
 }

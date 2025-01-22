@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { subscribeToCases } from '@/lib/supabase/realtime'
 import type { CaseResponse } from '@/lib/validations/case'
-import { useAuth } from '@/components/auth/auth-provider'
+import { useAuth } from '@/providers/auth-provider'
 
 type UseCasesSubscriptionProps = {
   onUpdate?: (updatedCase: CaseResponse) => void

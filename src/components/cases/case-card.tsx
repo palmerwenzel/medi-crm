@@ -1,3 +1,8 @@
+/**
+ * Case Card Component
+ * Displays individual case information
+ */
+
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -5,10 +10,20 @@ import { CaseStatusBadge } from './case-status-badge'
 import type { CaseResponse } from '@/lib/validations/case'
 
 interface CaseCardProps {
-  case: CaseResponse
+  case: CaseResponse & {
+    patient: {
+      first_name: string | null
+      last_name: string | null
+    } | null
+  }
 }
 
 export function CaseCard({ case: caseData }: CaseCardProps) {
+  // Format patient name
+  const patientName = caseData.patient
+    ? `${caseData.patient.first_name} ${caseData.patient.last_name}`.trim()
+    : 'Unknown Patient'
+
   return (
     <Link 
       href={`/patient/cases/${caseData.id}`}
@@ -25,8 +40,9 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground">
-            Created {formatDistanceToNow(new Date(caseData.created_at))} ago
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+            <span>Patient: {patientName}</span>
+            <span>Created {formatDistanceToNow(new Date(caseData.created_at))} ago</span>
           </div>
         </CardContent>
       </Card>

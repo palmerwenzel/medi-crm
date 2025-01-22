@@ -2,19 +2,25 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
 
+type Role = Database['public']['Tables']['users']['Row']['role']
+
 // Define route access patterns
 const publicRoutes = ['/login', '/signup']
-const patientRoutes = ['/patient', '/profile']
-const staffRoutes = ['/staff', '/cases', '/patients']
-const adminRoutes = ['/admin', '/settings']
+const patientRoutes = ['/patient', '/dashboard']
+const staffRoutes = ['/staff', '/cases', '/patients', '/dashboard']
+const adminRoutes = ['/admin', '/settings', '/dashboard']
 
 // Define home routes for each role
 const roleHomeRoutes = {
-  patient: '/patient',
-  staff: '/staff',
-  admin: '/admin'
+  patient: '/dashboard',
+  staff: '/dashboard',
+  admin: '/dashboard'
 } as const
 
+/**
+ * Middleware for route protection and role-based access control
+ * Uses Supabase auth for secure session management
+ */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -22,91 +28,70 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  const supabase = createServerClient<Database>(
+  // Create Supabase client with minimal cookie handling
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          // Let Supabase handle cookie options
-          request.cookies.set({
-            name,
-            value,
-            ...options
-          })
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           })
-          response.cookies.set({
-            name,
-            value,
-            ...options
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          // Let Supabase handle cookie options
-          request.cookies.set({
-            name,
-            value: '',
-            ...options
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options
-          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  // IMPORTANT: Get user immediately after client creation
+  const { pathname } = request.nextUrl
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Get URL info
-  const { pathname } = request.nextUrl
-
-  // Get user role if logged in
-  let userRole: keyof typeof roleHomeRoutes | undefined
-  if (user) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    userRole = userData?.role as keyof typeof roleHomeRoutes
-  }
-
-  // Allow public routes
-  if (publicRoutes.includes(pathname)) {
-    // If user is already logged in, redirect to their role-specific home
-    if (user && userRole) {
-      return NextResponse.redirect(new URL(roleHomeRoutes[userRole], request.url))
+  // Handle public routes
+  if (publicRoutes.some(route => pathname === route)) {
+    // Redirect authenticated users to their home page
+    if (user) {
+      const { data } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      
+      if (data?.role && data.role in roleHomeRoutes) {
+        return NextResponse.redirect(
+          new URL(roleHomeRoutes[data.role as keyof typeof roleHomeRoutes], request.url)
+        )
+      }
     }
     return response
   }
 
-  // Check authentication
+  // Require authentication for all other routes
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (!userRole) {
-    throw new Error('User role not found')
+  // Get and validate user role
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const role = userData?.role as Role
+
+  if (!role) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Handle role-based access
-  switch (userRole) {
+  switch (role) {
     case 'admin':
       // Admins can access all routes
       return response
@@ -127,5 +112,5 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Redirect unauthorized access to role-specific home
-  return NextResponse.redirect(new URL(roleHomeRoutes[userRole], request.url))
+  return NextResponse.redirect(new URL(roleHomeRoutes[role], request.url))
 } 

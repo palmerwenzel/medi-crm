@@ -1,41 +1,34 @@
 import type { Metadata } from "next";
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
-import { AuthProvider } from "@/components/auth/auth-provider";
-import { SiteHeader } from "@/components/layout/site-header";
-import { createClient } from "@/lib/supabase/server";
+import { AuthProvider } from "@/providers/auth-provider";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "MediCRM",
-  description: "Modern healthcare CRM",
+  description: "Modern medical practice management system",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  let userRole: string | null = null;
-  if (user) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = userData?.role ?? null;
-  }
-
   return (
-    <html lang="en" className="dark">
-      <body className={`${GeistSans.className} min-h-screen bg-background font-sans antialiased`}>
-        <AuthProvider>
-          <SiteHeader userRole={userRole} />
-          {children}
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

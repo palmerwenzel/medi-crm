@@ -1,3 +1,9 @@
+/**
+ * New Case Form Component
+ * Client component for creating new medical cases
+ * Uses server actions for data mutations
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -25,11 +31,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { createCase } from '@/lib/actions/cases'
 import { createCaseSchema, type CreateCaseInput } from '@/lib/validations/case'
+import { useToast } from '@/hooks/use-toast'
 
 export function NewCaseForm() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<CreateCaseInput>({
@@ -43,28 +51,27 @@ export function NewCaseForm() {
   async function onSubmit(data: CreateCaseInput) {
     try {
       setIsLoading(true)
-      setError(null)
 
-      const response = await fetch('/api/cases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
+      const result = await createCase(data)
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to create case')
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create case')
       }
 
-      // Refresh the cases list
+      toast({
+        title: 'Case created',
+        description: 'Your case has been submitted successfully.',
+      })
+
+      // Optimistic update
       router.refresh()
-      
-      // Redirect to cases list
       router.push('/patient/cases')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create case')
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to create case',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -120,16 +127,6 @@ export function NewCaseForm() {
                 </FormItem>
               )}
             />
-
-            {error && (
-              <Alert 
-                variant="destructive"
-                role="alert"
-                className="animate-in fade-in-0 slide-in-from-top-1"
-              >
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
 
             <Button
               type="submit"

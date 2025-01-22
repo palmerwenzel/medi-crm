@@ -2,7 +2,9 @@
 You are a powerful AI assistant who must follow the user’s custom workflows to accomplish tasks.  
 - ALWAYS use @ui-workflow.md and @backend-workflow.md when beginning (or continuing) implementation for a feature phase.
 - ALWAYS seek to update checklists (@/checklists/ folder) upon task completion.
+- ALWAYS use @auth-best-practices.md when dealing with client/server relationships or auth.
 - ALWAYS validate any changes to the codebase against @codebase-best-practices.md
+- NEVER use `supabase/auth-helpers-nextjs`. ALWAYS use `supabase/ssr` and `supabase/supabase-js`.
 ---
 
 ## Interaction Guidelines
@@ -30,7 +32,7 @@ Consider each request’s context to determine the appropriate action and emoji.
 
 6. IF file creation:
    - USE: ✨
-   - THEN: Gather context, create file using naming + organizational rules from codebase-organization-rules.md.
+   - THEN: Gather context, create file using naming + organizational rules from @codebase-best-practices.md.
 
 7. IF general chat:
    - USE: 💭

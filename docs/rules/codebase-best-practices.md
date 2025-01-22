@@ -40,59 +40,58 @@ By following these practices, we ensure that all contributors (including AI-base
 
 Below is the folder structure for Next.js (App Router) + Supabase + Shadcn UI. It reflects our actual organization for maximum clarity and maintainability.
 ```
-my-crm  
-├── app  
-│   ├── (routes)  
-│   │   ├── layout.tsx            // Layout component for default page structure  
-│   │   ├── page.tsx              // Root page for the application  
-│   │   ├── api                   // API route handlers: e.g., /api/cases  
-│   │   │   └── cases  
-│   │   │       └── route.ts      // "POST/GET/PUT/DELETE" methods for case handling  
-│   │   └── ...other routes       // Additional routes (patients, admin, etc.)  
-│   └── (components)             // Shared UI elements (navbars, footers, etc.)  
-│       ├── header.tsx            // Example: header component  
-│       ├── sidebar.tsx           // Example: sidebar navigation component  
-│       └── ...  
-├── components  
-│   ├── forms  
-│   │   ├── patient-form.tsx      // Patient data form with Shadcn UI  
-│   │   └── staff-form.tsx        // Staff creation/edit form  
-│   ├── ui                        // Core Shadcn UI wrappers, custom Radix components  
-│   └── ...                       // Additional shared or feature-specific components  
-├── lib  
-│   ├── supabase                  // Supabase client and utilities  
-│   │   ├── client.ts             // Browser client using @supabase/ssr  
-│   │   ├── server.ts             // Server client using @supabase/ssr  
-│   │   ├── api.ts               // API helpers using @supabase/ssr  
-│   │   └── realtime.ts          // Realtime subscriptions using @supabase/supabase-js  
-│   ├── hooks                     // Custom React hooks (e.g., real-time DB updates)  
-│   │   └── use-something.ts      // Example: useRealtime, useAuth  
-│   ├── store                     // State management (if needed)  
-│   ├── utils                     // Utility functions and helpers  
-│   └── ai                        // AI utility folder (OpenAI integration, LLM logic)  
-│       └── triage-llm.ts         // Triage logic via OpenAI API  
-├── middleware                    // Next.js middleware (auth, routing)  
-│   └── auth.ts                   // Authentication and route protection  
-├── types  
-│   ├── supabase.ts              // Generated Supabase types  
-│   └── index.d.ts               // Global type declarations  
-├── styles  
-│   ├── globals.css              // Tailwind base, global style overrides  
-│   └── theme.css                // Additional CSS tokens for glassmorphic styling  
-├── docs  
-│   ├── project-info  
-│   │   └── tech-stack.md        // Already defined tech stack details  
-│   ├── rules  
-│   │   ├── tech-stack-rules.md  // Stack usage guidelines  
-│   │   ├── ui-rules.md          // UI building guidelines  
-│   │   ├── theme-rules.md       // Theme styles & color palette  
-│   │   └── codebase-best-practices.md // This file  
-│   └── ...                      // Additional docs & references  
-├── .eslintrc.js                 // ESLint config  
-├── tailwind.config.js           // Tailwind config + Shadcn theme tokens  
-├── tsconfig.json                // TypeScript config with strict settings  
-├── package.json                 // Dependencies + scripts  
-└── README.md                    // Overview of the project
+my-app
+├── app
+│   ├── (auth)                # Authentication-related routes
+│   │   ├── login
+│   │   │   ├── page.tsx      # Page for login
+│   │   │   ├── actions.ts    # Server actions for login flows
+│   │   │   └── login-form.tsx # Client-side form or UI component
+│   │   └── signup
+│   │       ├── page.tsx
+│   │       ├── actions.ts
+│   │       └── signup-form.tsx
+│   ├── (dashboard)           # Example feature area (e.g., main user dashboard)
+│   │   ├── page.tsx          # Main dashboard page
+│   │   ├── actions.ts        # Any server actions for dashboard operations
+│   │   └── widgets
+│   │       ├── stats-panel.tsx   # Client-side UI component
+│   │       └── data-fetch.ts     # (Optional) utility or server action
+│   └── layout.tsx            # Root-level layout (header, footer, etc.)
+├── components                # Shared, reusable UI components
+│   ├── forms
+│   │   └── basic-form.tsx    # Example form UI
+│   ├── ui                    # Reusable building blocks / Shadcn-based wrappers
+│   └── ...                   # Additional shared or feature-specific components
+├── lib
+│   ├── supabase
+│   │   ├── client.ts         # Browser-based Supabase client
+│   │   └── server.ts         # Server-based Supabase client
+│   ├── hooks
+│   │   └── use-something.ts  # Example hook (e.g., custom data fetching)
+│   ├── utils
+│   │   └── format-something.ts # Example utility function
+│   └── ...                   # Further utility modules or subfolders
+├── middleware
+│   └── auth.ts               # Example Next.js middleware for auth or route protection
+├── types
+│   └── supabase.ts           # Generated Supabase types or general type definitions
+├── styles
+│   ├── globals.css           # Tailwind base, global overrides
+│   ├── theme.css             # Theme-specific CSS tokens
+│   └── ...
+├── docs
+│   ├── rules
+│   │   ├── codebase-best-practices.md   # Best practices
+│   │   ├── auth-best-practices.md       # Auth patterns
+│   │   └── tech-stack-rules.md          # Technology usage guidelines
+│   └── project-info
+│       └── tech-stack.md               # Overview of chosen technologies
+├── .eslintrc.js
+├── tailwind.config.js
+├── tsconfig.json
+├── package.json
+└── README.md
 ```
 ---
 
@@ -101,22 +100,35 @@ my-crm
 1. Per-Feature Foldering  
    • Group files by feature or domain within the app or components folder. For example, all "patient" pages and components under "app/(routes)/patient" or "components/patient".
 
-2. Avoid Massive Files  
+2. Server Actions Pattern
+   • Each page with form submissions or server-side operations should have an accompanying `actions.ts` file
+   • The `actions.ts` file should contain all server actions, form handlers, and redirect logic
+   • Keep UI components focused on presentation, delegating business logic to actions
+   • Example structure:
+     ```
+     app/(auth)/login/
+     ├── page.tsx           // UI and component composition
+     ├── actions.ts         // Server actions, form handlers, redirects
+     └── loading.tsx        // Loading state (optional)
+     ```
+
+3. Avoid Massive Files  
    • For complex functions or large utilities, break them into smaller modules. If a single function becomes too large, divide it into multiple internal helper functions.
 
-3. Adherence to Tech-Stack Rules  
+4. Adherence to Tech-Stack Rules  
    • Follow [tech-stack-rules.md] for React, Next.js, Tailwind, Supabase, and Node.js best practices.  
    • Keep server-side and client-side logic separate, leveraging Next.js App Router features properly.
 
-4. Code Comments & Documentation  
+5. Code Comments & Documentation  
    • Place summary comments in your modules to clarify data flows (e.g., how supabase.ts integrates with the triage-llm.ts).  
    • For UI components, mention relevant references in [ui-rules.md] or [theme-rules.md] if you adopt special styling or accessibility design.
 
-5. Testing & Integration Flow  
+6. Testing & Integration Flow  
    • Tests for each module or feature reside alongside their code (e.g., patient-form.test.tsx or within a __tests__ subfolder).  
    • Rely on Jest for unit tests, React Testing Library for component tests, and (optionally) Cypress/Playwright for E2E.
 
-6. Supabase Integration  
+7. Supabase Integration  
+   • For authentication implementation, refer to [@auth-best-practices.md] for detailed patterns and best practices.
    • Use @supabase/ssr for all Next.js App Router integrations (server components, API routes, middleware).  
    • Use @supabase/supabase-js for testing and client-side realtime features.  
    • NEVER use @supabase/auth-helpers-nextjs (deprecated).  
@@ -179,6 +191,7 @@ When adding a new file, follow these steps:
 • [tech-stack-rules.md] – Stack-specific best practices  
 • [ui-rules.md] – UI building principles (desktop-first, animations, accessibility)  
 • [theme-rules.md] – Theming (dark-mode, glassmorphism, accent colors)  
+• [auth-best-practices.md] – Authentication implementation patterns and best practices
 
 ---
 

@@ -2,6 +2,8 @@
 
 This phase implements the core case/ticket functionality. Items are marked as either MVP (required for initial release) or Enhancement (can be deferred).
 
+For all authentication and authorization implementations, refer to [@auth-best-practices.md] for detailed patterns and best practices.
+
 ---
 
 ## MVP Requirements
@@ -14,9 +16,10 @@ This phase implements the core case/ticket functionality. Items are marked as ei
    - status (e.g., "Open," "In Progress," "Resolved")  
    - created_at, updated_at timestamps
 
-[x] BACKEND: Implement essential RLS policies:  
+[x] BACKEND: Implement essential RLS policies (following @auth-best-practices.md):  
    - Patients can create cases and view their own
    - Staff can view all cases
+   - Use JWT claims for role-based access
 
 [x] BACKEND: Create basic Next.js API routes (/api/cases):  
    - Create new case

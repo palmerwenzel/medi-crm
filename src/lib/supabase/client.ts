@@ -33,4 +33,4 @@ export function createClient() {
 }
 
 // Export a singleton instance for use in client components
-export const supabase = createClient() 
+export const supabase = createClient() as ReturnType<typeof createBrowserClient<Database>> 

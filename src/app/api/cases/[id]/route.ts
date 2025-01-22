@@ -38,13 +38,13 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, session } = await createApiClient()
+    const { supabase, user } = await createApiClient()
 
     // Get user role
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (userError) throw userError
@@ -63,7 +63,7 @@ export async function PATCH(
 
       if (caseError) throw caseError
       if (!caseData) throw new Error('Case not found')
-      if (caseData.patient_id !== session.user.id) {
+      if (caseData.patient_id !== user.id) {
         throw new Error('You can only update your own cases')
       }
     }
@@ -94,13 +94,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, session } = await createApiClient()
+    const { supabase, user } = await createApiClient()
 
     // Get user role
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (userError) throw userError

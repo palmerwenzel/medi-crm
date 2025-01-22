@@ -10,8 +10,8 @@ import { createApiClient, handleApiError } from '@/lib/supabase/api'
  */
 export async function GET() {
   try {
-    const { supabase, session } = await createApiClient()
-    if (!session?.user) {
+    const { supabase, user } = await createApiClient()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -36,8 +36,8 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { supabase, session } = await createApiClient()
-    if (!session?.user) {
+    const { supabase, user } = await createApiClient()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (userData?.role !== 'patient') {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       .from('cases')
       .insert([
         {
-          patient_id: session.user.id,
+          patient_id: user.id,
           title: validatedData.title,
           description: validatedData.description,
           status: 'open'
