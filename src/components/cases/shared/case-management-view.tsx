@@ -7,9 +7,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { FilterBar } from './filter-bar'
-import { BulkActionBar } from './bulk-action-bar'
-import { StaffToolbar } from '../staff/staff-toolbar'
+import { FilterBar } from '@/components/cases/shared/filter-bar'
+import { BulkActionBar } from '@/components/cases/shared/bulk-action-bar'
+import { StaffToolbar } from '@/components/cases/staff/staff-toolbar'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,11 +19,13 @@ import { CaseListItem } from './case-list-item'
 import { useCaseManagement } from './hooks/use-case-list'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
+import type { CaseFilters } from './filter-bar'
 
 interface CaseManagementViewProps {
   basePath?: string
   showNotes?: boolean
   isDashboard?: boolean
+  showActions?: boolean
 }
 
 // Loading skeleton for case items
@@ -53,9 +55,22 @@ function CaseItemSkeleton() {
   )
 }
 
-export function CaseManagementView({ basePath = '/cases', showNotes = false, isDashboard = false }: CaseManagementViewProps) {
+export function CaseManagementView({ 
+  basePath = '/cases', 
+  showNotes = false, 
+  isDashboard = false,
+  showActions = true 
+}: CaseManagementViewProps) {
   const { userRole } = useAuth()
   const { ref, inView } = useInView()
+  const [filters, setFilters] = useState<CaseFilters>({
+    status: 'all',
+    priority: 'all',
+    search: '',
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  })
+
   const {
     cases,
     filteredCases,
@@ -70,6 +85,12 @@ export function CaseManagementView({ basePath = '/cases', showNotes = false, isD
     handleBulkStatusChange,
     handleBulkAssignmentChange
   } = useCaseManagement({ isDashboard })
+
+  // Handle filter changes
+  const onFilterChange = useCallback((newFilters: CaseFilters) => {
+    setFilters(newFilters)
+    handleFilterChange(newFilters)
+  }, [handleFilterChange])
 
   // Load more cases when scrolling to the bottom
   useEffect(() => {
@@ -113,8 +134,11 @@ export function CaseManagementView({ basePath = '/cases', showNotes = false, isD
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <FilterBar onFilterChange={handleFilterChange} />
-        {selectedCases.length > 0 && (
+        <FilterBar 
+          filters={filters} 
+          onFilterChange={onFilterChange} 
+        />
+        {showActions && selectedCases.length > 0 && (
           <div className="flex items-center gap-2" role="toolbar" aria-label="Bulk actions">
             <Button 
               variant="outline" 

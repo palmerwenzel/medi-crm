@@ -108,6 +108,10 @@ export const caseQuerySchema = z.object({
   search: z.string().optional(),
   sort_by: z.enum(['created_at', 'updated_at', 'priority']).default('created_at'),
   sort_order: z.enum(['asc', 'desc']).default('desc'),
+  date_range: z.object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional()
+  }).optional()
 })
 
 export type CaseQueryParams = z.infer<typeof caseQuerySchema>

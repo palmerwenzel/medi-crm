@@ -16,15 +16,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { CaseFilters } from './filter-bar'
+import type { CaseStatus, CasePriority, CaseQueryParams } from '@/lib/validations/case'
+
+// UI-friendly version of CaseQueryParams
+export interface CaseFilters {
+  status?: CaseStatus | 'all'
+  priority?: CasePriority | 'all'
+  search?: string
+  sortBy?: CaseQueryParams['sort_by']
+  sortOrder?: CaseQueryParams['sort_order']
+  dateRange?: CaseQueryParams['date_range']
+}
 
 interface FilterBarProps {
+  filters: CaseFilters
   onFilterChange: (filters: CaseFilters) => void
   className?: string
 }
 
-export function FilterBar({ onFilterChange, className }: FilterBarProps) {
-  const [filters, setFilters] = useState<CaseFilters>({
+export function FilterBar({ filters, onFilterChange, className }: FilterBarProps) {
+  const [localFilters, setLocalFilters] = useState<CaseFilters>({
     status: 'all',
     priority: 'all',
     search: '',
@@ -33,10 +44,10 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
   })
 
   const handleFilterChange = useCallback((key: keyof CaseFilters, value: any) => {
-    const newFilters = { ...filters, [key]: value }
-    setFilters(newFilters)
+    const newFilters = { ...localFilters, [key]: value }
+    setLocalFilters(newFilters)
     onFilterChange(newFilters)
-  }, [filters, onFilterChange])
+  }, [localFilters, onFilterChange])
 
   return (
     <div className={className} role="search" aria-label="Case filters">
@@ -45,7 +56,7 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search cases..."
-            value={filters.search}
+            value={localFilters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="pl-8"
             aria-label="Search cases"
@@ -53,8 +64,8 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
         </div>
 
         <Select
-          value={filters.status}
-          onValueChange={(value) => handleFilterChange('status', value)}
+          value={localFilters.status}
+          onValueChange={(value) => handleFilterChange('status', value as CaseStatus | 'all')}
           name="status"
         >
           <SelectTrigger className="w-[140px]" aria-label="Filter by status">
@@ -69,8 +80,8 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
         </Select>
 
         <Select
-          value={filters.priority}
-          onValueChange={(value) => handleFilterChange('priority', value)}
+          value={localFilters.priority}
+          onValueChange={(value) => handleFilterChange('priority', value as CasePriority | 'all')}
           name="priority"
         >
           <SelectTrigger className="w-[140px]" aria-label="Filter by priority">
@@ -86,8 +97,8 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
         </Select>
 
         <Select
-          value={filters.sortBy}
-          onValueChange={(value) => handleFilterChange('sortBy', value)}
+          value={localFilters.sortBy}
+          onValueChange={(value) => handleFilterChange('sortBy', value as 'created_at' | 'updated_at' | 'priority')}
           name="sortBy"
         >
           <SelectTrigger className="w-[140px]" aria-label="Sort by field">
@@ -96,14 +107,12 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
           <SelectContent>
             <SelectItem value="created_at">Created Date</SelectItem>
             <SelectItem value="updated_at">Updated Date</SelectItem>
-            <SelectItem value="title">Title</SelectItem>
             <SelectItem value="priority">Priority</SelectItem>
-            <SelectItem value="status">Status</SelectItem>
           </SelectContent>
         </Select>
 
         <Select
-          value={filters.sortOrder}
+          value={localFilters.sortOrder}
           onValueChange={(value) => handleFilterChange('sortOrder', value as 'asc' | 'desc')}
           name="sortOrder"
         >
@@ -126,7 +135,7 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
               sortBy: 'created_at',
               sortOrder: 'desc'
             }
-            setFilters(defaultFilters)
+            setLocalFilters(defaultFilters)
             onFilterChange(defaultFilters)
           }}
           aria-label="Reset all filters"
