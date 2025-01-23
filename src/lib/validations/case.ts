@@ -94,4 +94,28 @@ export const assignCaseSchema = z.object({
   assigned_to: z.string().uuid().nullable(),
 })
 
-export type AssignCaseInput = z.infer<typeof assignCaseSchema> 
+export type AssignCaseInput = z.infer<typeof assignCaseSchema>
+
+// Schema for case query parameters
+export const caseQuerySchema = z.object({
+  limit: z.number().min(1).max(100).default(20),
+  offset: z.number().min(0).default(0),
+  status: z.enum(caseStatusEnum).optional(),
+  priority: z.enum(casePriorityEnum).optional(),
+  category: z.enum(caseCategoryEnum).optional(),
+  department: z.enum(departmentEnum).optional(),
+  assigned_to: z.string().uuid().nullable().optional(),
+  search: z.string().optional(),
+  sort_by: z.enum(['created_at', 'updated_at', 'priority']).default('created_at'),
+  sort_order: z.enum(['asc', 'desc']).default('desc'),
+})
+
+export type CaseQueryParams = z.infer<typeof caseQuerySchema>
+
+// Schema for paginated case response
+export interface PaginatedCaseResponse {
+  cases: CaseResponse[]
+  total: number
+  hasMore: boolean
+  nextOffset?: number
+} 

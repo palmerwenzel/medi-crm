@@ -6,17 +6,17 @@ This phase enhances the basic case management with improved UX and additional fe
 
 ## MVP Requirements
 
-[ ] FRONTEND: Basic patient case overview:
+[x] FRONTEND: Basic patient case overview:
    - List of cases with status
    - Simple view/edit actions
    - Basic mobile responsiveness
 
-[ ] FRONTEND: Essential staff case queue:
+[x] FRONTEND: Essential staff case queue:
    - List all cases
    - Basic status updates
    - Simple case details view
 
-[ ] BACKEND: Basic data fetching:
+[x] BACKEND: Basic data fetching:
    - Efficient case listing queries
    - Simple status updates
    - Basic error handling

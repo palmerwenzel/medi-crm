@@ -5,8 +5,9 @@
  */
 'use client'
 
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { useState, useCallback } from 'react'
+import { Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -15,126 +16,124 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Search, SlidersHorizontal } from 'lucide-react'
-import { DatePickerWithRange } from '@/components/ui/date-range-picker'
-import { addDays } from 'date-fns'
-import { type DateRange } from 'react-day-picker'
-import { useAuth } from '@/providers/auth-provider'
+import type { CaseFilters } from './filter-bar'
 
 interface FilterBarProps {
   onFilterChange: (filters: CaseFilters) => void
   className?: string
 }
 
-export interface CaseFilters {
-  search?: string
-  status?: string
-  priority?: string
-  dateRange?: DateRange
-}
-
-const statusOptions = [
-  { value: 'all', label: 'All Status' },
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'resolved', label: 'Resolved' },
-]
-
-const priorityOptions = [
-  { value: 'all', label: 'All Priority' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
-]
-
 export function FilterBar({ onFilterChange, className }: FilterBarProps) {
-  const { userRole } = useAuth()
-  const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<CaseFilters>({
-    search: '',
     status: 'all',
     priority: 'all',
-    dateRange: {
-      from: new Date(),
-      to: addDays(new Date(), 7),
-    },
+    search: '',
+    sortBy: 'created_at',
+    sortOrder: 'desc'
   })
 
-  const handleFilterChange = (newFilters: Partial<CaseFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters }
-    setFilters(updatedFilters)
-    onFilterChange(updatedFilters)
-  }
-
-  // Patients can only see basic filters
-  const isStaffOrAdmin = ['staff', 'admin'].includes(userRole || '')
+  const handleFilterChange = useCallback((key: keyof CaseFilters, value: any) => {
+    const newFilters = { ...filters, [key]: value }
+    setFilters(newFilters)
+    onFilterChange(newFilters)
+  }, [filters, onFilterChange])
 
   return (
-    <div className={cn('space-y-2', className)}>
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className={className} role="search" aria-label="Case filters">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search cases..."
-            className="pl-8"
             value={filters.search}
-            onChange={(e) => handleFilterChange({ search: e.target.value })}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            className="pl-8"
+            aria-label="Search cases"
           />
         </div>
-        {isStaffOrAdmin && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(showFilters && 'bg-accent')}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-        )}
+
+        <Select
+          value={filters.status}
+          onValueChange={(value) => handleFilterChange('status', value)}
+          name="status"
+        >
+          <SelectTrigger className="w-[140px]" aria-label="Filter by status">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.priority}
+          onValueChange={(value) => handleFilterChange('priority', value)}
+          name="priority"
+        >
+          <SelectTrigger className="w-[140px]" aria-label="Filter by priority">
+            <SelectValue placeholder="Priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priority</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.sortBy}
+          onValueChange={(value) => handleFilterChange('sortBy', value)}
+          name="sortBy"
+        >
+          <SelectTrigger className="w-[140px]" aria-label="Sort by field">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Created Date</SelectItem>
+            <SelectItem value="updated_at">Updated Date</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.sortOrder}
+          onValueChange={(value) => handleFilterChange('sortOrder', value as 'asc' | 'desc')}
+          name="sortOrder"
+        >
+          <SelectTrigger className="w-[140px]" aria-label="Sort order">
+            <SelectValue placeholder="Sort order" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="desc">Newest First</SelectItem>
+            <SelectItem value="asc">Oldest First</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant="outline"
+          onClick={() => {
+            const defaultFilters: CaseFilters = {
+              status: 'all',
+              priority: 'all',
+              search: '',
+              sortBy: 'created_at',
+              sortOrder: 'desc'
+            }
+            setFilters(defaultFilters)
+            onFilterChange(defaultFilters)
+          }}
+          aria-label="Reset all filters"
+        >
+          Reset Filters
+        </Button>
       </div>
-
-      {showFilters && isStaffOrAdmin && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-4">
-          <Select
-            value={filters.status}
-            onValueChange={(value: string) => handleFilterChange({ status: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={filters.priority}
-            onValueChange={(value: string) => handleFilterChange({ priority: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              {priorityOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <DatePickerWithRange
-            value={filters.dateRange}
-            onChange={(range) => handleFilterChange({ dateRange: range })}
-          />
-        </div>
-      )}
     </div>
   )
 } 

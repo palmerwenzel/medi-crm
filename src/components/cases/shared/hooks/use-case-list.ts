@@ -1,8 +1,13 @@
-import { useState, useCallback } from 'react'
-import { createClient } from '@/utils/supabase/client'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import type { CaseResponse, CaseStatus } from '@/lib/validations/case'
+import { getCases } from '@/lib/actions/cases'
+import type { 
+  CaseResponse, 
+  CaseStatus,
+  CaseQueryParams,
+  PaginatedCaseResponse 
+} from '@/lib/validations/case'
 import type { CaseFilters } from '../filter-bar'
 import { updateCaseStatuses, assignCases } from '@/lib/actions/cases'
 
@@ -22,122 +27,123 @@ interface UseCaseManagementReturn {
   selectedCases: string[]
   staffMembers: StaffMember[]
   isLoading: boolean
+  hasMore: boolean
   loadCases: () => Promise<void>
+  loadMore: () => Promise<void>
   handleFilterChange: (filters: CaseFilters) => void
   handleSelectAll: () => void
   handleDeselectAll: () => void
   handleCaseSelect: (caseId: string) => void
-  handleBulkStatusChange: (status: string) => Promise<void>
+  handleBulkStatusChange: (status: CaseStatus) => Promise<void>
   handleBulkAssignmentChange: (userId: string) => Promise<void>
 }
 
-export function useCaseManagement({ limit, isDashboard }: UseCaseManagementOptions): UseCaseManagementReturn {
+/**
+ * Hook for managing case data with pagination and filtering
+ */
+export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagementOptions): UseCaseManagementReturn {
   const { user, userRole } = useAuth()
   const [cases, setCases] = useState<CaseResponse[]>([])
   const [filteredCases, setFilteredCases] = useState<CaseResponse[]>([])
   const [selectedCases, setSelectedCases] = useState<string[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const [hasMore, setHasMore] = useState(false)
+  const [offset, setOffset] = useState(0)
+  const [currentFilters, setCurrentFilters] = useState<Partial<CaseQueryParams>>({})
   const { toast } = useToast()
 
   const loadCases = useCallback(async () => {
     if (!user) return
 
-    let query = supabase
-      .from('cases')
-      .select(`
-        *,
-        assigned_to:users!cases_assigned_to_fkey(id, first_name, last_name),
-        patient:users!cases_patient_id_fkey(id, first_name, last_name)
-      `)
-      .order('created_at', { ascending: false })
+    try {
+      setIsLoading(true)
+      const result = await getCases({
+        limit,
+        offset: 0,
+        ...currentFilters
+      })
 
-    // Role-based filtering
-    switch (userRole) {
-      case 'patient':
-        query = query.eq('patient_id', user.id)
-        break
-      case 'staff':
-        query = query.eq('assigned_to', user.id)
-        break
-      // Admin sees all cases
+      // Handle both success and empty results
+      if (result.success) {
+        const data = result.data as PaginatedCaseResponse
+        setCases(data.cases)
+        setFilteredCases(data.cases)
+        setHasMore(data.hasMore)
+        setOffset(limit)
+      } else {
+        // Only show error toast if it's not just empty
+        console.error('Failed to fetch cases:', result.error)
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to load cases',
+          variant: 'destructive',
+        })
+        // Reset to empty state
+        setCases([])
+        setFilteredCases([])
+        setHasMore(false)
+        setOffset(0)
+      }
+    } catch (error) {
+      console.error('Unexpected error loading cases:', error)
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      })
+      // Reset to empty state
+      setCases([])
+      setFilteredCases([])
+      setHasMore(false)
+      setOffset(0)
+    } finally {
+      setIsLoading(false)
     }
+  }, [user, limit, currentFilters, toast])
 
-    if (limit) {
-      query = query.limit(limit)
+  const loadMore = useCallback(async () => {
+    if (!user || !hasMore) return
+
+    try {
+      const result = await getCases({
+        limit,
+        offset,
+        ...currentFilters
+      })
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      const data = result.data as PaginatedCaseResponse
+      setCases(prev => [...prev, ...data.cases])
+      setFilteredCases(prev => [...prev, ...data.cases])
+      setHasMore(data.hasMore)
+      setOffset(prev => prev + limit)
+    } catch (error) {
+      console.error('Failed to fetch more cases:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load more cases',
+        variant: 'destructive',
+      })
     }
+  }, [user, hasMore, offset, limit, currentFilters, toast])
 
-    const { data, error } = await query
-    
-    if (error) {
-      console.error('Failed to fetch cases:', error)
-      return
-    }
-
-    setCases(data || [])
-    setFilteredCases(data || [])
-    setIsLoading(false)
-  }, [user, userRole, limit, supabase])
-
-  // Load staff members for assignment
-  const loadStaffMembers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('role', 'staff')
-      .order('first_name')
-
-    if (error) {
-      console.error('Failed to load staff members:', error)
-      return
-    }
-
-    setStaffMembers(
-      data.map(staff => ({
-        id: staff.id,
-        name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim()
-      }))
-    )
-  }, [supabase])
-
-  // Handle filter changes
   const handleFilterChange = useCallback((filters: CaseFilters) => {
-    let filtered = [...cases]
-
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(case_ => 
-        case_.title.toLowerCase().includes(searchLower) ||
-        case_.description.toLowerCase().includes(searchLower)
-      )
+    // Convert UI filters to API query params
+    const queryParams: Partial<CaseQueryParams> = {
+      status: filters.status === 'all' ? undefined : filters.status,
+      priority: filters.priority === 'all' ? undefined : filters.priority,
+      search: filters.search,
+      sort_by: filters.sortBy,
+      sort_order: filters.sortOrder
     }
 
-    if (filters.status && filters.status !== 'all') {
-      filtered = filtered.filter(case_ => case_.status === filters.status)
-    }
-
-    if (filters.priority && filters.priority !== 'all') {
-      filtered = filtered.filter(case_ => case_.priority === filters.priority)
-    }
-
-    if (filters.dateRange?.from) {
-      filtered = filtered.filter(case_ => {
-        const caseDate = new Date(case_.created_at)
-        const fromDate = new Date(filters.dateRange!.from!)
-        return caseDate >= fromDate
-      })
-    }
-    if (filters.dateRange?.to) {
-      filtered = filtered.filter(case_ => {
-        const caseDate = new Date(case_.created_at)
-        const toDate = new Date(filters.dateRange!.to!)
-        return caseDate <= toDate
-      })
-    }
-
-    setFilteredCases(filtered)
-  }, [cases])
+    setCurrentFilters(queryParams)
+    loadCases() // Reload with new filters
+  }, [loadCases])
 
   // Handle bulk selection
   const handleSelectAll = useCallback(() => {
@@ -158,53 +164,64 @@ export function useCaseManagement({ limit, isDashboard }: UseCaseManagementOptio
   }, [])
 
   // Handle bulk actions
-  const handleBulkStatusChange = useCallback(async (status: string) => {
+  const handleBulkStatusChange = useCallback(async (status: CaseStatus) => {
+    if (selectedCases.length === 0) return
+
     try {
-      const result = await updateCaseStatuses(selectedCases, status as CaseStatus)
-      
+      const result = await updateCaseStatuses(selectedCases, status)
       if (!result.success) {
         throw new Error(result.error)
       }
-
-      toast({
-        title: 'Status Updated',
-        description: `Successfully updated ${selectedCases.length} cases.`,
-      })
-
-      setSelectedCases([])
+      
+      // Refresh cases after update
       await loadCases()
-    } catch (err) {
+      setSelectedCases([])
+      
+      toast({
+        title: 'Success',
+        description: 'Cases updated successfully',
+      })
+    } catch (error) {
+      console.error('Failed to update cases:', error)
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to update cases',
+        description: 'Failed to update cases',
         variant: 'destructive',
       })
     }
   }, [selectedCases, loadCases, toast])
 
   const handleBulkAssignmentChange = useCallback(async (userId: string) => {
+    if (selectedCases.length === 0) return
+
     try {
       const result = await assignCases(selectedCases, userId)
-      
       if (!result.success) {
         throw new Error(result.error)
       }
-
-      toast({
-        title: 'Cases Assigned',
-        description: `Successfully assigned ${selectedCases.length} cases.`,
-      })
-
-      setSelectedCases([])
+      
+      // Refresh cases after update
       await loadCases()
-    } catch (err) {
+      setSelectedCases([])
+      
+      toast({
+        title: 'Success',
+        description: 'Cases assigned successfully',
+      })
+    } catch (error) {
+      console.error('Failed to assign cases:', error)
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to assign cases',
+        description: 'Failed to assign cases',
         variant: 'destructive',
       })
     }
   }, [selectedCases, loadCases, toast])
+
+  // Initial load
+  useEffect(() => {
+    loadCases()
+  }, [loadCases])
 
   return {
     cases,
@@ -212,7 +229,9 @@ export function useCaseManagement({ limit, isDashboard }: UseCaseManagementOptio
     selectedCases,
     staffMembers,
     isLoading,
+    hasMore,
     loadCases,
+    loadMore,
     handleFilterChange,
     handleSelectAll,
     handleDeselectAll,

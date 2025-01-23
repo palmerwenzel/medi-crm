@@ -82,17 +82,36 @@ export function NewCaseForm() {
   const onSubmit = async (data: CreateCaseInput) => {
     try {
       setIsSubmitting(true)
-      await createCase(data)
+      const loadingToast = toast({
+        title: 'Creating case...',
+        description: 'Please wait while we create your case.',
+        variant: 'loading',
+      })
+
+      const result = await createCase(data)
+      
+      if (!result.success) {
+        loadingToast.dismiss()
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to create case',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      loadingToast.dismiss()
       toast({
         title: 'Success',
         description: 'Case created successfully',
       })
       form.reset()
+      router.push('/cases')
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to create case. Please try again.',
-        variant: 'destructive',
+        description: error instanceof Error ? error.message : 'Failed to create case. Please try again.',
+        variant: 'destructive'
       })
     } finally {
       setIsSubmitting(false)

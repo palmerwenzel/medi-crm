@@ -75,5 +75,5 @@ export async function addCaseNote(caseId: string, staffId: string, content: stri
     throw error
   }
 
-  revalidatePath(`/dashboard/cases/${caseId}`)
+  revalidatePath(`/cases/${caseId}`)
 } 

@@ -31,9 +31,7 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
     : 'Unknown Patient'
 
   // Determine case URL based on role
-  const caseUrl = userRole === 'patient' 
-    ? `/dashboard/cases/${caseData.id}`
-    : `/cases/${caseData.id}`
+  const caseUrl = `/cases/${caseData.id}`
 
   // Determine what actions to show based on role
   const showAssignButton = userRole === 'staff' || userRole === 'admin'

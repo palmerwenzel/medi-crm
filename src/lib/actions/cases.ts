@@ -7,7 +7,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
-import { createCaseSchema, type CreateCaseInput, type CaseResponse } from '@/lib/validations/case'
+import { 
+  createCaseSchema, 
+  type CreateCaseInput, 
+  type CaseResponse,
+  type CaseQueryParams,
+  type PaginatedCaseResponse,
+  caseQuerySchema
+} from '@/lib/validations/case'
 
 type ActionResponse<T = void> = {
   success: boolean
@@ -16,21 +23,61 @@ type ActionResponse<T = void> = {
 }
 
 /**
- * Fetch cases for the current user
+ * Fetch cases for the current user with pagination and filtering
  * RLS policies ensure:
  * - Patients see their own cases
  * - Staff see cases in their department
  * - Admins see all cases
  */
-export async function getCases(): Promise<ActionResponse<CaseResponse[]>> {
+export async function getCases(params?: Partial<CaseQueryParams>): Promise<ActionResponse<PaginatedCaseResponse>> {
   try {
     const supabase = await createClient()
     
-    // Query cases - RLS will filter based on user role
-    const { data: cases, error: fetchError } = await supabase
+    // Validate and parse query parameters
+    const validatedParams = caseQuerySchema.parse({
+      limit: 20,
+      offset: 0,
+      sort_by: 'created_at',
+      sort_order: 'desc',
+      ...params
+    })
+
+    // Start building the query
+    let query = supabase
       .from('cases')
-      .select('*, patient:users(first_name, last_name)')
-      .order('created_at', { ascending: false })
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(id, first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(id, first_name, last_name)
+      `, { count: 'exact' })
+
+    // Apply filters if provided
+    if (validatedParams.status) {
+      query = query.eq('status', validatedParams.status)
+    }
+    if (validatedParams.priority) {
+      query = query.eq('priority', validatedParams.priority)
+    }
+    if (validatedParams.category) {
+      query = query.eq('category', validatedParams.category)
+    }
+    if (validatedParams.department) {
+      query = query.eq('department', validatedParams.department)
+    }
+    if (validatedParams.assigned_to !== undefined) {
+      query = query.eq('assigned_to', validatedParams.assigned_to)
+    }
+    if (validatedParams.search) {
+      query = query.or(`title.ilike.%${validatedParams.search}%,description.ilike.%${validatedParams.search}%`)
+    }
+
+    // Apply sorting and pagination
+    const { data: cases, error: fetchError, count } = await query
+      .order(validatedParams.sort_by, { ascending: validatedParams.sort_order === 'asc' })
+      .range(
+        validatedParams.offset,
+        validatedParams.offset + validatedParams.limit - 1
+      )
 
     if (fetchError) {
       console.error('Error fetching cases:', fetchError)
@@ -40,9 +87,19 @@ export async function getCases(): Promise<ActionResponse<CaseResponse[]>> {
       }
     }
 
+    // Calculate pagination metadata
+    const total = count || 0
+    const hasMore = total > validatedParams.offset + cases.length
+    const nextOffset = hasMore ? validatedParams.offset + validatedParams.limit : undefined
+
     return {
       success: true,
-      data: cases,
+      data: {
+        cases: cases || [],
+        total,
+        hasMore,
+        nextOffset
+      }
     }
   } catch (error) {
     console.error('Error in getCases:', error)
@@ -64,10 +121,25 @@ export async function createCase(input: CreateCaseInput): Promise<ActionResponse
     
     const supabase = await createClient()
     
-    // Create case - RLS will verify the user is a patient
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError)
+      return {
+        success: false,
+        error: 'Not authenticated',
+      }
+    }
+    
+    // Create case with patient_id set to current user
     const { error: createError } = await supabase
       .from('cases')
-      .insert(validatedInput)
+      .insert({
+        ...validatedInput,
+        patient_id: user.id,
+        status: 'open', // Set default status
+      })
 
     if (createError) {
       console.error('Error creating case:', createError)
@@ -77,7 +149,7 @@ export async function createCase(input: CreateCaseInput): Promise<ActionResponse
       }
     }
 
-    revalidatePath('/dashboard/cases')
+    revalidatePath('/cases')
     return { success: true }
   } catch (error) {
     console.error('Error in createCase:', error)
@@ -115,7 +187,7 @@ export async function updateCaseStatuses(
       }
     }
 
-    revalidatePath('/dashboard/cases')
+    revalidatePath('/cases')
     return { success: true }
   } catch (error) {
     console.error('Error in updateCaseStatuses:', error)
@@ -153,7 +225,7 @@ export async function assignCases(
       }
     }
 
-    revalidatePath('/dashboard/cases')
+    revalidatePath('/cases')
     return { success: true }
   } catch (error) {
     console.error('Error in assignCases:', error)

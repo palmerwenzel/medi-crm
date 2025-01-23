@@ -35,6 +35,14 @@ const log = process.env.NODE_ENV === 'development'
   ? (...args: any[]) => console.log('[Auth]:', ...args)
   : () => {}
 
+// Add performance logging
+const logPerformance = process.env.NODE_ENV === 'development'
+  ? (label: string, startTime: number) => {
+      const duration = performance.now() - startTime
+      console.log(`[Auth Performance]: ${label} took ${duration.toFixed(2)}ms`)
+    }
+  : () => {}
+
 // Add utility for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -91,15 +99,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Memoize the role fetch function to share between handlers
   const fetchUserRole = useMemo(() => async (user: User) => {
+    const startTime = performance.now()
     log('Fetching user role...')
     log('Using user ID:', user.id)
     
-    // Add initial delay to allow session to establish
-    await delay(500)
+    // NOTE: This delay was added to prevent race conditions on initial page load
+    // where the role fetch might happen before the session is fully established.
+    // If you see session/role sync issues on first load, consider re-enabling this.
+    // await delay(500)
     
     try {
+      const roleStartTime = performance.now()
       const { data: userData, error: roleError } = await retryWithBackoff<{
-        data: Database['public']['Tables']['users']['Row'] | null,
+        data: Pick<Database['public']['Tables']['users']['Row'], 'role'> | null,
         error: any
       }>(
         async () => {
@@ -113,14 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => reject(new Error('Role fetch timed out after 5s')), 5000)
           })
 
-          return Promise.race([rolePromise, timeoutPromise]) as Promise<{
-            data: Database['public']['Tables']['users']['Row'] | null,
-            error: any
-          }>
-        },
-        3,  // max attempts
-        1000 // initial delay
+          return Promise.race([rolePromise, timeoutPromise])
+        }
       )
+      logPerformance('Supabase role query', roleStartTime)
 
       if (roleError) {
         log('Error fetching role after retries:', roleError)
@@ -129,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userRole: null,
           loading: false
         }))
+        logPerformance('Total role fetch (error)', startTime)
         return
       }
 
@@ -143,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       log('Role fetch result:', { userData, error: roleError })
+      logPerformance('Total role fetch (success)', startTime)
 
       // Only update state if data has changed
       setState(prev => {
@@ -159,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error) {
       log('All role fetch retries failed:', error)
+      logPerformance('Total role fetch (failed)', startTime)
       setState(prev => ({
         user,
         userRole: null,

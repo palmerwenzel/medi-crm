@@ -87,12 +87,11 @@ export function PatientDashboard() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Recent Cases</h2>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/cases">View All Cases</Link>
+            <Link href="/cases">View All Cases</Link>
           </Button>
         </div>
 
         <CaseManagementView 
-          limit={3}
           isDashboard={true}
         />
       </div>

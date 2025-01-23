@@ -25,19 +25,24 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all backdrop-blur-[2px] data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
   {
     variants: {
       variant: {
-        default: "border bg-background/95 text-foreground supports-[backdrop-filter]:bg-background/60",
+        default: "border bg-background text-foreground",
         destructive:
-          "destructive group border-destructive bg-destructive/95 text-destructive-foreground supports-[backdrop-filter]:bg-destructive/80",
+          "destructive group border-destructive bg-destructive text-destructive-foreground",
+        loading: "border bg-background text-foreground",
       },
     },
     defaultVariants: {
       variant: "default",
     },
   }
+)
+
+const LoadingSpinner = () => (
+  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
 )
 
 const Toast = React.forwardRef<
@@ -50,7 +55,10 @@ const Toast = React.forwardRef<
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {variant === 'loading' && <LoadingSpinner />}
+      {props.children}
+    </ToastPrimitives.Root>
   )
 })
 Toast.displayName = ToastPrimitives.Root.displayName

@@ -66,9 +66,7 @@ function ErrorState({ message }: { message: string }) {
 // Individual case card
 function CaseCard({ case: caseData }: { case: CaseResponse }) {
   const { userRole } = useAuth()
-  const caseUrl = userRole === 'patient' 
-    ? `/dashboard/cases/${caseData.id}`
-    : `/cases/${caseData.id}`
+  const caseUrl = `/cases/${caseData.id}`
 
   return (
     <Card className="h-full hover:bg-accent/5 transition-colors">
@@ -122,7 +120,7 @@ export function CaseGridView() {
         if (!result.success) {
           throw new Error(result.error)
         }
-        setCases(result.data || [])
+        setCases(result.data?.cases || [])
       } catch (err) {
         console.error('Error loading cases:', err)
         setError('Failed to load cases')
