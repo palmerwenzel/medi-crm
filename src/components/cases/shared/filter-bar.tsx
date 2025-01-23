@@ -37,6 +37,7 @@ import type {
   CasePriority, 
   CaseCategory,
   Department,
+  StaffSpecialty,
   CaseQueryParams 
 } from '@/lib/validations/case'
 import { cn } from '@/lib/utils'
@@ -45,12 +46,14 @@ import { MultiSelectFilter } from './filters/multi-select-filter'
 import { DateRangeFilter } from './filters/date-range-filter'
 import { SortControls } from './filters/sort-controls'
 import { ActiveFilters } from './filters/active-filters'
+import { TagFilter } from './filters/tag-filter'
 import type { CaseFilters, FilterBarProps } from '@/types/filters'
 import {
   caseStatusEnum,
   casePriorityEnum,
   caseCategoryEnum,
-  departmentEnum
+  departmentEnum,
+  staffSpecialtyEnum
 } from '@/lib/validations/case'
 
 export function FilterBar({
@@ -102,6 +105,16 @@ export function FilterBar({
           options={departmentEnum}
           values={filters.department === 'all' ? 'all' : Array.isArray(filters.department) ? filters.department : []}
           onChange={values => onFilterChange({ ...filters, department: values })}
+        />
+        <MultiSelectFilter
+          label="Specialty"
+          options={staffSpecialtyEnum}
+          values={filters.specialties === 'all' ? 'all' : Array.isArray(filters.specialties) ? filters.specialties : []}
+          onChange={values => onFilterChange({ ...filters, specialties: values })}
+        />
+        <TagFilter
+          values={filters.tags === 'all' ? 'all' : Array.isArray(filters.tags) ? filters.tags : []}
+          onChange={values => onFilterChange({ ...filters, tags: values })}
         />
         <DateRangeFilter
           value={filters.dateRange}

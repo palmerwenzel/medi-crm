@@ -25,10 +25,10 @@ This phase enhances the basic case management with improved UX and additional fe
 
 ## Enhancements (Post-MVP)
 
-[~] FRONTEND: Enhanced patient dashboard:
+[x] FRONTEND: Enhanced patient dashboard:
    - [x] Advanced sorting and filtering
-   - [ ] File attachments
-   - [ ] Rich case history
+   - [x] File attachments
+   - [x] Rich case history
 
 [ ] FRONTEND: Advanced staff features:
    - Priority-based filtering

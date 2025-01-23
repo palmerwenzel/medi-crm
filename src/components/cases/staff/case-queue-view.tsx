@@ -18,15 +18,23 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/providers/auth-provider'
 import { CaseManagementView } from '../shared/case-management-view'
+import { PerformanceMetrics } from './performance-metrics'
 import { Card } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCaseManagement } from '@/hooks/cases/use-case-management'
+import { cn } from '@/lib/utils'
 
-export function CaseQueueView() {
+interface CaseQueueViewProps {
+  className?: string
+}
+
+export function CaseQueueView({ className }: CaseQueueViewProps) {
   const { user, userRole, loading: authLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const { cases } = useCaseManagement({})
 
   // Redirect non-staff users
   useEffect(() => {
@@ -43,6 +51,7 @@ export function CaseQueueView() {
   if (authLoading) {
     return (
       <div className="space-y-4">
+        <Skeleton className="h-[200px] w-full rounded-lg" />
         <Skeleton className="h-[52px] w-full rounded-lg" />
         <Card className="relative overflow-hidden border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="space-y-4">
@@ -69,13 +78,20 @@ export function CaseQueueView() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
+        className={cn('space-y-4', className)}
       >
         <Card className="relative overflow-hidden border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <CaseManagementView
-            showActions={false}
-            isDashboard={false}
+          <PerformanceMetrics 
+            cases={cases} 
+            timeframe="week"
           />
         </Card>
+
+        <CaseManagementView
+          showNotes
+          showActions
+          isDashboard={false}
+        />
       </motion.div>
     </AnimatePresence>
   )

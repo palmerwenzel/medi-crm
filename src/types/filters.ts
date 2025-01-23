@@ -8,6 +8,7 @@ import type {
   CasePriority, 
   CaseCategory,
   Department,
+  StaffSpecialty,
   CaseQueryParams 
 } from '@/lib/validations/case'
 
@@ -19,6 +20,8 @@ export interface CaseFilters {
   priority?: CasePriority[] | 'all'
   category?: CaseCategory[] | 'all'
   department?: Department[] | 'all'
+  specialties?: StaffSpecialty[] | 'all'
+  tags?: string[] | 'all'
   search?: string
   sortBy?: CaseQueryParams['sort_by']
   sortOrder?: CaseQueryParams['sort_order']

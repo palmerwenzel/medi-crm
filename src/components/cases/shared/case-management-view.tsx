@@ -8,24 +8,28 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { FilterBar } from '@/components/cases/shared/filter-bar'
-import { BulkActionBar } from '@/components/cases/shared/bulk-action-bar'
 import { StaffToolbar } from '@/components/cases/staff/staff-toolbar'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import { useAuth } from '@/providers/auth-provider'
-import { CaseListItem } from './case-list-item'
-import { useCaseManagement } from './hooks/use-case-list'
+import { CaseListItem } from './case-list-item/index'
+import { useCaseManagement } from '@/hooks/cases/use-case-management'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import type { CaseFilters } from './filter-bar'
+import { CaseFilters } from '@/types/filters'
+import { BulkOperationsBar } from './bulk-operations'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import type { CaseResponse } from '@/lib/validations/case'
 
 interface CaseManagementViewProps {
   basePath?: string
   showNotes?: boolean
   isDashboard?: boolean
   showActions?: boolean
+  className?: string
 }
 
 // Loading skeleton for case items
@@ -59,7 +63,8 @@ export function CaseManagementView({
   basePath = '/cases', 
   showNotes = false, 
   isDashboard = false,
-  showActions = true 
+  showActions = true,
+  className
 }: CaseManagementViewProps) {
   const { userRole } = useAuth()
   const { ref, inView } = useInView()
@@ -83,7 +88,8 @@ export function CaseManagementView({
     handleDeselectAll,
     handleCaseSelect,
     handleBulkStatusChange,
-    handleBulkAssignmentChange
+    handleBulkAssignmentChange,
+    staffMembers
   } = useCaseManagement({ isDashboard })
 
   // Handle filter changes
@@ -123,16 +129,25 @@ export function CaseManagementView({
 
   if (isLoading) {
     return (
-      <div className="space-y-4" aria-busy="true" aria-label="Loading cases">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
+      <div className={cn('space-y-4', className)}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-6">
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-[250px]" />
+              <Skeleton className="h-4 w-[400px]" />
+              <div className="flex gap-2">
+                <Skeleton className="h-4 w-[100px]" />
+                <Skeleton className="h-4 w-[100px]" />
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
         <FilterBar 
           filters={filters} 
@@ -174,15 +189,22 @@ export function CaseManagementView({
         aria-live="polite"
       >
         {filteredCases.map((case_) => (
-          <CaseListItem
+          <motion.div
             key={case_.id}
-            case_={case_}
-            isSelected={selectedCases.includes(case_.id)}
-            onSelect={handleCaseSelect}
-            showNotes={showNotes}
-            basePath={basePath}
-            isStaffOrAdmin={userRole === 'staff' || userRole === 'admin'}
-          />
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <CaseListItem
+              case_={case_}
+              isSelected={selectedCases.includes(case_.id)}
+              onSelect={handleCaseSelect}
+              showNotes={showNotes}
+              basePath={basePath}
+              isStaffOrAdmin={userRole === 'staff' || userRole === 'admin'}
+            />
+          </motion.div>
         ))}
         {hasMore && (
           <div 
@@ -203,6 +225,16 @@ export function CaseManagementView({
           </div>
         )}
       </div>
+
+      {showActions && selectedCases.length > 0 && (
+        <BulkOperationsBar
+          selectedCount={selectedCases.length}
+          staffMembers={staffMembers}
+          onStatusChange={handleBulkStatusChange}
+          onAssignmentChange={handleBulkAssignmentChange}
+          onDeselectAll={handleDeselectAll}
+        />
+      )}
     </div>
   )
 } 

@@ -5,41 +5,28 @@ import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import type { CaseResponse, CaseStatus, CaseQueryParams } from '@/lib/validations/case'
-import type { CaseFilters } from '@/types/filters'
+import { staffSpecialtyEnum } from '@/lib/validations/case'
+import type { 
+  CaseResponse, 
+  CaseStatus, 
+  CaseQueryParams,
+  CasePriority,
+  CaseCategory,
+  CaseDepartment,
+  StaffSpecialty
+} from '@/lib/validations/case'
+import type { CaseFilters, CaseManagementOptions, CaseManagementReturn } from '@/types/cases'
 import type { StaffMember } from '@/types/staff'
 import { updateCaseStatuses, assignCases } from '@/lib/actions/cases'
 import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
 
-// Temporary type until we create staff types
-interface StaffMember {
-  id: string
-  name: string
-}
-
-interface UseCaseManagementOptions {
-  limit?: number
-  isDashboard?: boolean
-}
-
-interface UseCaseManagementReturn {
-  cases: CaseResponse[]
-  filteredCases: CaseResponse[]
-  selectedCases: string[]
-  staffMembers: StaffMember[]
-  isLoading: boolean
-  hasMore: boolean
-  loadCases: () => Promise<void>
-  loadMore: () => Promise<void>
-  handleFilterChange: (filters: CaseFilters) => void
-  handleSelectAll: () => void
-  handleDeselectAll: () => void
-  handleCaseSelect: (id: string) => void
-  handleBulkStatusChange: (status: CaseStatus) => Promise<void>
-  handleBulkAssignmentChange: (userId: string) => Promise<void>
-}
-
-export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagementOptions): UseCaseManagementReturn {
+/**
+ * Hook for managing case data, including filtering, selection, and bulk actions
+ */
+export function useCaseManagement({ 
+  limit = 20, 
+  isDashboard 
+}: CaseManagementOptions = {}): CaseManagementReturn {
   const { user, userRole } = useAuth()
   const [cases, setCases] = useState<CaseResponse[]>([])
   const [filteredCases, setFilteredCases] = useState<CaseResponse[]>([])
@@ -52,6 +39,7 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
   const supabase = createClient()
   const { toast } = useToast()
 
+  // Load cases with pagination and role-based filtering
   const loadCases = useCallback(async () => {
     if (!user) return
 
@@ -61,10 +49,10 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
         *,
         assigned_to:users!cases_assigned_to_fkey(id, first_name, last_name),
         patient:users!cases_patient_id_fkey(id, first_name, last_name)
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false })
 
-    // Role-based filtering
+    // Apply role-based filtering
     switch (userRole) {
       case 'patient':
         query = query.eq('patient_id', user.id)
@@ -75,74 +63,69 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
       // Admin sees all cases
     }
 
-    if (limit) {
-      query = query.limit(limit)
+    // Apply current filters
+    if (currentFilters.status) {
+      query = query.in('status', currentFilters.status)
+    }
+    if (currentFilters.priority) {
+      query = query.in('priority', currentFilters.priority)
+    }
+    if (currentFilters.category) {
+      query = query.in('category', currentFilters.category)
+    }
+    if (currentFilters.department) {
+      query = query.in('department', currentFilters.department)
+    }
+    if (currentFilters.specialties) {
+      query = query.contains('metadata->specialties', currentFilters.specialties)
+    }
+    if (currentFilters.search) {
+      query = query.or(`title.ilike.%${currentFilters.search}%,description.ilike.%${currentFilters.search}%`)
+    }
+    if (currentFilters.date_range?.from) {
+      query = query.gte('created_at', currentFilters.date_range.from)
+    }
+    if (currentFilters.date_range?.to) {
+      query = query.lte('created_at', currentFilters.date_range.to)
     }
 
-    const { data, error } = await query
-    
+    // Apply pagination
+    if (limit) {
+      query = query.range(offset, offset + limit - 1)
+    }
+
+    const { data, error, count } = await query
+
     if (error) {
       console.error('Failed to fetch cases:', error)
       return
     }
 
     setCases(data || [])
-    // Re-apply current filters to the new data
-    applyFilters(data || [], currentFilters)
+    setFilteredCases(data || [])
+    setHasMore(count ? offset + limit < count : false)
     setIsLoading(false)
-  }, [user, userRole, limit, supabase])
+  }, [user, userRole, limit, offset, currentFilters, supabase])
 
-  // Apply filters to cases
-  const applyFilters = useCallback((casesToFilter: CaseResponse[], filters: CaseFilters) => {
-    let filtered = [...casesToFilter]
-
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(case_ => 
-        case_.title.toLowerCase().includes(searchLower) ||
-        case_.description.toLowerCase().includes(searchLower)
-      )
-    }
-
-    if (filters.status && filters.status !== 'all') {
-      filtered = filtered.filter(case_ => case_.status === filters.status)
-    }
-
-    if (filters.priority && filters.priority !== 'all') {
-      filtered = filtered.filter(case_ => case_.priority === filters.priority)
-    }
-
-    if (filters.dateRange?.from) {
-      filtered = filtered.filter(case_ => {
-        const caseDate = new Date(case_.created_at)
-        const fromDate = new Date(filters.dateRange!.from!)
-        return caseDate >= fromDate
-      })
-    }
-    if (filters.dateRange?.to) {
-      filtered = filtered.filter(case_ => {
-        const caseDate = new Date(case_.created_at)
-        const toDate = new Date(filters.dateRange!.to!)
-        return caseDate <= toDate
-      })
-    }
-
-    setFilteredCases(filtered)
-  }, [])
+  // Load more cases (pagination)
+  const loadMore = useCallback(async () => {
+    if (!hasMore) return
+    setOffset(prev => prev + limit)
+  }, [hasMore, limit])
 
   // Handle filter changes
   const handleFilterChange = useCallback((filters: CaseFilters) => {
-    // Convert UI filters to API query params
     const queryParams: Partial<CaseQueryParams> = {
       status: filters.status === 'all' ? undefined : 
-        Array.isArray(filters.status) && filters.status.length === 1 ? filters.status[0] : undefined,
+        (Array.isArray(filters.status) ? filters.status.filter((s): s is CaseStatus => Boolean(s)) : [filters.status].filter((s): s is CaseStatus => Boolean(s))),
       priority: filters.priority === 'all' ? undefined :
-        Array.isArray(filters.priority) && filters.priority.length === 1 ? filters.priority[0] : undefined,
+        (Array.isArray(filters.priority) ? filters.priority.filter((p): p is CasePriority => Boolean(p)) : [filters.priority].filter((p): p is CasePriority => Boolean(p))),
       category: filters.category === 'all' ? undefined :
-        Array.isArray(filters.category) && filters.category.length === 1 ? filters.category[0] : undefined,
+        (Array.isArray(filters.category) ? filters.category.filter((c): c is CaseCategory => Boolean(c)) : [filters.category].filter((c): c is CaseCategory => Boolean(c))),
       department: filters.department === 'all' ? undefined :
-        Array.isArray(filters.department) && filters.department.length === 1 ? filters.department[0] : undefined,
-      specialties: filters.specialties === 'all' ? undefined : filters.specialties,
+        (Array.isArray(filters.department) ? filters.department.filter((d): d is CaseDepartment => Boolean(d)) : [filters.department].filter((d): d is CaseDepartment => Boolean(d))),
+      specialties: filters.specialties === 'all' ? undefined :
+        (Array.isArray(filters.specialties) ? filters.specialties.filter((s): s is StaffSpecialty => Boolean(s)) : [filters.specialties].filter((s): s is StaffSpecialty => Boolean(s))),
       search: filters.search,
       sort_by: filters.sortBy,
       sort_order: filters.sortOrder,
@@ -153,13 +136,13 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
     }
 
     setCurrentFilters(queryParams)
-    loadCases() // Reload with new filters
+    setOffset(0) // Reset pagination
+    loadCases()
   }, [loadCases])
 
   // Subscribe to real-time updates
   useCaseSubscription({
     onUpdate: (updatedCase) => {
-      // Only update if the case belongs to the current user (based on role)
       const shouldInclude = userRole === 'admin' || 
         (userRole === 'patient' && updatedCase.patient_id === user?.id) ||
         (userRole === 'staff' && updatedCase.assigned_to === user?.id)
@@ -167,13 +150,15 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
       if (shouldInclude) {
         setCases(prev => {
           const updated = prev.map(c => c.id === updatedCase.id ? updatedCase : c)
-          applyFilters(updated, currentFilters)
+          return updated
+        })
+        setFilteredCases(prev => {
+          const updated = prev.map(c => c.id === updatedCase.id ? updatedCase : c)
           return updated
         })
       }
     },
     onNew: (newCase) => {
-      // Only add if the case belongs to the current user (based on role)
       const shouldInclude = userRole === 'admin' || 
         (userRole === 'patient' && newCase.patient_id === user?.id) ||
         (userRole === 'staff' && newCase.assigned_to === user?.id)
@@ -182,9 +167,15 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
         setCases(prev => {
           const updated = [newCase, ...prev]
           if (limit && updated.length > limit) {
-            updated.pop() // Remove last item if we're over the limit
+            updated.pop()
           }
-          applyFilters(updated, currentFilters)
+          return updated
+        })
+        setFilteredCases(prev => {
+          const updated = [newCase, ...prev]
+          if (limit && updated.length > limit) {
+            updated.pop()
+          }
           return updated
         })
       }
@@ -195,7 +186,7 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
   const loadStaffMembers = useCallback(async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, role, specialties:metadata->specialties')
       .eq('role', 'staff')
       .order('first_name')
 
@@ -207,7 +198,12 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
     setStaffMembers(
       data.map(staff => ({
         id: staff.id,
-        name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim()
+        name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
+        role: 'staff' as const,
+        specialties: Array.isArray(staff.specialties) ? 
+          staff.specialties.filter((s): s is StaffSpecialty => 
+            typeof s === 'string' && Object.values(staffSpecialtyEnum).includes(s as StaffSpecialty)
+          ) : undefined
       }))
     )
   }, [supabase])
@@ -249,7 +245,7 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
     } catch (err) {
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to update cases',
+        description: 'Failed to update case statuses.',
         variant: 'destructive',
       })
     }
@@ -273,11 +269,17 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
     } catch (err) {
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to assign cases',
+        description: 'Failed to assign cases.',
         variant: 'destructive',
       })
     }
   }, [selectedCases, loadCases, toast])
+
+  // Initial load
+  useEffect(() => {
+    loadCases()
+    loadStaffMembers()
+  }, [loadCases, loadStaffMembers])
 
   return {
     cases,
@@ -285,12 +287,14 @@ export function useCaseManagement({ limit = 20, isDashboard }: UseCaseManagement
     selectedCases,
     staffMembers,
     isLoading,
+    hasMore,
     loadCases,
+    loadMore,
     handleFilterChange,
     handleSelectAll,
     handleDeselectAll,
     handleCaseSelect,
     handleBulkStatusChange,
-    handleBulkAssignmentChange
+    handleBulkAssignmentChange,
   }
 } 

@@ -1,162 +1,123 @@
-# UI Workflow Template
+# UI Workflow
 
 ## Project State
-Project Phase: Phase 3 - Post-MVP Enhancements
-Current Task: Enhanced Patient Dashboard Implementation
+Phase 3 (Post-MVP Enhancements)
 
 ## Task Breakdown
-1. [x] Identify task from phase checklist
-2. [x] Break down into components
-3. [x] Document primary feature below
+- [x] Break down components and document primary feature
+- [x] Implement SLA fields and validation
+- [x] Create SLA indicator component
+- [x] Create performance metrics display
+- [x] Integrate components into case queue view
+- [x] Enhance bulk operations interface
+- [x] Organize and clean up components
+  - [x] Move case management hook to proper location
+  - [x] Consolidate bulk operation components
+  - [x] Move case list item to its own directory
+  - [x] Extract case formatting utilities
+  - [x] Update imports to use new locations
+  - [x] Fix type issues and linter errors
+  - [x] Ensure proper type imports and validation
+- [ ] Add specialty/tag filtering system
+- [ ] Add performance metrics dashboard
 
 ## Primary Feature
-Name: Enhanced Patient Dashboard
-Description: Implementing advanced sorting/filtering, file attachments, and rich case history for improved patient experience
-Components:
-- [x] Advanced Sorting & Filtering System
-  - [x] Sort by date, status, priority
-  - [x] Filter by multiple criteria
-  - [x] Save filter preferences
-  - [x] Loading states
-  - [x] Accessibility features
-- [x] File Attachment System
-  - [x] Upload interface (FileUploadZone)
-  - [x] File preview (FileViewer)
-  - [x] Attachment management (FilePreview)
-  - [x] Progress tracking
-  - [x] Type validation
-  - [x] Security features
-  - [x] Server-side integration
-    - [x] Secure file storage
-    - [x] File removal
-    - [x] Case attachment updates
-- [x] Rich Case History
-  - [x] Timeline view
-  - [x] Detailed activity log
-  - [x] Status change tracking
+**Advanced Staff Features**
+- Enhanced filtering with priority, specialty, and tags
+- Bulk operations for efficient case management
+- Performance tracking with SLA compliance and metrics
 
----
+## Components
+- [x] SLA fields and validation
+  - Added to case schema
+  - Includes response and resolution targets
+  - Tracks last update time
+- [x] SLA indicator component
+  - Visual status indicator
+  - Tooltip with time remaining
+  - Color-coded states
+- [x] Performance metrics display
+  - Case resolution stats
+  - SLA compliance tracking
+  - Average response times
+- [x] Bulk operations interface
+  - Status updates
+  - Assignment changes
+  - Confirmation dialogs
+  - Loading states
+  - Proper type safety
+  - Keyboard accessibility
 
-## Documentation Guidelines
-1. [x] Review existing documentation
-2. [x] Document findings
-3. [x] Update component docs
-4. [x] Add usage examples
-
-## Planning
-1. [x] Design Architecture
-    ```
-    Layout: Enhanced FilterBar in case-management-view
-    State: CaseFilters interface with multi-select support
-    Theme: Following dark-mode first design
-    ```
-2. [x] Documentation Plan
-    ```
-    Components:
-    - FilterBar: Advanced filtering and sorting
-    - FileUploadZone: File upload with drag-and-drop
-    - FileViewer: File preview and download
-    - FilePreview: Progress tracking and management
-    
-    State Management:
-    - Filter preferences with localStorage
-    - File upload progress tracking
-    - File validation and security
-    
-    Styling:
-    - Consistent with design system
-    - Dark mode support
-    - Responsive design
-    ```
-
-## Implementation Workflow
-### 1. Understanding Phase
-1. [x] Review requirements
-2. [x] Analyze existing code
-3. [x] Document findings
-4. [x] CHECKPOINT: Verify Understanding
-
-### 2. Planning Phase
-1. [x] Break down tasks
-2. [x] Design component structure
-3. [x] Plan state management
-4. [x] CHECKPOINT: Review Plan
-
-### 3. Implementation Phase
-1. [x] Setup & Verification
-    ```
-    Layout: Enhanced FilterBar in case-management-view
-    State: CaseFilters interface with multi-select support
-    Theme: Following dark-mode first design
-    ```
-2. [x] CHECKPOINT: Verify Setup
-
-3. [x] Development
-    - [x] Component structure
-    - [x] Styling implementation
-    - [x] Interactions/animations
-    - [x] Loading states
-    - [x] A11y features
-    Document each step:
-    ```
-    FilterBar Component:
-    Location: src/components/cases/shared/filter-bar.tsx
-    Implementation: 
-    - Multi-select filters with Command + Popover
-    - Date range picker with Calendar
-    - Filter badges with remove functionality
-    - Local storage persistence
-    - Loading states for initial load and save
-    - Full ARIA support and keyboard navigation
-
-    File Attachment Components:
-    Location: src/components/cases/shared/
-    Implementation:
-    - FileUploadZone: Drag-and-drop with validation
-    - FileViewer: Modal preview for images/PDFs
-    - FilePreview: Progress tracking and management
-    - Security: Hash calculation and type validation
-    
-    Server Integration:
-    Location: src/lib/actions/
-    Implementation:
-    - files.ts: Secure file upload/removal with Supabase Storage
-    - cases.ts: Enhanced case actions with file attachment support
-    - Type-safe interfaces and error handling
-    - Security: File validation and secure storage paths
-    ```
-4. [x] CHECKPOINT: Review Progress
-
-5. [x] Integration
-    - [x] Connect data
-    - [x] Hook up actions
-    - [x] Polish transitions
-    ```
-    Data: File uploads connected to Supabase Storage
-    Actions: Case creation/update with attachments
-    Polish: Upload progress and transitions
-    ```
-6. [x] CHECKPOINT: Verify Integration
-
-### 4. Polishing Phase
-1. [ ] Testing
-2. [ ] Documentation
-3. [ ] Final review
-4. [ ] CHECKPOINT: Ready for Review
-
-## Checkpoint Log
-1. [x] Understanding: Requirements and existing code analyzed
-2. [x] Planning: Component structure and state management planned
-3. [x] Setup: Development environment ready
-4. [x] Implementation: Core features implemented
-5. [x] Integration: Data flow and actions connected
-6. [ ] Polish: Final touches and documentation
+## Implementation Progress
+1. [x] Added SLA configuration and metadata types
+2. [x] Created SLA indicator component
+3. [x] Enhanced case schema with SLA fields
+4. [x] Added performance metrics component
+5. [x] Integrated components into case queue view
+6. [x] Organized components into proper directories
+   - Moved hooks to `src/hooks/cases`
+   - Consolidated bulk operations
+   - Extracted utilities
+   - Updated imports
+   - Fixed type issues
+   - Added proper validation
 
 ## Key Decisions
-1. [x] Command + Popover pattern for multi-select UX
-2. [x] Filter persistence with localStorage
-3. [x] Modal preview for images and PDFs
-4. [x] Progress tracking for file uploads
-5. [x] Security features for file validation
-6. [x] Case-specific storage paths for attachments
-7. [x] Server-side file validation and secure naming
+1. Using tiered SLA configuration based on case priority
+2. Focusing on key performance indicators:
+   - Resolution rate
+   - SLA compliance
+   - Average response time
+3. Component organization:
+   - Complex components in dedicated directories
+   - Shared utilities in `src/lib/utils`
+   - Hooks in feature-specific directories
+   - Consistent import paths
+4. Type system improvements:
+   - Proper validation schemas
+   - Type-safe props and state
+   - Clear type hierarchy
+
+## Component Organization Issues
+Last Updated: [Current Date]
+
+### 1. Completed Reorganization
+- [x] Moved bulk operations to dedicated directory
+- [x] Consolidated filter components
+- [x] Extracted case formatting utilities
+- [x] Proper type imports and validation
+- [x] Fixed component dependencies
+
+### 2. Directory Structure
+Current:
+```
+cases/
+├── shared/
+│   ├── bulk-operations/
+│   │   └── index.tsx
+│   ├── case-list-item/
+│   │   └── index.tsx
+│   ├── case-management-view.tsx
+│   └── filters/
+│       └── components/
+├── staff/
+│   └── views/
+│       └── case-queue-view.tsx
+└── hooks/
+    └── cases/
+        └── use-case-management.ts
+```
+
+### 3. Next Steps
+1. [ ] Implement specialty/tag filtering system
+2. [ ] Add performance metrics dashboard
+3. [ ] Enhance bulk operations interface
+4. [ ] Add comprehensive test coverage
+
+## Checkpoint Log
+- [x] 1.3 Understanding
+- [x] 2.3 Planning
+- [x] 3.2 Setup
+- [x] 3.4 Progress
+- [x] 3.6 Integration
+- [ ] 4.2 Final
