@@ -1,11 +1,15 @@
-import { LoginForm } from './login-form'
 import { Metadata } from 'next'
+import { LoginForm } from './login-form'
 
 export const metadata: Metadata = {
-  title: 'Login | MediCRM',
-  description: 'Login to your MediCRM account',
+  title: 'Login',
+  description: 'Login to your account',
 }
 
 export default function LoginPage() {
-  return <LoginForm />
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <LoginForm />
+    </div>
+  )
 } 

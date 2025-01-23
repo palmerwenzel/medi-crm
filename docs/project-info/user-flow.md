@@ -1,6 +1,54 @@
+# User Flow Documentation
+
+## Authentication Flow
+
+1. **Initial Access**
+   - Unauthenticated users are redirected to `/login`
+   - After successful login, users are directed to `/dashboard`
+
+2. **Protected Routes**
+   All authenticated routes are under `(protected)` group:
+   - `/dashboard` - Overview and quick actions
+   - `/cases` - Case management
+   - `/patients` - Patient records
+   - `/messages` - Internal messaging
+   - `/schedule` - Appointment management
+   - `/documents` - Document storage
+   - `/profile` - User settings
+   - `/settings` - System settings (admin)
+   - `/analytics` - Data insights (admin)
+
+## Role-Based Access
+
+1. **Admin Users**
+   - Full access to all routes
+   - Additional access to:
+     - `/analytics`
+     - `/settings`
+
+2. **Medical Staff**
+   - Access to patient-related features:
+     - `/cases`
+     - `/patients`
+     - `/schedule`
+     - `/documents`
+
+3. **Support Staff**
+   - Limited access to:
+     - `/messages`
+     - `/schedule`
+     - `/documents`
+
+## Navigation Structure
+
+- Top navigation bar for main sections
+- Side navigation for contextual actions
+- Mobile-responsive drawer menu
+- Role-based menu items
+
 # MediCRM User Flow
 
-This document defines the user journey through MediCRM, showing how distinct user types (Patients, Staff, and Administrators) navigate the system. The application relies on role-based access control (RBAC) to tailor functionality, with a shared “Users” table storing common fields and role assignments.
+This document defines the user journey through MediCRM, showing how distinct user types (Patients, Staff, and Administrators) navigate the system. The application relies on role-based access control (RBAC) to tailor functionality, with a shared "Users" table storing common fields and role assignments.
 
 ---
 
@@ -13,9 +61,9 @@ This document defines the user journey through MediCRM, showing how distinct use
 
 ## 2. Authentication & Onboarding
 1. A new user (patient or staff) arrives at the MediCRM landing page.  
-2. User selects “Create Account” or “Log In.”  
-3. On successful registration, the system creates a record in the “Users” table and assigns a role (e.g., “Patient,” “Staff,” or “Admin”).  
-4. If needed, additional data specific to each role is stored in role-specific tables (e.g., “Patients,” “Staff”).
+2. User selects "Create Account" or "Log In."  
+3. On successful registration, the system creates a record in the "Users" table and assigns a role (e.g., "Patient," "Staff," or "Admin").  
+4. If needed, additional data specific to each role is stored in role-specific tables (e.g., "Patients," "Staff").
 
 ---
 
@@ -30,8 +78,8 @@ This document defines the user journey through MediCRM, showing how distinct use
 
 ### 3.3 Case Creation & Tracking
 1. Patient fills out a case form (symptoms, urgency, specialty) and optionally attaches relevant documents.  
-2. Once submitted, the case system updates the status to “Open” and notifies appropriate staff.  
-3. The patient can track case progress in “My Cases,” upload files, or send follow-up messages.
+2. Once submitted, the case system updates the status to "Open" and notifies appropriate staff.  
+3. The patient can track case progress in "My Cases," upload files, or send follow-up messages.
 
 ### 3.4 Case Closure & Feedback
 1. When resolved, staff closes the case. The patient receives a prompt for feedback or a short survey.  
@@ -50,7 +98,7 @@ This document defines the user journey through MediCRM, showing how distinct use
 3. Staff provides updates or corrective actions, attaching additional documents or AI-powered suggestions where appropriate.
 
 ### 4.3 Resolution & Metrics
-1. Staff sets the case status based on workflow stages (e.g., “Awaiting Lab Results,” “Doctor Follow-Up,” “Closed”).  
+1. Staff sets the case status based on workflow stages (e.g., "Awaiting Lab Results," "Doctor Follow-Up," "Closed").  
 2. Once the issue is resolved, staff can finalize the case, sending a closure message to the patient.  
 3. Staff monitors personal performance metrics (e.g., average resolution times) via a dedicated stats panel.
 
@@ -62,9 +110,9 @@ This document defines the user journey through MediCRM, showing how distinct use
 2. Admin can view high-level summaries, spot trends, and drill down into specifics if needed (e.g., staff performance).
 
 ### 5.2 Role & User Management
-1. Admin reviews and manages user roles in the “Users” table.  
-2. For staff, the admin can update specialty metadata (e.g., “Cardiology,” “Pediatrics”), which helps power automated routing.  
-3. Admin can set up subgroup permissions if further distinction is needed between different types of staff (e.g., “Doctor,” “Nurse,” “Support”).
+1. Admin reviews and manages user roles in the "Users" table.  
+2. For staff, the admin can update specialty metadata (e.g., "Cardiology," "Pediatrics"), which helps power automated routing.  
+3. Admin can set up subgroup permissions if further distinction is needed between different types of staff (e.g., "Doctor," "Nurse," "Support").
 
 ### 5.3 Configuration & Compliance
 1. Admin configures routing rules: how new cases are assigned to staff teams, triggers for urgent escalations, etc.  
@@ -75,7 +123,7 @@ This document defines the user journey through MediCRM, showing how distinct use
 
 ## 6. Integrations & Notification Channels
 1. Optional integrations with third-party EHR systems for medical records and lab results.  
-2. Automated notifications (email, SMS, or in-app) for both patients (e.g., “Lab results available”) and staff (e.g., “New urgent case assigned”).  
+2. Automated notifications (email, SMS, or in-app) for both patients (e.g., "Lab results available") and staff (e.g., "New urgent case assigned").  
 3. Admin configures advanced integrations (webhooks, Slack channels) for real-time updates and performance monitoring.
 
 ---

@@ -1,10 +1,12 @@
 /**
  * CaseAssignmentDialog Component
  * Provides a modal interface for assigning cases to staff members
+ * Only accessible to staff and admin roles
  */
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -34,8 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/utils/supabase/client'
 import { assignCases } from '@/lib/actions/cases'
+import { useAuth } from '@/providers/auth-provider'
 
 // Form schema
 const assignmentSchema = z.object({
@@ -57,10 +60,18 @@ export function CaseAssignmentDialog({
   onAssign,
   trigger
 }: CaseAssignmentDialogProps) {
+  const { user, userRole } = useAuth()
+  const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const { toast } = useToast()
   const supabase = createClient()
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    router.push('/dashboard')
+    return null
+  }
 
   const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema),

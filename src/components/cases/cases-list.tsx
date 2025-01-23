@@ -1,13 +1,16 @@
 /**
  * Cases List Component
- * Server component for displaying medical cases
- * Uses server actions for data fetching
+ * Client component for displaying medical cases with role-based filtering
+ * Uses useAuth for role checks and server actions for data fetching
  */
 
-import { Suspense } from 'react'
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CaseCard } from './case-card'
+import { useAuth } from '@/providers/auth-provider'
 import { getCases } from '@/lib/actions/cases'
 import type { CaseResponse } from '@/lib/validations/case'
 
@@ -67,25 +70,38 @@ function CasesGrid({ cases }: { cases: CaseResponse[] }) {
 }
 
 // Main cases list component
-async function CasesList() {
-  const result = await getCases()
+function CasesList() {
+  const { user } = useAuth()
+  const [cases, setCases] = useState<CaseResponse[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  if (!result.success) {
-    return <ErrorState message={result.error || 'Failed to load cases'} />
-  }
+  useEffect(() => {
+    async function loadCases() {
+      if (!user) return
 
-  if (!result.data?.length) {
-    return <EmptyCases />
-  }
+      try {
+        const result = await getCases()
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+        setCases(result.data || [])
+      } catch (err) {
+        console.error('Error loading cases:', err)
+        setError('Failed to load cases')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  return <CasesGrid cases={result.data} />
+    loadCases()
+  }, [user])
+
+  if (isLoading) return <LoadingCases />
+  if (error) return <ErrorState message={error} />
+  if (!cases.length) return <EmptyCases />
+
+  return <CasesGrid cases={cases} />
 }
 
-// Export wrapped in Suspense boundary
-export default function CasesListWrapper() {
-  return (
-    <Suspense fallback={<LoadingCases />}>
-      <CasesList />
-    </Suspense>
-  )
-} 
+export { CasesList } 

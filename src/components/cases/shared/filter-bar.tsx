@@ -1,6 +1,7 @@
 /**
  * Filter bar component for case management
  * Provides status, priority, and date range filtering
+ * Customizes available filters based on user role
  */
 'use client'
 
@@ -19,6 +20,7 @@ import { Search, SlidersHorizontal } from 'lucide-react'
 import { DatePickerWithRange } from '@/components/ui/date-range-picker'
 import { addDays } from 'date-fns'
 import { type DateRange } from 'react-day-picker'
+import { useAuth } from '@/providers/auth-provider'
 
 interface FilterBarProps {
   onFilterChange: (filters: CaseFilters) => void
@@ -48,6 +50,7 @@ const priorityOptions = [
 ]
 
 export function FilterBar({ onFilterChange, className }: FilterBarProps) {
+  const { userRole } = useAuth()
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<CaseFilters>({
     search: '',
@@ -65,6 +68,9 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
     onFilterChange(updatedFilters)
   }
 
+  // Patients can only see basic filters
+  const isStaffOrAdmin = ['staff', 'admin'].includes(userRole || '')
+
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center gap-2">
@@ -77,17 +83,19 @@ export function FilterBar({ onFilterChange, className }: FilterBarProps) {
             onChange={(e) => handleFilterChange({ search: e.target.value })}
           />
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(showFilters && 'bg-accent')}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
+        {isStaffOrAdmin && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(showFilters && 'bg-accent')}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {showFilters && (
+      {showFilters && isStaffOrAdmin && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-4">
           <Select
             value={filters.status}

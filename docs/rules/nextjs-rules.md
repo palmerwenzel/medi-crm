@@ -7,8 +7,36 @@ This document outlines how to use Next.js App Router features effectively in Med
 ## 1. File-Based Routing
 
 • Organize routes in the `app/` directory with descriptive folder names.  
-• Use route groups (e.g., `(auth)`) to house login/signup without changing URL structure.  
+• Use route groups for organization and protection:
+  - `(auth)` for login/signup without affecting URL structure
+  - `(protected)` for authenticated routes with role-based access
 • Keep route-specific files together (page.tsx, actions.ts, loading.tsx, etc.).
+
+Example structure:
+```
+app/
+├── (auth)/
+│   ├── login/
+│   │   ├── page.tsx
+│   │   ├── actions.ts
+│   │   └── login-form.tsx
+│   └── signup/
+│       ├── page.tsx
+│       ├── actions.ts
+│       └── signup-form.tsx
+├── (protected)/
+│   ├── layout.tsx (auth checks)
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── cases/
+│   │   ├── page.tsx
+│   │   └── new/
+│   └── patients/
+│       ├── page.tsx
+│       └── [id]/
+└── api/
+    └── webhooks/
+```
 
 ---
 
@@ -39,7 +67,8 @@ This document outlines how to use Next.js App Router features effectively in Med
 ## 5. Authentication & Authorization
 
 • See auth-rules.md for complete details on server actions, Supabase integration, and role-based gating.  
-• Use Next.js middleware or layout-based checks for route guarding.
+• Use Next.js middleware or layout-based checks for route guarding.  
+• (Optional) For a more SPA-like experience, you can perform minimal checks in middleware (verifying user session) and then rely on the client's AuthProvider to gate roles or other logic.
 
 ---
 
@@ -53,4 +82,4 @@ This document outlines how to use Next.js App Router features effectively in Med
 
 ## 7. Summary
 
-By leveraging server components, route groups, and server actions, MediCRM remains efficient and secure. Keep references to official Next.js docs (and our other internal rules) for consistent style and performance.
+By leveraging server components, route groups, server actions, and optionally minimal server gating, MediCRM remains efficient and secure. Keep references to official Next.js docs (and our other internal rules) for consistent style and performance.

@@ -1,10 +1,12 @@
 /**
  * PriorityManager Component
  * Handles individual and bulk case priority updates
+ * Only accessible to staff and admin roles
  */
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/providers/auth-provider'
 
 type CasePriority = 'low' | 'medium' | 'high' | 'urgent'
 
@@ -39,9 +42,17 @@ export function PriorityManager({
   onUpdate,
   className
 }: PriorityManagerProps) {
+  const { user, userRole } = useAuth()
+  const router = useRouter()
   const [isLoading, setIsLoading] = React.useState(false)
   const { toast } = useToast()
   const supabase = createClient()
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    router.push('/dashboard')
+    return null
+  }
 
   async function handlePriorityChange(priority: CasePriority) {
     try {

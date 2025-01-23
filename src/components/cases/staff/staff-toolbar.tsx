@@ -1,15 +1,18 @@
 /**
  * StaffToolbar Component
  * Integrates all staff tools for case management
+ * Only accessible to staff and admin roles
  */
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { CaseAssignmentDialog } from './case-assignment-dialog'
 import { PriorityManager } from './priority-manager'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/providers/auth-provider'
 
 interface StaffMember {
   id: string
@@ -27,10 +30,18 @@ export function StaffToolbar({
   onUpdate,
   className
 }: StaffToolbarProps) {
+  const { user, userRole } = useAuth()
+  const router = useRouter()
   const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const { toast } = useToast()
   const supabase = createClient()
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    router.push('/dashboard')
+    return null
+  }
 
   // Load staff members
   React.useEffect(() => {

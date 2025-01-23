@@ -1,11 +1,12 @@
 /**
  * Shared case list component with role-based filtering
  * Used by both dashboard and full case management views
+ * Access control handled by RLS policies and useAuth hook
  */
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/utils/supabase/client'
 import { Card, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +19,7 @@ import { StaffToolbar } from '../staff/staff-toolbar'
 import { InternalNotesEditor } from '../staff/internal-notes-editor'
 import { useToast } from '@/hooks/use-toast'
 import { updateCaseStatuses, assignCases } from '@/lib/actions/cases'
+import { useAuth } from '@/providers/auth-provider'
 
 // Type definitions based on database schema
 type CaseStatus = 'open' | 'in_progress' | 'resolved'
@@ -43,20 +45,17 @@ interface StaffMember {
 }
 
 interface CaseListProps {
-  userRole: string
-  userId: string
   limit?: number
   showActions?: boolean
   isDashboard?: boolean
 }
 
 export function CaseList({ 
-  userRole, 
-  userId, 
   limit, 
   showActions = true,
   isDashboard = false 
 }: CaseListProps) {
+  const { user, userRole } = useAuth()
   const [cases, setCases] = useState<Case[]>([])
   const [filteredCases, setFilteredCases] = useState<Case[]>([])
   const [selectedCases, setSelectedCases] = useState<string[]>([])
@@ -85,6 +84,8 @@ export function CaseList({
 
   useEffect(() => {
     async function loadCases() {
+      if (!user) return
+
       let query = supabase
         .from('cases')
         .select(`
@@ -97,10 +98,10 @@ export function CaseList({
       // Role-based filtering
       switch (userRole) {
         case 'patient':
-          query = query.eq('patient_id', userId)
+          query = query.eq('patient_id', user.id)
           break
         case 'staff':
-          query = query.eq('assigned_to', userId)
+          query = query.eq('assigned_to', user.id)
           break
         // Admin sees all cases
       }
@@ -134,7 +135,7 @@ export function CaseList({
     }
 
     loadCases()
-  }, [userRole, userId, limit])
+  }, [userRole, user, limit])
 
   // Load staff members for assignment
   useEffect(() => {
@@ -387,7 +388,7 @@ export function CaseList({
             <div className="pl-8">
               <InternalNotesEditor
                 caseId={case_.id}
-                currentUserId={userId}
+                currentUserId={user.id}
               />
             </div>
           )}

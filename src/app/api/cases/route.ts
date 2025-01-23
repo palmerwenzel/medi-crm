@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createCaseSchema } from '@/lib/validations/case'
-import { createApiClient, handleApiError } from '@/lib/supabase/api'
+import { createApiClient, handleApiError } from '@/utils/supabase/api'
 
 /**
  * GET /api/cases
- * List cases based on user role:
- * - Patients see only their own cases (enforced by RLS)
- * - Staff and admins see all cases (enforced by RLS)
+ * List cases based on user role
+ * Access control handled by RLS policies
  */
 export async function GET() {
   try {
-    const { supabase, user } = await createApiClient()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { supabase } = await createApiClient()
 
     const { data: cases, error: casesError } = await supabase
       .from('cases')
@@ -29,44 +25,25 @@ export async function GET() {
 
     return NextResponse.json(cases)
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
 /**
  * POST /api/cases
- * Create a new case. Access control handled by:
- * - Server-side auth in layout
- * - RLS policies for data access
+ * Create a new case
+ * Access control handled by RLS policies
  */
 export async function POST(request: Request) {
   try {
-    const { supabase, user } = await createApiClient()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { supabase, user, role } = await createApiClient()
 
     // Parse and validate request body
     const json = await request.json()
     const validatedData = createCaseSchema.parse(json)
 
-    // Get user role
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'patient') {
+    // Only patients can create cases (enforced by RLS)
+    if (role !== 'patient') {
       return NextResponse.json(
         { error: 'Only patients can create cases' },
         { status: 403 }

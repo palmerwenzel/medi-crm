@@ -1,9 +1,11 @@
 /**
  * Form for creating a new case with rich text description and file attachments
+ * Only accessible to patients
  */
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createCaseSchema } from '@/lib/validations/case'
@@ -12,14 +14,23 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/providers/auth-provider'
 import { createCase } from '@/lib/actions/cases'
 import { RichTextEditor } from './shared/rich-text-editor'
 import { FileUploadZone } from './shared/file-upload'
 
 export function NewCaseForm() {
   const { toast } = useToast()
+  const router = useRouter()
+  const { user, userRole } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+
+  // Only patients can create cases
+  if (!user || userRole !== 'patient') {
+    router.push('/dashboard')
+    return null
+  }
 
   const form = useForm<CreateCaseInput>({
     resolver: zodResolver(createCaseSchema),

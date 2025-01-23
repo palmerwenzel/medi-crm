@@ -1,10 +1,12 @@
 /**
  * Bulk action bar component for case management
  * Provides multi-select operations like status updates and assignments
+ * Only accessible to staff and admin roles
  */
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -16,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Users, CheckSquare } from 'lucide-react'
+import { useAuth } from '@/providers/auth-provider'
 
 interface BulkActionBarProps {
   selectedCases: string[]
@@ -42,7 +45,15 @@ export function BulkActionBar({
   className,
   staffMembers = [],
 }: BulkActionBarProps) {
+  const { user, userRole } = useAuth()
+  const router = useRouter()
   const [isAllSelected, setIsAllSelected] = useState(false)
+
+  // Only staff and admin can use bulk actions
+  if (!user || !['staff', 'admin'].includes(userRole)) {
+    router.push('/dashboard')
+    return null
+  }
 
   const handleSelectAllChange = () => {
     if (isAllSelected) {

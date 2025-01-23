@@ -177,9 +177,9 @@ export function FileUploadZone({
               className={cn(
                 'animate-in fade-in slide-in-from-right-2',
                 'transition-all duration-200 ease-in-out hover:bg-accent',
-                { 'delay-[150ms]': index === 0 },
-                { 'delay-[300ms]': index === 1 },
-                { 'delay-[450ms]': index === 2 }
+                { 'delay-150': index === 0 },
+                { 'delay-300': index === 1 },
+                { 'delay-500': index === 2 }
               )}
             />
           ))}

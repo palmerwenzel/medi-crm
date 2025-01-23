@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { webhookSchema } from '@/lib/validations/webhook'
-import { createApiClient, createApiError, handleApiError } from '@/lib/supabase/api'
+import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 import { randomBytes } from 'crypto'
 
 // Helper to generate a secure webhook secret
@@ -8,7 +8,10 @@ function generateWebhookSecret(): string {
   return randomBytes(32).toString('hex')
 }
 
-// GET /api/webhooks - List webhooks
+/**
+ * GET /api/webhooks - List webhooks
+ * Access control handled by RLS policies
+ */
 export async function GET() {
   try {
     const { supabase, role } = await createApiClient()
@@ -33,7 +36,10 @@ export async function GET() {
   }
 }
 
-// POST /api/webhooks - Register new webhook
+/**
+ * POST /api/webhooks - Register new webhook
+ * Access control handled by RLS policies
+ */
 export async function POST(request: NextRequest) {
   try {
     const { supabase, user, role } = await createApiClient()
@@ -69,7 +75,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/webhooks?id={id} - Delete webhook
+/**
+ * DELETE /api/webhooks?id={id} - Delete webhook
+ * Access control handled by RLS policies
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const { supabase, user, role } = await createApiClient()

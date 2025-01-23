@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/providers/auth-provider'
 import { Card, CardHeader, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarDays, FileText, MessageSquare, Plus } from 'lucide-react'
@@ -9,23 +8,10 @@ import { CaseList } from '@/components/cases/shared/case-list'
 import Link from 'next/link'
 
 export function PatientDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const { user, userRole, loading } = useAuth()
 
-  useEffect(() => {
-    async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user)
-      }
-      setIsLoading(false)
-    }
-
-    loadUser()
-  }, [])
-
-  if (isLoading || !user) return null
+  // Only show for patients
+  if (loading || !user || userRole !== 'patient') return null
 
   return (
     <div className="space-y-8">
@@ -67,7 +53,7 @@ export function PatientDashboard() {
           </Card>
         </Link>
 
-        <Link href="/appointments">
+        <Link href="/schedule">
           <Card className="hover:bg-accent/5 transition-colors">
             <CardHeader>
               <div className="flex flex-col items-center text-center space-y-2">
@@ -106,8 +92,6 @@ export function PatientDashboard() {
         </div>
 
         <CaseList 
-          userRole="patient"
-          userId={user.id}
           limit={3}
           isDashboard={true}
         />

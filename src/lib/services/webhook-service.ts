@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 import { WebhookEventType, WebhookPayload } from '@/lib/validations/webhook'
 import { deliverWebhook, isRateLimited } from '@/lib/utils/webhook'
 

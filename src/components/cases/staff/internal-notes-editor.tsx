@@ -1,10 +1,13 @@
 /**
  * InternalNotesEditor Component
  * Rich text editor for staff internal notes with history and attribution
+ * Only accessible to staff and admin roles
+ * Uses server actions for data mutations and client for real-time updates
  */
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,7 +31,9 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/providers/auth-provider'
+import { loadCaseNotes, addCaseNote } from '@/lib/actions/case-notes'
 
 // Form schema
 const notesSchema = z.object({
@@ -49,19 +54,25 @@ interface Note {
 
 interface InternalNotesEditorProps {
   caseId: string
-  currentUserId: string
   className?: string
 }
 
 export function InternalNotesEditor({
   caseId,
-  currentUserId,
   className
 }: InternalNotesEditorProps) {
+  const { user, userRole } = useAuth()
+  const router = useRouter()
   const [notes, setNotes] = React.useState<Note[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const { toast } = useToast()
   const supabase = createClient()
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    router.push('/dashboard')
+    return null
+  }
 
   const form = useForm<NotesFormValues>({
     resolver: zodResolver(notesSchema),
@@ -70,39 +81,24 @@ export function InternalNotesEditor({
     },
   })
 
-  // Load notes
+  // Load notes using server action
   React.useEffect(() => {
-    async function loadNotes() {
-      const { data, error } = await supabase
-        .from('case_notes')
-        .select(`
-          id,
-          content,
-          created_at,
-          staff:users(id, first_name, last_name)
-        `)
-        .eq('case_id', caseId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
+    async function fetchNotes() {
+      try {
+        const data = await loadCaseNotes(caseId)
+        setNotes(data)
+      } catch (error) {
         console.error('Error loading notes:', error)
-        return
+        toast({
+          title: 'Error',
+          description: 'Failed to load notes. Please try again.',
+          variant: 'destructive',
+        })
       }
-
-      // Transform staff data
-      const transformedNotes = data.map(note => ({
-        ...note,
-        staff: {
-          id: note.staff.id,
-          full_name: `${note.staff.first_name || ''} ${note.staff.last_name || ''}`.trim()
-        }
-      }))
-
-      setNotes(transformedNotes)
     }
 
-    loadNotes()
-  }, [caseId])
+    fetchNotes()
+  }, [caseId, toast])
 
   // Subscribe to realtime updates
   React.useEffect(() => {
@@ -117,33 +113,13 @@ export function InternalNotesEditor({
           filter: `case_id=eq.${caseId}`,
         },
         async () => {
-          // Reload notes on any change
-          const { data, error } = await supabase
-            .from('case_notes')
-            .select(`
-              id,
-              content,
-              created_at,
-              staff:users(id, first_name, last_name)
-            `)
-            .eq('case_id', caseId)
-            .order('created_at', { ascending: false })
-
-          if (error) {
+          // Reload notes on any change using server action
+          try {
+            const data = await loadCaseNotes(caseId)
+            setNotes(data)
+          } catch (error) {
             console.error('Error reloading notes:', error)
-            return
           }
-
-          // Transform staff data
-          const transformedNotes = data.map(note => ({
-            ...note,
-            staff: {
-              id: note.staff.id,
-              full_name: `${note.staff.first_name || ''} ${note.staff.last_name || ''}`.trim()
-            }
-          }))
-
-          setNotes(transformedNotes)
         }
       )
       .subscribe()
@@ -151,24 +127,15 @@ export function InternalNotesEditor({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [caseId])
+  }, [caseId, supabase])
 
   async function onSubmit(data: NotesFormValues) {
+    if (!user) return
+
     try {
       setIsLoading(true)
-
-      const { error } = await supabase
-        .from('case_notes')
-        .insert({
-          case_id: caseId,
-          staff_id: currentUserId,
-          content: data.content,
-        })
-
-      if (error) throw error
-
+      await addCaseNote(caseId, user.id, data.content)
       form.reset()
-
       toast({
         title: 'Note Added',
         description: 'Your note has been added successfully.',
@@ -222,30 +189,16 @@ export function InternalNotesEditor({
         </Form>
 
         <div className="border-t pt-4">
-          <h4 className="text-sm font-medium mb-4">Note History</h4>
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-4">
               {notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="p-4 rounded-lg border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-                >
-                  <div className="flex justify-between items-start gap-2 mb-2">
-                    <p className="text-sm font-medium">{note.staff.full_name}</p>
-                    <time className="text-sm text-muted-foreground">
-                      {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
-                    </time>
+                <div key={note.id} className="space-y-1">
+                  <div className="text-sm text-muted-foreground">
+                    {note.staff.full_name} • {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {note.content}
-                  </p>
+                  <div className="text-sm">{note.content}</div>
                 </div>
               ))}
-              {notes.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No notes yet
-                </p>
-              )}
             </div>
           </ScrollArea>
         </div>

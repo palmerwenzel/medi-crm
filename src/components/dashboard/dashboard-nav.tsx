@@ -37,28 +37,28 @@ const navItems: NavItem[] = [
   },
   {
     title: "My Cases",
-    href: "/dashboard/cases",
+    href: "/cases",
     icon: FileText,
     variant: "ghost",
     roles: ['patient']
   },
   {
     title: "New Case",
-    href: "/dashboard/cases/new",
+    href: "/cases/new",
     icon: PlusCircle,
     variant: "ghost",
     roles: ['patient']
   },
   {
     title: "Messages",
-    href: "/dashboard/messages",
+    href: "/messages",
     icon: MessageSquare,
     variant: "ghost",
     roles: ['patient', 'staff', 'admin']
   },
   {
     title: "My Profile",
-    href: "/dashboard/profile",
+    href: "/profile",
     icon: UserCircle,
     variant: "ghost",
     roles: ['patient', 'staff', 'admin']
@@ -66,21 +66,21 @@ const navItems: NavItem[] = [
   // Staff & Admin items
   {
     title: "All Cases",
-    href: "/dashboard/cases",
+    href: "/cases",
     icon: FileText,
     variant: "ghost",
     roles: ['staff', 'admin']
   },
   {
     title: "Patients",
-    href: "/dashboard/patients",
+    href: "/patients",
     icon: Users,
     variant: "ghost",
     roles: ['staff', 'admin']
   },
   {
     title: "Schedule",
-    href: "/dashboard/schedule",
+    href: "/schedule",
     icon: Calendar,
     variant: "ghost",
     roles: ['staff', 'admin']
@@ -88,14 +88,14 @@ const navItems: NavItem[] = [
   // Admin only items
   {
     title: "Analytics",
-    href: "/dashboard/analytics",
+    href: "/analytics",
     icon: BarChart,
     variant: "ghost",
     roles: ['admin']
   },
   {
     title: "Settings",
-    href: "/dashboard/settings",
+    href: "/settings",
     icon: Settings,
     variant: "ghost",
     roles: ['admin']

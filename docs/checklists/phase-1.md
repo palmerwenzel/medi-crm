@@ -18,7 +18,18 @@ In this phase, we'll set up user roles (patient, staff, admin), secure access to
 [✓] FRONTEND: Use Tailwind classes for responsive design per our guidelines.
 
 [✓] FRONTEND: Conditionally render UI based on role (patient vs. staff vs. admin) to ensure correct access to future pages (dashboards, admin panel, etc.).  
-[✓] BACKEND: Validate user identities in Next.js server components/middleware.  
+[✓] BACKEND: Validate user identities in Next.js middleware.  
 
-[ ] GENERAL: Test end-to-end (login, registration, role-specific UIs) and confirm that only authorized roles can see restricted pages or actions.  
-[ ] GENERAL: Check for adherence to healthcare privacy considerations (e.g., storing minimal user info publicly, enabling encryption in Supabase).
+[✓] GENERAL: Test end-to-end (login, registration, role-specific UIs) and confirm that only authorized roles can see restricted pages or actions.  
+[✓] GENERAL: Check for adherence to healthcare privacy considerations (e.g., storing minimal user info publicly, enabling encryption in Supabase).
+
+---
+
+## Implementation Notes
+- Using client-first pattern with minimal server gating:
+  - Middleware checks for valid session token
+  - Client AuthProvider handles role-based UI and navigation
+  - RLS policies enforce data-level permissions
+- Server components rely on middleware for basic auth
+- API routes use RLS for access control
+- Client components use `useAuth()` hook for role checks

@@ -44,12 +44,8 @@ const signupSchema = z.object({
   password: z
     .string()
     .min(1, 'Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password is too long') // bcrypt max length
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/,
-      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-    ),
+    .min(6, 'Password must be at least 6 characters')
+    .max(72, 'Password is too long'),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -62,7 +58,7 @@ export function SignUpForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [signupAttempts, setSignupAttempts] = useState(0)
+  const [failedAttempts, setFailedAttempts] = useState(0)
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signupSchema),
@@ -78,8 +74,8 @@ export function SignUpForm() {
   async function onSubmit(data: SignUpFormValues) {
     try {
       // Prevent rapid signup attempts
-      if (signupAttempts > 3) {
-        await new Promise(resolve => setTimeout(resolve, Math.min(signupAttempts * 1000, 5000)))
+      if (failedAttempts > 3) {
+        await new Promise(resolve => setTimeout(resolve, Math.min(failedAttempts * 1000, 5000)))
       }
 
       setIsLoading(true)
@@ -93,22 +89,25 @@ export function SignUpForm() {
       })
 
       if (result?.error) {
-        setSignupAttempts(prev => prev + 1)
-        // Use generic error messages to prevent information disclosure
-        if (result.error.toLowerCase().includes('email')) {
-          throw new Error('This email cannot be used. Please try another.')
-        }
-        throw new Error('Failed to create account. Please try again.')
+        setFailedAttempts(prev => prev + 1)
+        throw new Error(result.error)
       }
 
-      // Router.refresh() and redirect are handled by the server action
+      // Reset failed attempts on success
+      setFailedAttempts(0)
+
+      if (result.success) {
+        // Let middleware handle the session, then redirect
+        window.location.href = '/dashboard'
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-      // Clear password fields on error
-      form.setValue('password', '')
-      form.setValue('confirmPassword', '')
+      setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
       setIsLoading(false)
+      if (error) {
+        form.setValue('password', '')
+        form.setValue('confirmPassword', '')
+      }
     }
   }
 
@@ -257,8 +256,8 @@ export function SignUpForm() {
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading || signupAttempts > 5} // Prevent excessive attempts
-              aria-disabled={isLoading || signupAttempts > 5}
+              disabled={isLoading || failedAttempts > 5} // Prevent excessive attempts
+              aria-disabled={isLoading || failedAttempts > 5}
             >
               {isLoading ? (
                 <>

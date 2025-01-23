@@ -19,21 +19,22 @@ import {
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { loginUser } from './actions'
+import { useAuth } from "@/providers/auth-provider"
 
 // Form validation schema
 const loginSchema = z.object({
   email: z
     .string()
-    .trim() // Prevent whitespace-based attacks
+    .trim()
     .min(1, 'Email is required')
     .max(255, 'Email is too long')
     .email('Please enter a valid email address')
-    .transform(val => val.toLowerCase()), // Normalize email
+    .transform(val => val.toLowerCase()),
   password: z
     .string()
     .min(1, 'Password is required')
     .min(6, 'Password must be at least 6 characters')
-    .max(72, 'Password is too long'), // bcrypt max length
+    .max(72, 'Password is too long'),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -62,9 +63,8 @@ export function LoginForm() {
       setIsLoading(true)
       setError(null)
 
-      // Use the server action directly with the form data
       const result = await loginUser({
-        email: data.email, // Email is already normalized by Zod
+        email: data.email,
         password: data.password,
       })
       
@@ -76,13 +76,14 @@ export function LoginForm() {
       // Reset failed attempts on success
       setFailedAttempts(0)
 
-      // Router.refresh() and redirect are handled by the server action
+      if (result.success) {
+        // Let middleware handle the session, then redirect
+        window.location.href = '/dashboard'
+      }
     } catch (err) {
-      // Generic error message for security
       setError('Invalid email or password')
     } finally {
       setIsLoading(false)
-      // Clear password field on error
       if (error) {
         form.setValue('password', '')
       }

@@ -6,8 +6,8 @@ MediCRM integrates with Supabase for database, authentication, and real-time fea
 
 ## 1. Server vs. Client
 
-• Use a “server” client (`lib/supabase/server.ts`) for server actions and SSR.  
-• Use a “browser” client (`lib/supabase/client.ts`) for client components needing real-time or read-only data.  
+• Use a “server” client (`utils/supabase/server.ts`) for server actions and SSR.  
+• Use a “browser” client (`utils/supabase/client.ts`) for client components needing real-time or read-only data.  
 • Never expose secrets or admin keys in the client.
 
 ---

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { webhookTestPayloadSchema } from '@/lib/validations/webhook'
 import { deliverWebhook, isRateLimited } from '@/lib/utils/webhook'
-import { createApiClient, createApiError, handleApiError } from '@/lib/supabase/api'
+import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
-// POST /api/webhooks/test?id={id} - Test webhook delivery
+/**
+ * POST /api/webhooks/test?id={id} - Test webhook delivery
+ * Access control handled by RLS policies
+ */
 export async function POST(request: NextRequest) {
   try {
     const { supabase, user, role } = await createApiClient()
@@ -20,7 +23,7 @@ export async function POST(request: NextRequest) {
       throw createApiError(400, 'Webhook ID is required')
     }
 
-    // Get webhook details
+    // Get webhook details (RLS will ensure user has access)
     const { data: webhook, error: webhookError } = await supabase
       .from('webhooks')
       .select('*')

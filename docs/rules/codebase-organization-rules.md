@@ -29,7 +29,7 @@ This file describes how to structure MediCRM’s folder layout, file naming, and
 2. File Naming  
    • Use `page.tsx` for the entry point of a route.  
    • Use `actions.ts` for server actions.  
-   • Keep file names under 30-40 chars and prefer lowerCamelCase or kebab-case.
+   • Keep file names under 30–40 chars and prefer lowerCamelCase or kebab-case.
 
 ---
 
@@ -63,6 +63,12 @@ export function getUserById(userId: string) {
 • Keep server actions in `actions.ts` near the route using them.  
 • Avoid massive “utility” files; group related helpers by domain or purpose.  
 • Confine route-specific components to that route’s folder for clarity.
+
+---
+
+### 4.1 Organization for Auth Patterns
+
+When using minimal server gating (Option B), store only the essential session check in `middleware.ts` (or a layout-based approach). Then, manage fine-grained role logic in the client’s AuthProvider or related hooks. Avoid duplicating role checks in every server action or route component.
 
 ---
 

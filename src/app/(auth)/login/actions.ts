@@ -5,15 +5,29 @@
 
 'use server'
 
-import { loginUser as baseLoginUser } from '@/lib/actions/auth'
-import type { LoginFormData } from '@/lib/actions/auth'
+import { createClient } from '@/utils/supabase/server'
 
 /**
  * Login action with page-specific handling
  * Wraps the base login action to add any page-specific logic
  */
-export async function loginUser(formData: LoginFormData) {
-  // Here we can add any login page specific logic
-  // For example: analytics, logging, etc.
-  return baseLoginUser(formData)
+export async function loginUser({
+  email,
+  password,
+}: {
+  email: string
+  password: string
+}) {
+  const supabase = createClient()
+
+  const { data: { session }, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { success: true, user: session?.user }
 } 

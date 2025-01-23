@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { updateCaseSchema, updateCaseInternalNotesSchema, updateCaseMetadataSchema } from '@/lib/validations/case'
-import { createApiClient, handleApiError } from '@/lib/supabase/api'
+import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
 /**
  * GET /api/cases/[id]
@@ -21,36 +21,21 @@ export async function GET(
       .single()
 
     if (caseError) {
-      return NextResponse.json(
-        { error: caseError.message },
-        { status: 500 }
-      )
+      throw createApiError(500, caseError.message)
     }
     if (!caseData) {
-      return NextResponse.json(
-        { error: 'Case not found' },
-        { status: 404 }
-      )
+      throw createApiError(404, 'Case not found')
     }
 
     return NextResponse.json(caseData)
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
 /**
  * PATCH /api/cases/[id]
- * Update a case. Staff and admins can update any case, patients can only update their own.
+ * Update a case. Access control handled by RLS policies.
  * Internal notes can only be updated by staff/admin.
  */
 export async function PATCH(
@@ -58,178 +43,66 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, user } = await createApiClient()
-
-    // Get user role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userError) throw userError
+    const { supabase, user, role } = await createApiClient()
 
     // Parse and validate request body
     const json = await request.json()
-    
-    // If updating internal notes, validate separately (staff/admin only)
-    if ('internal_notes' in json) {
-      if (userData.role !== 'staff' && userData.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'Only staff and admins can update internal notes' },
-          { status: 403 }
-        )
-      }
-      const validatedData = updateCaseInternalNotesSchema.parse(json)
-      const { data: updatedCase, error: updateError } = await supabase
-        .from('cases')
-        .update(validatedData)
-        .eq('id', params.id)
-        .select()
-        .single()
-
-      if (updateError) throw updateError
-      if (!updatedCase) throw new Error('Case not found')
-
-      return NextResponse.json(updatedCase)
-    }
-
-    // If updating metadata, validate separately
-    if ('metadata' in json) {
-      const validatedData = updateCaseMetadataSchema.parse(json)
-      const { data: updatedCase, error: updateError } = await supabase
-        .from('cases')
-        .update(validatedData)
-        .eq('id', params.id)
-        .select()
-        .single()
-
-      if (updateError) throw updateError
-      if (!updatedCase) throw new Error('Case not found')
-
-      return NextResponse.json(updatedCase)
-    }
-
-    // For other updates, use the main schema
     const validatedData = updateCaseSchema.parse(json)
 
-    // If assigning to a user, verify they are staff/admin
-    if (validatedData.assigned_to) {
-      const { data: assignedUser, error: assignedUserError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', validatedData.assigned_to)
-        .single()
-
-      if (assignedUserError) {
-        return NextResponse.json(
-          { error: assignedUserError.message },
-          { status: 500 }
-        )
-      }
-
-      if (!assignedUser || (assignedUser.role !== 'staff' && assignedUser.role !== 'admin')) {
-        return NextResponse.json(
-          { error: 'Cases can only be assigned to staff or admin users' },
-          { status: 400 }
-        )
-      }
+    // Staff/admin check for internal notes
+    if (validatedData.internal_notes !== undefined && role === 'patient') {
+      throw createApiError(403, 'Only staff and admins can update internal notes')
     }
 
-    // If user is a patient, verify they own the case
-    if (userData.role === 'patient') {
-      const { data: caseData, error: caseError } = await supabase
-        .from('cases')
-        .select('patient_id')
-        .eq('id', params.id)
-        .single()
-
-      if (caseError) {
-        return NextResponse.json(
-          { error: caseError.message },
-          { status: 500 }
-        )
-      }
-      if (!caseData) {
-        return NextResponse.json(
-          { error: 'Case not found' },
-          { status: 404 }
-        )
-      }
-      if (caseData.patient_id !== user.id) {
-        return NextResponse.json(
-          { error: 'You can only update your own cases' },
-          { status: 403 }
-        )
-      }
-    }
-
-    // Update the case
+    // Update the case (RLS will enforce access rules)
     const { data: updatedCase, error: updateError } = await supabase
       .from('cases')
-      .update(validatedData)
+      .update({
+        ...validatedData,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', params.id)
       .select()
       .single()
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      )
+      throw createApiError(500, 'Failed to update case', updateError)
     }
     if (!updatedCase) {
-      return NextResponse.json(
-        { error: 'Case not found' },
-        { status: 404 }
-      )
+      throw createApiError(404, 'Case not found')
     }
 
     return NextResponse.json(updatedCase)
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
 /**
  * DELETE /api/cases/[id]
- * Delete a case. Only staff and admins can delete cases.
+ * Delete a case. Access control handled by RLS policies.
  */
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, user } = await createApiClient()
+    const { supabase, role } = await createApiClient()
 
-    // Get user role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userError) throw userError
-    if (userData.role === 'patient') {
-      throw new Error('Only staff and admins can delete cases')
+    // Only staff and admins can delete cases
+    if (role === 'patient') {
+      throw createApiError(403, 'Only staff and admins can delete cases')
     }
 
-    // Delete the case
+    // Delete the case (RLS will enforce access rules)
     const { error: deleteError } = await supabase
       .from('cases')
       .delete()
       .eq('id', params.id)
 
-    if (deleteError) throw deleteError
+    if (deleteError) {
+      throw createApiError(500, 'Failed to delete case', deleteError)
+    }
 
     return new NextResponse(null, { status: 204 })
   } catch (error) {

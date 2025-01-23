@@ -1,182 +1,146 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Card } from '@/components/ui/card'
+import { useAuth } from '@/providers/auth-provider'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/use-toast'
+import { getDashboardStats } from '@/lib/actions/staff'
+
+// UI Components
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Users, FileText, CalendarDays, Bell } from 'lucide-react'
-import Link from 'next/link'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Icons } from '@/components/ui/icons'
+
+interface DashboardStats {
+  activeCases: number
+  totalPatients: number
+  upcomingAppointments: number
+}
 
 export function StaffDashboard() {
-  const [stats, setStats] = useState({
+  const { user, userRole } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
+  const [stats, setStats] = useState<DashboardStats>({
     activeCases: 0,
     totalPatients: 0,
-    upcomingAppointments: 0,
+    upcomingAppointments: 0
   })
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
 
-  useEffect(() => {
-    async function loadDashboardStats() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Get assigned cases count
-      const { count: casesCount } = await supabase
-        .from('cases')
-        .select('*', { count: 'exact', head: true })
-        .eq('assigned_to', user.id)
-        .eq('status', 'active')
-
-      // Get total patients count
-      const { count: patientsCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'patient')
-
-      setStats({
-        activeCases: casesCount || 0,
-        totalPatients: patientsCount || 0,
-        upcomingAppointments: 0, // To be implemented with appointments table
+  // Move loadStats outside useEffect for better type safety
+  const loadStats = async (userId: string) => {
+    try {
+      const stats = await getDashboardStats(userId)
+      setStats(stats)
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard statistics',
+        variant: 'destructive'
       })
+    } finally {
       setIsLoading(false)
     }
+  }
 
-    loadDashboardStats()
-  }, [])
+  useEffect(() => {
+    if (!user?.id) return
+    loadStats(user.id)
+  }, [user?.id, toast])
+
+  if (!user || userRole !== 'staff') {
+    return null
+  }
+
+  const firstName = user?.user_metadata?.first_name || 'Staff Member'
 
   return (
-    <div className="space-y-8">
-      {/* Header Section with Glassmorphic Effect */}
-      <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <h1 className="text-3xl font-bold tracking-tight">Staff Dashboard</h1>
+    <div className="flex flex-col gap-8">
+      {/* Header Section */}
+      <div className="flex flex-col gap-2 rounded-lg bg-gradient-to-r from-blue-600/10 via-blue-800/10 to-purple-800/10 p-6 backdrop-blur-sm">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome back, {firstName}
+        </h1>
         <p className="text-muted-foreground">
-          Manage your patients and cases efficiently.
+          Here's an overview of your assigned cases and patient statistics
         </p>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Active Cases</h3>
-            </div>
-            <div className="mt-4">
-              {isLoading ? (
-                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-              ) : (
-                <p className="text-3xl font-bold">{stats.activeCases}</p>
-              )}
-            </div>
-          </div>
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Cases</CardTitle>
+            <Icons.cases className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">{stats.activeCases}</div>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Total Patients</h3>
-            </div>
-            <div className="mt-4">
-              {isLoading ? (
-                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-              ) : (
-                <p className="text-3xl font-bold">{stats.totalPatients}</p>
-              )}
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
+            <Icons.users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">{stats.totalPatients}</div>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <CalendarDays className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Upcoming</h3>
-            </div>
-            <div className="mt-4">
-              {isLoading ? (
-                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-              ) : (
-                <p className="text-3xl font-bold">{stats.upcomingAppointments}</p>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <Bell className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Notifications</h3>
-            </div>
-            <div className="mt-4">
-              {isLoading ? (
-                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-              ) : (
-                <p className="text-3xl font-bold">0</p>
-              )}
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
+            <Icons.calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">{stats.upcomingAppointments}</div>
+            )}
+          </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Quick Actions</h2>
-          </div>
-          <div className="grid gap-2">
-            <Button asChild className="justify-start" variant="outline">
-              <Link href="/cases/new">
-                <FileText className="mr-2 h-4 w-4" />
-                Create New Case
-              </Link>
-            </Button>
-            <Button asChild className="justify-start" variant="outline">
-              <Link href="/patients">
-                <Users className="mr-2 h-4 w-4" />
-                View All Patients
-              </Link>
-            </Button>
-            <Button asChild className="justify-start" variant="outline">
-              <Link href="/appointments">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Manage Appointments
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="flex flex-wrap gap-4">
+        <Button onClick={() => router.push('/cases/new')}>
+          <Icons.plus className="mr-2 h-4 w-4" />
+          Create New Case
+        </Button>
+        <Button onClick={() => router.push('/patients')} variant="outline">
+          <Icons.users className="mr-2 h-4 w-4" />
+          View All Patients
+        </Button>
+        <Button onClick={() => router.push('/schedule')} variant="outline">
+          <Icons.calendar className="mr-2 h-4 w-4" />
+          Manage Appointments
+        </Button>
+      </div>
 
-        <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recent Activity</h2>
-            <Button variant="outline" size="sm">View All</Button>
+      {/* Recent Activity */}
+      <div className="rounded-lg border p-6">
+        <h2 className="mb-4 text-lg font-semibold">Recent Activity</h2>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No recent activity to display.
-              </p>
-            )}
-          </div>
-        </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No recent activity</p>
+        )}
       </div>
     </div>
   )

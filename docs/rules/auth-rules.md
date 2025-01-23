@@ -29,7 +29,7 @@ This document provides guidelines for implementing authentication in a Next.js A
 • Must handle environment variables, cookies, or tokens that are not exposed in the client.
 
 Example (simplified):
-// lib/supabase/server.ts
+// utils/supabase/server.ts
 ```ts
 import { createClient } from '@supabase/supabase-js'
 
@@ -58,7 +58,7 @@ Example:
 ```ts
 'use server'
 import { revalidatePath, redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/utils/supabase/server'
 
 // Some server action:
 export async function loginUser(formData: FormData) {
@@ -66,6 +66,16 @@ export async function loginUser(formData: FormData) {
   redirect('/')
 }
 ```
+
+---
+
+### 4.5. Minimal Server Gating
+
+In some projects, you may gate routes in Next.js middleware at a basic level (e.g., checking for a session token) and rely on a client-based AuthProvider to handle more detailed role checks. This is a valid approach if you prefer a more fluid, SPA-like user experience, while still maintaining security:
+
+- Middleware or server actions confirm the user is logged in (e.g., by checking the session token).  
+- The client AuthProvider retrieves role details via the browser Supabase client and executes final gating logic.  
+- Use row-level security (RLS) in Supabase to enforce actual data permissions so that no one can bypass checks on the database level.
 
 ---
 
@@ -81,7 +91,7 @@ export async function loginUser(formData: FormData) {
 
 • Assign roles in JWT claims or a user profile table.  
 • Enforce row-level security (RLS) in Postgres for data-level constraints.  
-• Restrict Next.js routes with middleware or layout-based checks.
+• Restrict Next.js routes with middleware or layout-based checks (or a client-based AuthProvider if following the minimal server gating approach).
 
 ---
 
@@ -89,4 +99,4 @@ export async function loginUser(formData: FormData) {
 
 • Always separate server logic from client logic to preserve security.  
 • Rely on server actions for any sensitive tasks (login, sign up, queries).  
-• Keep a consistent folder structure for clarity and maintainability.
+• Keep a consistent folder structure for clarity and maintainability, noting that either heavy server gating or a combination of minimal server + client gating can be valid approaches.
