@@ -1,28 +1,30 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { Database } from '@/types/supabase'
 
-// Define route access patterns
+// Define public routes that don't require authentication
 const publicRoutes = ['/login', '/signup']
-const patientRoutes = ['/patient', '/profile']
-const staffRoutes = ['/staff', '/cases', '/patients']
-const adminRoutes = ['/admin', '/settings']
 
-// Define home routes for each role
-const roleHomeRoutes = {
-  patient: '/patient',
-  staff: '/staff',
-  admin: '/admin'
-} as const
+function logRedirect(from: string, to: string, reason: string) {
+  console.log(`[REDIRECT] From: ${from} -> To: ${to} | Reason: ${reason}`)
+}
 
+/**
+ * Minimal middleware for basic auth protection
+ * Only checks if user has a valid session token
+ */
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  console.log(`[MIDDLEWARE] Processing route: ${pathname}`)
+
+  // Create initial response
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  const supabase = createServerClient<Database>(
+  // Create Supabase client with proper cookie handling
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -31,11 +33,10 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Let Supabase handle cookie options
           request.cookies.set({
             name,
             value,
-            ...options
+            ...options,
           })
           response = NextResponse.next({
             request: {
@@ -45,15 +46,14 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value,
-            ...options
+            ...options,
           })
         },
         remove(name: string, options: CookieOptions) {
-          // Let Supabase handle cookie options
           request.cookies.set({
             name,
             value: '',
-            ...options
+            ...options,
           })
           response = NextResponse.next({
             request: {
@@ -63,69 +63,32 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value: '',
-            ...options
+            ...options,
           })
         },
       },
     }
   )
 
-  // IMPORTANT: Get user immediately after client creation
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Get URL info
-  const { pathname } = request.nextUrl
-
-  // Get user role if logged in
-  let userRole: keyof typeof roleHomeRoutes | undefined
-  if (user) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    userRole = userData?.role as keyof typeof roleHomeRoutes
-  }
-
-  // Allow public routes
-  if (publicRoutes.includes(pathname)) {
-    // If user is already logged in, redirect to their role-specific home
-    if (user && userRole) {
-      return NextResponse.redirect(new URL(roleHomeRoutes[userRole], request.url))
-    }
+  // Skip auth check for public routes and assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
+    pathname.match(/\.(ico|png|jpg|jpeg|gif|svg)$/) ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup')
+  ) {
     return response
   }
 
-  // Check authentication
-  if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Refresh session and verify auth
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Redirect to login if accessing protected route without session
+  if (!session) {
+    const redirectUrl = new URL('/login', request.url)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  if (!userRole) {
-    throw new Error('User role not found')
-  }
-
-  // Handle role-based access
-  switch (userRole) {
-    case 'admin':
-      // Admins can access all routes
-      return response
-
-    case 'staff':
-      // Staff can access staff routes and patient routes
-      if ([...staffRoutes, ...patientRoutes].some(route => pathname.startsWith(route))) {
-        return response
-      }
-      break
-
-    case 'patient':
-      // Patients can only access patient routes
-      if (patientRoutes.some(route => pathname.startsWith(route))) {
-        return response
-      }
-      break
-  }
-
-  // Redirect unauthorized access to role-specific home
-  return NextResponse.redirect(new URL(roleHomeRoutes[userRole], request.url))
+  return response
 } 

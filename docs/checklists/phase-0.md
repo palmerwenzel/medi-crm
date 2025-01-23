@@ -1,6 +1,6 @@
 # Phase 0: Project Initialization & Environment Setup
 
-This document outlines the initial setup tasks for MediCRM, ensuring that your local environment is prepared for development and follows our established guidelines from [codebase-best-practices.md], [tech-stack.md], and related documentation.
+This document outlines the initial setup tasks for MediCRM, ensuring that your local environment is prepared for development and follows our established guidelines from [codebase-organization-rules.md], [tech-stack.md], and related documentation.
 
 ---
 
@@ -36,9 +36,9 @@ Below is a flattened, de-duplicated checklist. When a single step relates to bot
 
 [x] GENERAL: Install ESLint and Prettier (npm install -D eslint prettier).  
 [x] GENERAL: Generate an ESLint config (npx eslint --init) for Next.js + TS.  
-[x] GENERAL: Align ESLint/Prettier settings with codebase-best-practices.md (strict typing, consistent style).
+[x] GENERAL: Align ESLint/Prettier settings with codebase-organization-rules.md (strict typing, consistent style).
 
-[x] GENERAL: Create the basic file/folder structure, following codebase-best-practices.md (app/(routes), components, lib, utils, docs/rules, etc.).  
+[x] GENERAL: Create the basic file/folder structure, following codebase-organization-rules.md (app/(routes), components, lib, utils, docs/rules, etc.).  
 [x] GENERAL: Add placeholder files as needed (e.g., app/(routes)/page.tsx, docs/rules/.gitkeep).
 
 [x] GENERAL: Confirm the dev server runs (npm run dev) and displays a basic Next.js app.  

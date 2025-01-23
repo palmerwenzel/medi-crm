@@ -1,41 +1,48 @@
 import type { Metadata } from "next";
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
-import { AuthProvider } from "@/components/auth/auth-provider";
-import { SiteHeader } from "@/components/layout/site-header";
-import { createClient } from "@/lib/supabase/server";
+import { AuthProvider } from "@/providers/auth-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MediCRM",
-  description: "Modern healthcare CRM",
+  title: {
+    default: 'MediCRM',
+    template: '%s | MediCRM'
+  },
+  description: "Modern healthcare case management system",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/branding/logo-white.png',
+  }
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  let userRole: string | null = null;
-  if (user) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = userData?.role ?? null;
-  }
-
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${GeistSans.className} min-h-screen bg-background font-sans antialiased`}>
-        <AuthProvider>
-          <SiteHeader userRole={userRole} />
-          {children}
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head />
+      <body className={cn(
+        "min-h-screen bg-background font-sans antialiased",
+        inter.className
+      )}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

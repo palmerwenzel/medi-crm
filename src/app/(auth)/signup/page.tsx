@@ -1,4 +1,4 @@
-import { SignUpForm } from '@/components/auth/signup-form'
+import { SignUpForm } from './signup-form'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {

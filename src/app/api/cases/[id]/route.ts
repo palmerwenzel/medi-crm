@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { updateCaseSchema } from '@/lib/validations/case'
-import { createApiClient, handleApiError } from '@/lib/supabase/api'
+import { updateCaseSchema, updateCaseInternalNotesSchema, updateCaseMetadataSchema } from '@/lib/validations/case'
+import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
 /**
  * GET /api/cases/[id]
@@ -20,8 +20,12 @@ export async function GET(
       .eq('id', params.id)
       .single()
 
-    if (caseError) throw caseError
-    if (!caseData) throw new Error('Case not found')
+    if (caseError) {
+      throw createApiError(500, caseError.message)
+    }
+    if (!caseData) {
+      throw createApiError(404, 'Case not found')
+    }
 
     return NextResponse.json(caseData)
   } catch (error) {
@@ -31,53 +35,42 @@ export async function GET(
 
 /**
  * PATCH /api/cases/[id]
- * Update a case. Staff and admins can update any case, patients can only update their own.
+ * Update a case. Access control handled by RLS policies.
+ * Internal notes can only be updated by staff/admin.
  */
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, session } = await createApiClient()
-
-    // Get user role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (userError) throw userError
+    const { supabase, user, role } = await createApiClient()
 
     // Parse and validate request body
     const json = await request.json()
     const validatedData = updateCaseSchema.parse(json)
 
-    // If user is a patient, verify they own the case
-    if (userData.role === 'patient') {
-      const { data: caseData, error: caseError } = await supabase
-        .from('cases')
-        .select('patient_id')
-        .eq('id', params.id)
-        .single()
-
-      if (caseError) throw caseError
-      if (!caseData) throw new Error('Case not found')
-      if (caseData.patient_id !== session.user.id) {
-        throw new Error('You can only update your own cases')
-      }
+    // Staff/admin check for internal notes
+    if (validatedData.internal_notes !== undefined && role === 'patient') {
+      throw createApiError(403, 'Only staff and admins can update internal notes')
     }
 
-    // Update the case
+    // Update the case (RLS will enforce access rules)
     const { data: updatedCase, error: updateError } = await supabase
       .from('cases')
-      .update(validatedData)
+      .update({
+        ...validatedData,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', params.id)
       .select()
       .single()
 
-    if (updateError) throw updateError
-    if (!updatedCase) throw new Error('Case not found')
+    if (updateError) {
+      throw createApiError(500, 'Failed to update case', updateError)
+    }
+    if (!updatedCase) {
+      throw createApiError(404, 'Case not found')
+    }
 
     return NextResponse.json(updatedCase)
   } catch (error) {
@@ -87,34 +80,29 @@ export async function PATCH(
 
 /**
  * DELETE /api/cases/[id]
- * Delete a case. Only staff and admins can delete cases.
+ * Delete a case. Access control handled by RLS policies.
  */
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, session } = await createApiClient()
+    const { supabase, role } = await createApiClient()
 
-    // Get user role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (userError) throw userError
-    if (userData.role === 'patient') {
-      throw new Error('Only staff and admins can delete cases')
+    // Only staff and admins can delete cases
+    if (role === 'patient') {
+      throw createApiError(403, 'Only staff and admins can delete cases')
     }
 
-    // Delete the case
+    // Delete the case (RLS will enforce access rules)
     const { error: deleteError } = await supabase
       .from('cases')
       .delete()
       .eq('id', params.id)
 
-    if (deleteError) throw deleteError
+    if (deleteError) {
+      throw createApiError(500, 'Failed to delete case', deleteError)
+    }
 
     return new NextResponse(null, { status: 204 })
   } catch (error) {

@@ -1,28 +1,82 @@
 import { NextResponse } from 'next/server'
-import { createCaseSchema } from '@/lib/validations/case'
-import { createApiClient, handleApiError } from '@/lib/supabase/api'
+import { createCaseSchema, caseQuerySchema } from '@/lib/validations/case'
+import { createApiClient, handleApiError } from '@/utils/supabase/api'
 
 /**
  * GET /api/cases
- * List cases based on user role:
- * - Patients see only their own cases (enforced by RLS)
- * - Staff and admins see all cases (enforced by RLS)
+ * List cases based on user role with pagination and filtering
+ * Access control handled by RLS policies
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { supabase, session } = await createApiClient()
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { supabase } = await createApiClient()
+    const { searchParams } = new URL(request.url)
+
+    // Parse and validate query parameters
+    const queryParams = caseQuerySchema.parse({
+      limit: searchParams.has('limit') ? Number(searchParams.get('limit')) : 20,
+      offset: searchParams.has('offset') ? Number(searchParams.get('offset')) : 0,
+      status: searchParams.get('status') || undefined,
+      priority: searchParams.get('priority') || undefined,
+      category: searchParams.get('category') || undefined,
+      department: searchParams.get('department') || undefined,
+      assigned_to: searchParams.get('assigned_to') || undefined,
+      search: searchParams.get('search') || undefined,
+      sort_by: (searchParams.get('sort_by') as any) || 'created_at',
+      sort_order: (searchParams.get('sort_order') as any) || 'desc'
+    })
+
+    // Build query with filters
+    let query = supabase
+      .from('cases')
+      .select('*, patient:users(first_name, last_name)', { count: 'exact' })
+
+    // Apply filters
+    if (queryParams.status) {
+      query = query.eq('status', queryParams.status)
+    }
+    if (queryParams.priority) {
+      query = query.eq('priority', queryParams.priority)
+    }
+    if (queryParams.category) {
+      query = query.eq('category', queryParams.category)
+    }
+    if (queryParams.department) {
+      query = query.eq('department', queryParams.department)
+    }
+    if (queryParams.assigned_to !== undefined) {
+      query = query.eq('assigned_to', queryParams.assigned_to)
+    }
+    if (queryParams.search) {
+      query = query.or(`title.ilike.%${queryParams.search}%,description.ilike.%${queryParams.search}%`)
     }
 
-    const { data: cases, error: casesError } = await supabase
-      .from('cases')
-      .select('*')
-      .order('created_at', { ascending: false })
+    // Execute query with sorting and pagination
+    const { data: cases, error: casesError, count } = await query
+      .order(queryParams.sort_by, { ascending: queryParams.sort_order === 'asc' })
+      .range(
+        queryParams.offset,
+        queryParams.offset + queryParams.limit - 1
+      )
 
-    if (casesError) throw casesError
+    if (casesError) {
+      return NextResponse.json(
+        { error: casesError.message },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json(cases)
+    // Calculate pagination metadata
+    const total = count || 0
+    const hasMore = total > queryParams.offset + (cases?.length || 0)
+    const nextOffset = hasMore ? queryParams.offset + queryParams.limit : undefined
+
+    return NextResponse.json({
+      cases: cases || [],
+      total,
+      hasMore,
+      nextOffset
+    })
   } catch (error) {
     return handleApiError(error)
   }
@@ -30,29 +84,19 @@ export async function GET() {
 
 /**
  * POST /api/cases
- * Create a new case. Access control handled by:
- * - Server-side auth in layout
- * - RLS policies for data access
+ * Create a new case
+ * Access control handled by RLS policies
  */
 export async function POST(request: Request) {
   try {
-    const { supabase, session } = await createApiClient()
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { supabase, user, role } = await createApiClient()
 
     // Parse and validate request body
     const json = await request.json()
     const validatedData = createCaseSchema.parse(json)
 
-    // Get user role
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (userData?.role !== 'patient') {
+    // Only patients can create cases (enforced by RLS)
+    if (role !== 'patient') {
       return NextResponse.json(
         { error: 'Only patients can create cases' },
         { status: 403 }
@@ -64,10 +108,15 @@ export async function POST(request: Request) {
       .from('cases')
       .insert([
         {
-          patient_id: session.user.id,
+          patient_id: user.id,
           title: validatedData.title,
           description: validatedData.description,
-          status: 'open'
+          status: 'open',
+          priority: validatedData.priority || 'medium',
+          category: validatedData.category || 'general',
+          metadata: validatedData.metadata || {},
+          internal_notes: null,
+          attachments: []
         }
       ])
       .select()
