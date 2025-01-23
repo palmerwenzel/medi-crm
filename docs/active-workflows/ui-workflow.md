@@ -1,21 +1,20 @@
 # UI Workflow Template
 
 ## Project State
-Project Phase: Phase 2
-Current Task: Implement Advanced Validation (File checks, Rate limiting, Input sanitization)
+Project Phase: [Phase Number/Name]
+Current Task: [Task Description]
 
 ## Task Breakdown
-1. [x] Identify task from phase checklist
-2. [x] Break down into components
+1. [ ] Identify task from phase checklist
+2. [ ] Break down into components
 3. [ ] Document primary feature below
 
 ## Primary Feature
-Name: Advanced Validation System
-Description: Implement comprehensive validation across file uploads, API rate limiting, and input sanitization
+Name: [Feature Name]
+Description: [Feature Description]
 Components:
-- [ ] File Validation (type/size checks)
-- [ ] Rate Limiting Implementation
-- [ ] Input Sanitization Layer
+- [ ] [Component 1]
+- [ ] [Component 2]
 
 ---
 
