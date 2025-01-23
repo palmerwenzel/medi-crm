@@ -4,7 +4,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { Card, CardHeader, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarDays, FileText, MessageSquare, Plus } from 'lucide-react'
-import { CaseList } from '@/components/cases/shared/case-list'
+import { CaseManagementView } from '@/components/cases/shared/case-management-view'
 import Link from 'next/link'
 
 export function PatientDashboard() {
@@ -91,7 +91,7 @@ export function PatientDashboard() {
           </Button>
         </div>
 
-        <CaseList 
+        <CaseManagementView 
           limit={3}
           isDashboard={true}
         />

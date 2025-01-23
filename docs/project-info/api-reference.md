@@ -316,3 +316,21 @@ or
 2. Use type definitions from `@/types/supabase`
 3. Leverage RLS policies instead of manual checks
 4. Keep sessions fresh using refresh tokens 
+
+### New Import
+```typescript
+import { useCaseSubscription } from '@/lib/features/cases/subscriptions/use-case-subscription'
+```
+
+### Example Usage
+```typescript
+function CaseList() {
+  useCaseSubscription({
+    onUpdate: (updatedCase) => {
+      // Handle case update
+    },
+    onNew: (newCase) => {
+      // Handle new case
+    }
+  })
+} 

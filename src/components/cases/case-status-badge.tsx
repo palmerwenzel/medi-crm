@@ -1,31 +1,23 @@
-import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import type { CaseStatus } from '@/lib/validations/case'
 
-type CaseStatus = 'open' | 'in_progress' | 'resolved'
+const statusColors: Record<CaseStatus, string> = {
+  open: 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+  in_progress: 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
+  resolved: 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+}
 
 interface CaseStatusBadgeProps {
   status: CaseStatus
-  className?: string
 }
 
-const statusConfig: Record<CaseStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-  open: { label: 'Open', variant: 'default' },
-  in_progress: { label: 'In Progress', variant: 'secondary' },
-  resolved: { label: 'Resolved', variant: 'outline' },
-}
-
-export function CaseStatusBadge({ status, className }: CaseStatusBadgeProps) {
-  const config = statusConfig[status]
-  
+export function CaseStatusBadge({ status }: CaseStatusBadgeProps) {
   return (
     <Badge 
-      variant={config.variant}
-      className={cn(
-        'transition-colors duration-200',
-        className
-      )}
+      variant="secondary"
+      className={statusColors[status]}
     >
-      {config.label}
+      {status.replace('_', ' ')}
     </Badge>
   )
 } 

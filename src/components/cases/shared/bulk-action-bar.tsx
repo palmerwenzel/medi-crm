@@ -50,7 +50,7 @@ export function BulkActionBar({
   const [isAllSelected, setIsAllSelected] = useState(false)
 
   // Only staff and admin can use bulk actions
-  if (!user || !['staff', 'admin'].includes(userRole)) {
+  if (!user || !userRole || !['staff', 'admin'].includes(userRole)) {
     router.push('/dashboard')
     return null
   }
