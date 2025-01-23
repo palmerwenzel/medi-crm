@@ -1,8 +1,8 @@
 # UI Workflow Template
 
 ## Project State
-Project Phase: Phase 3
-Current Task: Implementing basic case listing UI
+Project Phase: Phase 3 - Post-MVP Enhancements
+Current Task: Enhanced Patient Dashboard Implementation
 
 ## Task Breakdown
 1. [x] Identify task from phase checklist
@@ -10,211 +10,153 @@ Current Task: Implementing basic case listing UI
 3. [x] Document primary feature below
 
 ## Primary Feature
-Name: Basic Case List Views
-Description: Implement responsive case listing UI with basic filtering and status updates
+Name: Enhanced Patient Dashboard
+Description: Implementing advanced sorting/filtering, file attachments, and rich case history for improved patient experience
 Components:
-- [ ] Case list container with pagination
-- [ ] Basic filter controls (status, search)
-- [ ] Case list item with status updates
-- [ ] Loading and error states
+- [x] Advanced Sorting & Filtering System
+  - [x] Sort by date, status, priority
+  - [x] Filter by multiple criteria
+  - [x] Save filter preferences
+  - [x] Loading states
+  - [x] Accessibility features
+- [x] File Attachment System
+  - [x] Upload interface (FileUploadZone)
+  - [x] File preview (FileViewer)
+  - [x] Attachment management (FilePreview)
+  - [x] Progress tracking
+  - [x] Type validation
+  - [x] Security features
+  - [x] Server-side integration
+    - [x] Secure file storage
+    - [x] File removal
+    - [x] Case attachment updates
+- [x] Rich Case History
+  - [x] Timeline view
+  - [x] Detailed activity log
+  - [x] Status change tracking
 
 ---
 
-## Implementation Workflow
+## Documentation Guidelines
+1. [x] Review existing documentation
+2. [x] Document findings
+3. [x] Update component docs
+4. [x] Add usage examples
 
-### 1. Understanding Phase
-1. [x] Review Documentation
-    - [x] UI guidelines & theme rules
-    - [x] Component strategies
-    - [x] UX patterns
-    - [x] Integration points
-2. [x] Document Findings
+## Planning
+1. [x] Design Architecture
     ```
-    Guidelines: 
-    - Desktop-first, mobile-responsive design
-    - Dark mode with glassmorphic elements
-    - Consistent spacing and alignment
-    - Role-based views (staff vs patient)
-
+    Layout: Enhanced FilterBar in case-management-view
+    State: CaseFilters interface with multi-select support
+    Theme: Following dark-mode first design
+    ```
+2. [x] Documentation Plan
+    ```
     Components:
-    - Need: CaseList, CaseListItem, FilterBar
-    - Existing: case-list-item.tsx, bulk-action-bar.tsx
-    - Use: Shadcn Table or ScrollArea
-
-    Theme:
-    - Dark backgrounds with purple accents
-    - Glassmorphic cards for cases
-    - Loading skeletons for pagination
-
-    Patterns:
-    - Infinite scroll or pagination controls
-    - Instant status updates with optimistic UI
-    - Toast notifications for errors
+    - FilterBar: Advanced filtering and sorting
+    - FileUploadZone: File upload with drag-and-drop
+    - FileViewer: File preview and download
+    - FilePreview: Progress tracking and management
+    
+    State Management:
+    - Filter preferences with localStorage
+    - File upload progress tracking
+    - File validation and security
+    
+    Styling:
+    - Consistent with design system
+    - Dark mode support
+    - Responsive design
     ```
-3. [x] CHECKPOINT: Share Understanding
+
+## Implementation Workflow
+### 1. Understanding Phase
+1. [x] Review requirements
+2. [x] Analyze existing code
+3. [x] Document findings
+4. [x] CHECKPOINT: Verify Understanding
 
 ### 2. Planning Phase
-1. [x] Design Architecture
-    - [x] Component tree
-    - [x] State management
-    - [x] Styling approach
-    - [x] Accessibility plan
-2. [x] Document Plan
-    ```
-    Components:
-    └── CaseListView
-        ├── FilterBar
-        │   ├── StatusFilter (Shadcn Select)
-        │   └── SearchInput (Shadcn Input)
-        ├── CaseList
-        │   ├── CaseListHeader
-        │   ├── CaseListItem[]
-        │   └── LoadMoreButton/Pagination
-        └── LoadingStates
-            ├── CaseListSkeleton
-            └── FilterBarSkeleton
-
-    State:
-    - Server state: useCaseList hook (pagination, filters)
-    - UI state: Local state for filters and selections
-    - Optimistic updates for status changes
-
-    Styling:
-    - Shadcn components as base
-    - Tailwind for custom styling
-    - Glassmorphic cards with hover effects
-
-    A11y:
-    - ARIA labels for filters and buttons
-    - Keyboard navigation for list items
-    - Loading announcements
-    ```
-3. [x] CHECKPOINT: Review Plan
+1. [x] Break down tasks
+2. [x] Design component structure
+3. [x] Plan state management
+4. [x] CHECKPOINT: Review Plan
 
 ### 3. Implementation Phase
 1. [x] Setup & Verification
     ```
-    Layout: Route structure verified
-    State: useCaseManagement hook updated with pagination
-    Theme: Using shadcn/ui components with dark theme
+    Layout: Enhanced FilterBar in case-management-view
+    State: CaseFilters interface with multi-select support
+    Theme: Following dark-mode first design
     ```
 2. [x] CHECKPOINT: Verify Setup
 
-3. [ ] Development
+3. [x] Development
     - [x] Component structure
-      ```
-      CaseManagementView:
-      Location: src/components/cases/shared/case-management-view.tsx
-      Implementation: 
-      - Infinite scroll pagination
-      - Role-based bulk actions
-      - Loading states with skeletons
-
-      FilterBar:
-      Location: src/components/cases/shared/filter-bar.tsx
-      Implementation:
-      - Search input with icon
-      - Status/priority filters
-      - Sort controls
-      - Reset functionality
-      ```
     - [x] Styling implementation
-      ```
-      CaseListItem:
-      Location: src/components/cases/shared/case-list-item.tsx
-      Implementation:
-      - Glassmorphic cards with hover effects
-      - Status/priority badges
-      - Internal notes expansion
-      ```
     - [x] Interactions/animations
-      - [x] List item transitions
-      - [x] Loading states
-      - [x] Filter animations
+    - [x] Loading states
     - [x] A11y features
-      - [x] ARIA labels for actions
-      - [x] Keyboard navigation
-        ```
-        - Space/Enter to select cases
-        - Ctrl/Cmd + A to select all
-        - Escape to clear selection
-        - Tab navigation through filters
-        - ARIA roles and labels
-        ```
-      - [x] Screen reader support
-        ```
-        - Descriptive labels for filters
-        - Status announcements
-        - Live regions for updates
-        - Role and state attributes
-        ```
-4. [ ] CHECKPOINT: Review Progress
+    Document each step:
+    ```
+    FilterBar Component:
+    Location: src/components/cases/shared/filter-bar.tsx
+    Implementation: 
+    - Multi-select filters with Command + Popover
+    - Date range picker with Calendar
+    - Filter badges with remove functionality
+    - Local storage persistence
+    - Loading states for initial load and save
+    - Full ARIA support and keyboard navigation
 
-5. [ ] Integration
+    File Attachment Components:
+    Location: src/components/cases/shared/
+    Implementation:
+    - FileUploadZone: Drag-and-drop with validation
+    - FileViewer: Modal preview for images/PDFs
+    - FilePreview: Progress tracking and management
+    - Security: Hash calculation and type validation
+    
+    Server Integration:
+    Location: src/lib/actions/
+    Implementation:
+    - files.ts: Secure file upload/removal with Supabase Storage
+    - cases.ts: Enhanced case actions with file attachment support
+    - Type-safe interfaces and error handling
+    - Security: File validation and secure storage paths
+    ```
+4. [x] CHECKPOINT: Review Progress
+
+5. [x] Integration
     - [x] Connect data
-      ```
-      Data: 
-      - Paginated case fetching
-      - Filter/sort integration
-      - Real-time updates (planned)
-      ```
     - [x] Hook up actions
-      ```
-      Actions:
-      - [x] Bulk status updates
-      - [x] Case selection
-      - [x] Filter controls
-      ```
     - [x] Polish transitions
-      ```
-      Polish:
-      - [x] List item animations
-      - [x] Filter transitions
-      - [x] Loading states
-      ```
-6. [ ] CHECKPOINT: Verify Integration
-
-### 4. Verification
-1. [ ] Quality Checks
     ```
-    Design:
-    - [x] Dark theme with glassmorphic cards
-    - [x] Consistent spacing/alignment
-    - [ ] Mobile responsiveness
-
-    Interactions:
-    - [x] Infinite scroll
-    - [x] Bulk actions
-    - [x] Filter controls
-
-    A11y:
-    - [x] ARIA labels
-    - [x] Keyboard nav
-    - [x] Screen reader
-
-    Theme:
-    - [x] Shadcn components
-    - [x] Dark mode
-    - [x] Purple accents
+    Data: File uploads connected to Supabase Storage
+    Actions: Case creation/update with attachments
+    Polish: Upload progress and transitions
     ```
-2. [ ] CHECKPOINT: Final Review
+6. [x] CHECKPOINT: Verify Integration
 
-### 5. Completion
-1. [ ] Get sign-off
-2. [ ] Update checklists
-3. [ ] Reset workflow
+### 4. Polishing Phase
+1. [ ] Testing
+2. [ ] Documentation
+3. [ ] Final review
+4. [ ] CHECKPOINT: Ready for Review
 
 ## Checkpoint Log
-- [x] 1.3 Understanding
-- [x] 2.3 Planning
-- [x] 3.2 Setup
-- [x] 3.4 Progress
-- [ ] 3.6 Integration
-- [ ] 4.2 Final
+1. [x] Understanding: Requirements and existing code analyzed
+2. [x] Planning: Component structure and state management planned
+3. [x] Setup: Development environment ready
+4. [x] Implementation: Core features implemented
+5. [x] Integration: Data flow and actions connected
+6. [ ] Polish: Final touches and documentation
 
 ## Key Decisions
-1. [x] Using infinite scroll with intersection observer for pagination
-2. [x] Implementing glassmorphic cards with hover effects
-3. [x] Role-based bulk actions in the UI
-4. [x] Filter controls with search, status, priority, and sorting
-5. [x] Comprehensive keyboard navigation and screen reader support
+1. [x] Command + Popover pattern for multi-select UX
+2. [x] Filter persistence with localStorage
+3. [x] Modal preview for images and PDFs
+4. [x] Progress tracking for file uploads
+5. [x] Security features for file validation
+6. [x] Case-specific storage paths for attachments
+7. [x] Server-side file validation and secure naming

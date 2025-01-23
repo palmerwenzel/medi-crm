@@ -7,17 +7,17 @@
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { FileIcon, UploadCloud, X } from 'lucide-react'
+import { UploadCloud } from 'lucide-react'
 import { validateFile, type AllowedMimeType } from '@/lib/utils/file-validation'
 import { sanitizeFileName } from '@/lib/utils/sanitize'
+import { FilePreview } from './file-preview'
 
 interface FileUploadZoneProps {
   onFilesSelected: (files: File[]) => void
   onFileRemoved: (fileName: string) => void
   uploadProgress?: Record<string, number>
+  fileUrls?: Record<string, string>
   maxFiles?: number
   maxSize?: number // in bytes
   acceptedTypes?: AllowedMimeType[]
@@ -25,43 +25,11 @@ interface FileUploadZoneProps {
   className?: string
 }
 
-interface FilePreviewProps {
-  file: File
-  progress?: number
-  onRemove: () => void
-  disabled?: boolean
-  className?: string
-}
-
-function FilePreview({ file, progress, onRemove, disabled, className }: FilePreviewProps) {
-  return (
-    <div className={cn('flex items-center gap-2 rounded-md border bg-card p-2', className)}>
-      <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{sanitizeFileName(file.name)}</p>
-        {typeof progress === 'number' && (
-          <Progress value={progress} className="h-1" />
-        )}
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-8 w-8 p-0"
-        disabled={disabled}
-        onClick={onRemove}
-      >
-        <X className="h-4 w-4" />
-        <span className="sr-only">Remove file</span>
-      </Button>
-    </div>
-  )
-}
-
 export function FileUploadZone({
   onFilesSelected,
   onFileRemoved,
   uploadProgress = {},
+  fileUrls = {},
   maxFiles = 5,
   maxSize = 5 * 1024 * 1024, // 5MB
   acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'],
@@ -171,6 +139,7 @@ export function FileUploadZone({
             <FilePreview
               key={file.name}
               file={file}
+              url={fileUrls[file.name]}
               progress={uploadProgress[file.name]}
               onRemove={() => handleRemove(file.name)}
               disabled={disabled}

@@ -15,6 +15,7 @@ import {
   type PaginatedCaseResponse,
   caseQuerySchema
 } from '@/lib/validations/case'
+import { uploadFile, removeFile } from './files'
 
 type ActionResponse<T = void> = {
   success: boolean
@@ -111,51 +112,125 @@ export async function getCases(params?: Partial<CaseQueryParams>): Promise<Actio
 }
 
 /**
- * Create a new case
- * RLS policies ensure only patients can create cases
+ * Creates a new case with optional file attachments
  */
-export async function createCase(input: CreateCaseInput): Promise<ActionResponse> {
+export async function createCase(
+  data: CreateCaseInput & { files?: File[] }
+): Promise<ActionResponse<CaseResponse>> {
   try {
-    // Validate input
-    const validatedInput = createCaseSchema.parse(input)
-    
     const supabase = await createClient()
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      console.error('Error getting user:', userError)
-      return {
-        success: false,
-        error: 'Not authenticated',
-      }
-    }
-    
-    // Create case with patient_id set to current user
-    const { error: createError } = await supabase
-      .from('cases')
-      .insert({
-        ...validatedInput,
-        patient_id: user.id,
-        status: 'open', // Set default status
-      })
+    const { files, ...caseData } = data
 
-    if (createError) {
-      console.error('Error creating case:', createError)
-      return {
-        success: false,
-        error: 'Failed to create case',
+    // Create case first to get the ID
+    const { data: newCase, error: createError } = await supabase
+      .from('cases')
+      .insert([{
+        ...caseData,
+        attachments: [],
+        status: 'open'
+      }])
+      .select()
+      .single()
+
+    if (createError) throw createError
+    if (!newCase) throw new Error('Failed to create case')
+
+    // Upload files if provided
+    if (files?.length) {
+      const uploadPromises = files.map(file => uploadFile(file, newCase.id))
+      const uploadResults = await Promise.all(uploadPromises)
+      
+      // Filter successful uploads and get URLs
+      const uploadedUrls = uploadResults
+        .filter(result => result.success && result.url)
+        .map(result => result.url!)
+
+      // Update case with attachment URLs
+      if (uploadedUrls.length) {
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update({ attachments: uploadedUrls })
+          .eq('id', newCase.id)
+
+        if (updateError) throw updateError
       }
     }
 
     revalidatePath('/cases')
-    return { success: true }
+    return { success: true, data: newCase }
   } catch (error) {
-    console.error('Error in createCase:', error)
+    console.error('Create case error:', error)
     return {
       success: false,
-      error: 'An unexpected error occurred',
+      error: error instanceof Error ? error.message : 'Failed to create case'
+    }
+  }
+}
+
+/**
+ * Updates an existing case, including file attachments
+ */
+export async function updateCase(
+  id: string,
+  data: {
+    files?: File[]
+    removedFiles?: string[]
+    updates: Partial<CaseResponse>
+  }
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { files, removedFiles, updates } = data
+
+    // Get current case data
+    const { data: currentCase, error: fetchError } = await supabase
+      .from('cases')
+      .select('attachments')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!currentCase) throw new Error('Case not found')
+
+    // Handle file removals
+    if (removedFiles?.length) {
+      await Promise.all(removedFiles.map(path => removeFile(path)))
+    }
+
+    // Upload new files
+    let newUrls: string[] = []
+    if (files?.length) {
+      const uploadPromises = files.map(file => uploadFile(file, id))
+      const uploadResults = await Promise.all(uploadPromises)
+      
+      newUrls = uploadResults
+        .filter(result => result.success && result.url)
+        .map(result => result.url!)
+    }
+
+    // Update case with new attachment list
+    const currentUrls = currentCase.attachments || []
+    const remainingUrls = removedFiles?.length
+      ? currentUrls.filter((url: string) => !removedFiles.includes(url))
+      : currentUrls
+
+    const { error: updateError } = await supabase
+      .from('cases')
+      .update({
+        ...updates,
+        attachments: [...remainingUrls, ...newUrls]
+      })
+      .eq('id', id)
+
+    if (updateError) throw updateError
+
+    revalidatePath('/cases')
+    return { success: true }
+  } catch (error) {
+    console.error('Update case error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update case'
     }
   }
 }
