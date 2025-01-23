@@ -121,18 +121,56 @@ export async function createCase(
     const supabase = await createClient()
     const { files, ...caseData } = data
 
+    // Get authenticated user data
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return {
+        success: false,
+        error: 'You must be logged in to create a case'
+      }
+    }
+
+    // Verify user is a patient by checking database role
+    const { data: userData, error: dbError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (dbError || !userData) {
+      return {
+        success: false,
+        error: 'User not found'
+      }
+    }
+
+    if (userData.role !== 'patient') {
+      return {
+        success: false,
+        error: 'Only patients can create cases'
+      }
+    }
+
     // Create case first to get the ID
     const { data: newCase, error: createError } = await supabase
       .from('cases')
-      .insert([{
+      .insert({
         ...caseData,
+        patient_id: user.id,
         attachments: [],
         status: 'open'
-      }])
-      .select()
+      })
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(first_name, last_name)
+      `)
       .single()
 
-    if (createError) throw createError
+    if (createError) {
+      console.error('Create case error:', createError)
+      throw createError
+    }
     if (!newCase) throw new Error('Failed to create case')
 
     // Upload files if provided

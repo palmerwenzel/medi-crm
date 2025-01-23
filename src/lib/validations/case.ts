@@ -74,12 +74,17 @@ export const caseResponseSchema = z.object({
   category: z.enum(caseCategoryEnum),
   department: z.enum(caseDepartmentEnum),
   patient_id: z.string().uuid(),
-  assigned_to: z.string().uuid().optional(),
+  assigned_to: z.object({
+    id: z.string().uuid(),
+    first_name: z.string().nullable(),
+    last_name: z.string().nullable(),
+    role: z.string(),
+    specialty: z.enum(staffSpecialtyEnum).nullable()
+  }).nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   metadata: z.object({
     sla: slaMetadataSchema.optional(),
-    specialties: z.array(z.enum(staffSpecialtyEnum)).optional(),
     tags: z.array(z.string()).optional(),
     internal_notes: z.string().optional()
   }).optional(),
@@ -87,6 +92,8 @@ export const caseResponseSchema = z.object({
     first_name: z.string().nullable(),
     last_name: z.string().nullable(),
   }).nullable(),
+  attachments: z.array(z.string()).optional(),
+  internal_notes: z.string().nullable()
 })
 
 // Case Response Type
@@ -98,7 +105,7 @@ export const createCaseSchema = z.object({
   description: z.string().min(1, 'Description is required').max(10000),
   priority: z.enum(casePriorityEnum).optional(),
   category: z.enum(caseCategoryEnum).optional(),
-  department: z.enum(caseDepartmentEnum).optional(),
+  department: z.enum(caseDepartmentEnum),
   metadata: z.record(z.string(), z.any()).optional(),
   attachments: z.array(z.string()).optional(),
   sla: slaMetadataSchema.optional(),
@@ -157,7 +164,7 @@ export const caseQuerySchema = z.object({
   priority: z.array(z.enum(casePriorityEnum)).optional(),
   category: z.array(z.enum(caseCategoryEnum)).optional(),
   department: z.array(z.enum(caseDepartmentEnum)).optional(),
-  specialties: z.array(z.enum(staffSpecialtyEnum)).optional(),
+  specialty: z.enum(staffSpecialtyEnum).optional(),
   search: z.string().optional(),
   sort_by: z.enum(caseSortFieldEnum).optional(),
   sort_order: z.enum(['asc', 'desc']).optional(),

@@ -9,7 +9,7 @@ import { createApiClient, handleApiError } from '@/utils/supabase/api'
  */
 export async function GET(request: Request) {
   try {
-    const { supabase } = await createApiClient()
+    const { supabase, user, role } = await createApiClient()
     const { searchParams } = new URL(request.url)
 
     // Parse and validate query parameters
@@ -29,9 +29,30 @@ export async function GET(request: Request) {
     // Build query with filters
     let query = supabase
       .from('cases')
-      .select('*, patient:users(first_name, last_name)', { count: 'exact' })
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(first_name, last_name)
+      `, { count: 'exact' })
 
-    // Apply filters
+    // Apply role-based filters
+    if (role === 'patient') {
+      query = query.eq('patient_id', user.id)
+    } else if (role === 'staff') {
+      // Get staff's department
+      const { data: staffData } = await supabase
+        .from('users')
+        .select('department')
+        .eq('id', user.id)
+        .single()
+      
+      if (staffData?.department) {
+        query = query.eq('department', staffData.department)
+      }
+    }
+    // Admins can see all cases (no filter needed)
+
+    // Apply additional filters
     if (queryParams.status) {
       query = query.eq('status', queryParams.status)
     }
@@ -106,23 +127,29 @@ export async function POST(request: Request) {
     // Create the case (RLS will enforce access rules)
     const { data: newCase, error: createError } = await supabase
       .from('cases')
-      .insert([
-        {
-          patient_id: user.id,
-          title: validatedData.title,
-          description: validatedData.description,
-          status: 'open',
-          priority: validatedData.priority || 'medium',
-          category: validatedData.category || 'general',
-          metadata: validatedData.metadata || {},
-          internal_notes: null,
-          attachments: []
-        }
-      ])
-      .select()
+      .insert({
+        patient_id: user.id,
+        title: validatedData.title,
+        description: validatedData.description,
+        status: 'open',
+        priority: validatedData.priority || 'medium',
+        category: validatedData.category || 'general',
+        department: validatedData.department,
+        metadata: validatedData.metadata || {},
+        internal_notes: null,
+        attachments: validatedData.attachments || []
+      })
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(first_name, last_name)
+      `)
       .single()
 
-    if (createError) throw createError
+    if (createError) {
+      console.error('Create case error:', createError)
+      throw createError
+    }
     if (!newCase) throw new Error('Failed to create case')
 
     return NextResponse.json(newCase, { status: 201 })

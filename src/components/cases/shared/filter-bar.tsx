@@ -36,7 +36,7 @@ import type {
   CaseStatus, 
   CasePriority, 
   CaseCategory,
-  Department,
+  CaseDepartment,
   StaffSpecialty,
   CaseQueryParams 
 } from '@/lib/validations/case'
@@ -52,7 +52,7 @@ import {
   caseStatusEnum,
   casePriorityEnum,
   caseCategoryEnum,
-  departmentEnum,
+  caseDepartmentEnum,
   staffSpecialtyEnum
 } from '@/lib/validations/case'
 
@@ -102,16 +102,26 @@ export function FilterBar({
         />
         <MultiSelectFilter
           label="Department"
-          options={departmentEnum}
+          options={caseDepartmentEnum}
           values={filters.department === 'all' ? 'all' : Array.isArray(filters.department) ? filters.department : []}
           onChange={values => onFilterChange({ ...filters, department: values })}
         />
-        <MultiSelectFilter
-          label="Specialty"
-          options={staffSpecialtyEnum}
-          values={filters.specialties === 'all' ? 'all' : Array.isArray(filters.specialties) ? filters.specialties : []}
-          onChange={values => onFilterChange({ ...filters, specialties: values })}
-        />
+        <Select
+          onValueChange={value => onFilterChange({ ...filters, specialty: value === 'all' ? 'all' : value as StaffSpecialty })}
+          value={filters.specialty || 'all'}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select specialty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Specialties</SelectItem>
+            {staffSpecialtyEnum.map(specialty => (
+              <SelectItem key={specialty} value={specialty}>
+                {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <TagFilter
           values={filters.tags === 'all' ? 'all' : Array.isArray(filters.tags) ? filters.tags : []}
           onChange={values => onFilterChange({ ...filters, tags: values })}

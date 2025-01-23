@@ -12,16 +12,23 @@ import type { MultiSelectFilterProps } from '@/types/filters'
 export function MultiSelectFilter<T extends string>({
   label,
   options,
-  selected,
+  values,
   onChange,
   placeholder = 'Select...',
-  emptyMessage = 'No options found.'
+  emptyMessage = 'No options found.',
+  className
 }: MultiSelectFilterProps<T>) {
-  const selectedCount = selected.length
+  const selectedCount = values === 'all' ? options.length : values.length
   const buttonLabel = selectedCount > 0 ? `${label} (${selectedCount})` : label
 
   const handleSelect = (value: T) => {
-    const currentValues = [...selected]
+    if (values === 'all') {
+      // If all was selected, deselect all except the clicked value
+      onChange([value])
+      return
+    }
+    
+    const currentValues = [...values]
     const index = currentValues.indexOf(value)
     
     if (index === -1) {
@@ -30,7 +37,7 @@ export function MultiSelectFilter<T extends string>({
       currentValues.splice(index, 1)
     }
     
-    onChange(currentValues)
+    onChange(currentValues.length === 0 ? 'all' : currentValues)
   }
 
   return (
@@ -42,7 +49,8 @@ export function MultiSelectFilter<T extends string>({
           aria-expanded={false}
           className={cn(
             'justify-between',
-            selectedCount > 0 && 'border-primary/50 font-medium'
+            selectedCount > 0 && 'border-primary/50 font-medium',
+            className
           )}
         >
           {buttonLabel}
@@ -59,9 +67,9 @@ export function MultiSelectFilter<T extends string>({
                 className="flex items-center gap-2"
               >
                 <div className="flex h-4 w-4 items-center justify-center rounded border">
-                  {selected.includes(option) && (
+                  {values === 'all' || values.includes(option) ? (
                     <Check className="h-3 w-3" />
-                  )}
+                  ) : null}
                 </div>
                 <span>{option}</span>
               </CommandItem>

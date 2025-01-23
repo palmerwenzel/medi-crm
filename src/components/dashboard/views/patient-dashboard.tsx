@@ -1,10 +1,9 @@
 'use client'
 
 import { useAuth } from '@/providers/auth-provider'
-import { Card, CardHeader, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, FileText, MessageSquare, Plus } from 'lucide-react'
 import { CaseManagementView } from '@/components/cases/shared/case-management-view'
+import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 import Link from 'next/link'
 
 export function PatientDashboard() {
@@ -24,63 +23,7 @@ export function PatientDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/cases/new">
-          <Card className="hover:bg-accent/5 transition-colors">
-            <CardHeader>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Plus className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">New Case</h3>
-                <CardDescription>Create a new medical case</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/messages">
-          <Card className="hover:bg-accent/5 transition-colors">
-            <CardHeader>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <MessageSquare className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">Messages</h3>
-                <CardDescription>Contact your healthcare team</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/schedule">
-          <Card className="hover:bg-accent/5 transition-colors">
-            <CardHeader>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <CalendarDays className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">Appointments</h3>
-                <CardDescription>View upcoming appointments</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/documents">
-          <Card className="hover:bg-accent/5 transition-colors">
-            <CardHeader>
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">Documents</h3>
-                <CardDescription>Access medical records</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-      </div>
+      <QuickActionsBar variant="cards" />
 
       {/* Recent Cases with Glassmorphic Effect */}
       <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -93,6 +36,8 @@ export function PatientDashboard() {
 
         <CaseManagementView 
           isDashboard={true}
+          viewType="patient"
+          limit={5}
         />
       </div>
     </div>

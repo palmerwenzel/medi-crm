@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/providers/auth-provider'
-import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 import { getDashboardStats } from '@/lib/actions/staff'
+import Link from 'next/link'
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Icons } from '@/components/ui/icons'
+import { CaseManagementView } from '@/components/cases/shared/case-management-view'
+import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 
 interface DashboardStats {
   activeCases: number
@@ -20,7 +22,6 @@ interface DashboardStats {
 
 export function StaffDashboard() {
   const { user, userRole } = useAuth()
-  const router = useRouter()
   const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats>({
     activeCases: 0,
@@ -115,32 +116,24 @@ export function StaffDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-4">
-        <Button onClick={() => router.push('/cases/new')}>
-          <Icons.plus className="mr-2 h-4 w-4" />
-          Create New Case
-        </Button>
-        <Button onClick={() => router.push('/patients')} variant="outline">
-          <Icons.users className="mr-2 h-4 w-4" />
-          View All Patients
-        </Button>
-        <Button onClick={() => router.push('/schedule')} variant="outline">
-          <Icons.calendar className="mr-2 h-4 w-4" />
-          Manage Appointments
-        </Button>
-      </div>
+      <QuickActionsBar />
 
-      {/* Recent Activity */}
+      {/* Recent Cases */}
       <div className="rounded-lg border p-6">
-        <h2 className="mb-4 text-lg font-semibold">Recent Activity</h2>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No recent activity</p>
-        )}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Recent Cases</h2>
+          <Button variant="outline" asChild>
+            <Link href="/cases">View All Cases</Link>
+          </Button>
+        </div>
+        
+        <CaseManagementView 
+          isDashboard={true}
+          viewType="staff"
+          showBulkActions={false}
+          showStaffTools={true}
+          limit={5}
+        />
       </div>
     </div>
   )

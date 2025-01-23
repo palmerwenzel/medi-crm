@@ -7,7 +7,7 @@ import type {
   CaseStatus, 
   CasePriority, 
   CaseCategory,
-  Department,
+  CaseDepartment,
   StaffSpecialty,
   CaseQueryParams 
 } from '@/lib/validations/case'
@@ -19,8 +19,8 @@ export interface CaseFilters {
   status?: CaseStatus[] | 'all'
   priority?: CasePriority[] | 'all'
   category?: CaseCategory[] | 'all'
-  department?: Department[] | 'all'
-  specialties?: StaffSpecialty[] | 'all'
+  department?: CaseDepartment[] | 'all'
+  specialty?: StaffSpecialty | 'all'
   tags?: string[] | 'all'
   search?: string
   sortBy?: CaseQueryParams['sort_by']
@@ -57,6 +57,10 @@ export interface MultiSelectFilterProps<T extends string> {
   onChange: (values: T[] | 'all') => void
   /** Optional className for styling */
   className?: string
+  /** Placeholder text for the select input */
+  placeholder?: string
+  /** Message to show when no options are available */
+  emptyMessage?: string
 }
 
 /**

@@ -14,6 +14,11 @@ CREATE TABLE case_notes (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Add indexes for efficient querying
+CREATE INDEX idx_case_notes_case_id ON case_notes(case_id);
+CREATE INDEX idx_case_notes_staff_id ON case_notes(staff_id);
+CREATE INDEX idx_case_notes_created_at ON case_notes(created_at);
+
 -- Add trigger for updated_at
 CREATE TRIGGER case_notes_updated_at
   BEFORE UPDATE ON case_notes

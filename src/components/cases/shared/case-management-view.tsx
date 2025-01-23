@@ -30,6 +30,10 @@ interface CaseManagementViewProps {
   isDashboard?: boolean
   showActions?: boolean
   className?: string
+  viewType?: 'staff' | 'patient'
+  showBulkActions?: boolean
+  showStaffTools?: boolean
+  limit?: number
 }
 
 // Loading skeleton for case items
@@ -64,7 +68,11 @@ export function CaseManagementView({
   showNotes = false, 
   isDashboard = false,
   showActions = true,
-  className
+  className,
+  viewType,
+  showBulkActions = false,
+  showStaffTools = false,
+  limit
 }: CaseManagementViewProps) {
   const { userRole } = useAuth()
   const { ref, inView } = useInView()
@@ -75,6 +83,9 @@ export function CaseManagementView({
     sortBy: 'created_at',
     sortOrder: 'desc'
   })
+
+  // If viewType is not specified, infer from userRole
+  const effectiveViewType = viewType || (userRole === 'staff' ? 'staff' : 'patient')
 
   const {
     cases,

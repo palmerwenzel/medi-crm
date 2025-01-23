@@ -15,18 +15,25 @@ export type ApiError = {
 export async function createApiClient() {
   const supabase = createClient()
   
-  // Get user session
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
+  // Get authenticated user data
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
   
-  if (!user) {
+  if (userError || !user) {
     throw createApiError(401, 'Unauthorized')
   }
 
-  // Get user role from metadata
-  const role = user.user_metadata.role || 'patient'
+  // Get user role from database
+  const { data: userData, error: dbError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  return { supabase, user, role }
+  if (dbError || !userData) {
+    throw createApiError(401, 'User not found')
+  }
+
+  return { supabase, user, role: userData.role }
 }
 
 /**

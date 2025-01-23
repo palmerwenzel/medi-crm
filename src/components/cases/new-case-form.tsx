@@ -8,10 +8,17 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createCaseSchema } from '@/lib/validations/case'
+import { createCaseSchema, caseDepartmentEnum } from '@/lib/validations/case'
 import type { CreateCaseInput } from '@/lib/validations/case'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/providers/auth-provider'
@@ -37,6 +44,7 @@ export function NewCaseForm() {
     defaultValues: {
       title: '',
       description: '',
+      department: 'primary_care',
       attachments: [],
     },
   })
@@ -130,6 +138,31 @@ export function NewCaseForm() {
               <FormControl>
                 <Input placeholder="Enter case title" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="department"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Department</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {caseDepartmentEnum.map(dept => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

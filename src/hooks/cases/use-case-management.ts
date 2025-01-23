@@ -76,8 +76,8 @@ export function useCaseManagement({
     if (currentFilters.department) {
       query = query.in('department', currentFilters.department)
     }
-    if (currentFilters.specialties) {
-      query = query.contains('metadata->specialties', currentFilters.specialties)
+    if (currentFilters.specialty) {
+      query = query.eq('specialty', currentFilters.specialty)
     }
     if (currentFilters.search) {
       query = query.or(`title.ilike.%${currentFilters.search}%,description.ilike.%${currentFilters.search}%`)
@@ -124,8 +124,7 @@ export function useCaseManagement({
         (Array.isArray(filters.category) ? filters.category.filter((c): c is CaseCategory => Boolean(c)) : [filters.category].filter((c): c is CaseCategory => Boolean(c))),
       department: filters.department === 'all' ? undefined :
         (Array.isArray(filters.department) ? filters.department.filter((d): d is CaseDepartment => Boolean(d)) : [filters.department].filter((d): d is CaseDepartment => Boolean(d))),
-      specialties: filters.specialties === 'all' ? undefined :
-        (Array.isArray(filters.specialties) ? filters.specialties.filter((s): s is StaffSpecialty => Boolean(s)) : [filters.specialties].filter((s): s is StaffSpecialty => Boolean(s))),
+      specialty: filters.specialty === 'all' ? undefined : filters.specialty,
       search: filters.search,
       sort_by: filters.sortBy,
       sort_order: filters.sortOrder,
@@ -145,7 +144,7 @@ export function useCaseManagement({
     onUpdate: (updatedCase) => {
       const shouldInclude = userRole === 'admin' || 
         (userRole === 'patient' && updatedCase.patient_id === user?.id) ||
-        (userRole === 'staff' && updatedCase.assigned_to === user?.id)
+        (userRole === 'staff' && updatedCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => {
@@ -161,7 +160,7 @@ export function useCaseManagement({
     onNew: (newCase) => {
       const shouldInclude = userRole === 'admin' || 
         (userRole === 'patient' && newCase.patient_id === user?.id) ||
-        (userRole === 'staff' && newCase.assigned_to === user?.id)
+        (userRole === 'staff' && newCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => {
@@ -186,7 +185,7 @@ export function useCaseManagement({
   const loadStaffMembers = useCallback(async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, role, specialties:metadata->specialties')
+      .select('id, first_name, last_name, role, specialty')
       .eq('role', 'staff')
       .order('first_name')
 
@@ -200,10 +199,7 @@ export function useCaseManagement({
         id: staff.id,
         name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
         role: 'staff' as const,
-        specialties: Array.isArray(staff.specialties) ? 
-          staff.specialties.filter((s): s is StaffSpecialty => 
-            typeof s === 'string' && Object.values(staffSpecialtyEnum).includes(s as StaffSpecialty)
-          ) : undefined
+        specialties: staff.specialty ? [staff.specialty] : undefined
       }))
     )
   }, [supabase])

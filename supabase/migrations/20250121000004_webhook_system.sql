@@ -1,5 +1,5 @@
 --
--- Name: 20250121000003_webhook_system; Type: MIGRATION
+-- Name: 20250121000004_webhook_system; Type: MIGRATION
 -- Description: Implements webhook system for case notifications
 -- Dependencies: 20250121000001_user_system (for user references)
 --

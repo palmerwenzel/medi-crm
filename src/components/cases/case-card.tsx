@@ -6,10 +6,10 @@
 'use client'
 
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CaseStatusBadge } from './case-status-badge'
+import { CaseMetadata } from './case-metadata'
 import { useAuth } from '@/providers/auth-provider'
 import type { CaseResponse } from '@/lib/validations/case'
 
@@ -24,11 +24,6 @@ interface CaseCardProps {
 
 export function CaseCard({ case: caseData }: CaseCardProps) {
   const { userRole } = useAuth()
-  
-  // Format patient name
-  const patientName = caseData.patient
-    ? `${caseData.patient.first_name} ${caseData.patient.last_name}`.trim()
-    : 'Unknown Patient'
 
   // Determine case URL based on role
   const caseUrl = `/cases/${caseData.id}`
@@ -49,10 +44,16 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-          <span>Patient: {patientName}</span>
-          <span>Created {formatDistanceToNow(new Date(caseData.created_at))} ago</span>
-        </div>
+        <CaseMetadata 
+          case={caseData}
+          showAttachments={true}
+          showAssignedTo={showAssignButton}
+          showCreatedAt={true}
+          showPatient={true}
+          dateFormat="relative"
+          variant="default"
+          iconSize="sm"
+        />
       </CardContent>
       <CardFooter className="flex justify-between">
         <Link href={caseUrl}>
