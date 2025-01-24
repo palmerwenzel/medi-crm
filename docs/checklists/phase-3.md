@@ -38,9 +38,9 @@ This phase enhances the basic case management with improved UX and additional fe
    - SLA indicators
 
 [ ] FRONTEND: Staff collaboration tools:
-   - Internal notes system
-   - Case assignment
-   - Team communication
+   - [x] Internal notes system
+   - [ ] Case assignment
+   - [ ] Team communication
 
 [ ] FRONTEND: AI/Chat features:
    - AI Triage widget
