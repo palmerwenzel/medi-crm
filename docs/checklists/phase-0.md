@@ -1,6 +1,6 @@
 # Phase 0: Project Initialization & Environment Setup
 
-This document outlines the initial setup tasks for MediCRM, ensuring that your local environment is prepared for development and follows our established guidelines from [codebase-organization-rules.md], [tech-stack.md], and related documentation.
+This document outlines the initial setup tasks for TonIQ, ensuring that your local environment is prepared for development and follows our established guidelines from [codebase-organization-rules.md], [tech-stack.md], and related documentation.
 
 ---
 

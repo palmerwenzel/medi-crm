@@ -5,7 +5,7 @@ import { NewCaseForm } from "@/components/cases/new-case-form"
  * Relies on middleware for auth and client components for role checks
  */
 export const metadata = {
-  title: 'Create New Case - MediCRM',
+  title: 'Create New Case - TonIQ',
   description: 'Submit a new medical case for review.',
 }
 

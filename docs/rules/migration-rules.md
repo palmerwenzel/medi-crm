@@ -1,6 +1,6 @@
 # Migration Rules
 
-This file defines the process and best practices for managing database migrations in MediCRM, focusing on Supabase’s Postgres environment.
+This file defines the process and best practices for managing database migrations in TonIQ, focusing on Supabase’s Postgres environment.
 
 ---
 
@@ -69,4 +69,4 @@ CREATE POLICY ...
 
 ## Conclusion
 
-A well-structured migration workflow ensures consistent database evolution with minimal risk. Adhere to these rules for all MediCRM schema changes.
+A well-structured migration workflow ensures consistent database evolution with minimal risk. Adhere to these rules for all TonIQ schema changes.

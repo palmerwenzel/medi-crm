@@ -1,6 +1,6 @@
 # Supabase Rules
 
-MediCRM integrates with Supabase for database, authentication, and real-time features. This document lays out how to use Supabase properly with Next.js App Router.
+TonIQ integrates with Supabase for database, authentication, and real-time features. This document lays out how to use Supabase properly with Next.js App Router.
 
 ---
 

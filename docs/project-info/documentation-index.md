@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-Welcome to the MediCRM Next.js project! This index document is designed to help anyone—from new contributors to AI assistants—navigate our codebase and documentation efficiently. Below is a high-level overview of the project and how all documents fit together.
+Welcome to the TonIQ Next.js project! This index document is designed to help anyone—from new contributors to AI assistants—navigate our codebase and documentation efficiently. Below is a high-level overview of the project and how all documents fit together.
 
 ---
 
@@ -18,7 +18,7 @@ Our project is organized into multiple phases (setup, authentication, case manag
 
 ## 2. Phase-Based Checklists
 
-These files outline the sequential tasks needed to build MediCRM from the ground up:
+These files outline the sequential tasks needed to build TonIQ from the ground up:
 
 1. @phase-0.md (Project Initialization & Environment Setup)  
    - Covers environment setup, Next.js configuration, Tailwind + Shadcn UI init, Supabase onboarding, and basic theming tokens.
@@ -127,4 +127,4 @@ These documents provide deeper context about our tech choices, planned user flow
 • Keep an eye on @test-rules.md for coverage and testing rigor.  
 • Always update the relevant workflow file (@ui-workflow.md, @backend-workflow.md, etc.) to reflect your progress.
 
-Feel free to explore these documents in any order that works best for you. Enjoy building MediCRM, and thank you for helping us maintain a clean, organized, and efficient healthcare-focused application!
+Feel free to explore these documents in any order that works best for you. Enjoy building TonIQ, and thank you for helping us maintain a clean, organized, and efficient healthcare-focused application!

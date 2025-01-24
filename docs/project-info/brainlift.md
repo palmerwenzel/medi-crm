@@ -1,12 +1,12 @@
-# MediCRM Brainlift
+# TonIQ Brainlift
 
 ## Purpose
-- MediCRM is a modern Patient Relationship Management platform designed for healthcare environments, supporting clinics, hospitals, and telehealth providers.
+- TonIQ is a modern Patient Relationship Management platform designed for healthcare environments, supporting clinics, hospitals, and telehealth providers.
 - We employ generative AI (chatbots, triage helpers) to handle patient inquiries, reduce staff workload, and ensure that human intervention happens only when necessary.
 - This Brainlift exists to:
   - Guide architectural and feature decisions, especially those related to AI-driven case handling and patient self-service.
   - Maintain an AI-first philosophy centered on rapid, intelligent responses and seamless communication.
-  - Document MediCRM’s unique approach to real-time healthcare support, case management, and secure patient interactions.
+  - Document TonIQ’s unique approach to real-time healthcare support, case management, and secure patient interactions.
   - Track knowledge specific to healthcare regulations, compliance, merging EHR data, and scaling for large patient/staff volumes.
 
 ## SpikyPOVs
@@ -15,15 +15,15 @@
 - Managing patient inquiries effectively requires a robust case (ticket) system, with dynamic metadata, real-time staff collaboration, and role-based permissions.  
 - Generative AI chatbots and triage helpers should be highly visible to channel routine questions away from staff.  
 - Priority and tracking tools are critical for urgent medical cases; automated assignment based on specialty or schedules can save time.  
-- Detailed audit logs, secure data storage, and healthcare regulations compliance (HIPAA-like considerations) are central to MediCRM.  
+- Detailed audit logs, secure data storage, and healthcare regulations compliance (HIPAA-like considerations) are central to TonIQ.  
 - Performance across communication channels—live chat, patient portal, or email—must remain swift and responsive.  
-- Flexibility in data modeling (attachments, insurance details, advanced stages of triage) keeps MediCRM adaptable to each facility’s needs.
+- Flexibility in data modeling (attachments, insurance details, advanced stages of triage) keeps TonIQ adaptable to each facility’s needs.
 
 ### Myths
 - We do not believe in treating AI as a “nice-to-have”; it is a core feature for reducing clinical burden.  
 - We do not believe staff dashboards should be cluttered; carefully structured queues, filters, and quick actions foster efficient patient care.  
 - We do not believe that advanced systems must sacrifice performance or clarity; thoughtful Next.js + Supabase integration maintains both.  
-- We do not believe in limiting patients to a single channel; MediCRM must be omnichannel (web portal, chatbots, real-time staff messaging).
+- We do not believe in limiting patients to a single channel; TonIQ must be omnichannel (web portal, chatbots, real-time staff messaging).
 
 ## Knowledge Tree
 
@@ -64,7 +64,7 @@
 
 ## Insights
 - Real-time collaboration combined with AI triage features can significantly reduce the workload for medical staff.  
-- A flexible data schema futureproofs MediCRM, facilitating expansions for advanced AI features and multi-channel interactions.  
+- A flexible data schema futureproofs TonIQ, facilitating expansions for advanced AI features and multi-channel interactions.  
 - Strong attention to security (RLS, encryption) and privacy (HIPAA-like needs) is essential to earn medical facility trust.  
 - Thoughtful UI design, merges, and dashboards help staff manage a high volume of cases without losing personalization.  
 - Performance, usability, and strict compliance remain the top priorities from day one and throughout the product’s lifecycle.

@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides a comprehensive reference for all API endpoints in MediCRM. Each endpoint includes its purpose, required permissions, request/response formats, and example usage.
+This document provides a comprehensive reference for all API endpoints in TonIQ. Each endpoint includes its purpose, required permissions, request/response formats, and example usage.
 
 ## Authentication Endpoints
 

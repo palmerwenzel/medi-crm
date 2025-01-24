@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 
 export const metadata = {
-  title: 'Schedule - MediCRM',
+  title: 'Schedule - TonIQ',
   description: 'View and manage your appointments.',
 }
 

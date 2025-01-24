@@ -3,7 +3,7 @@ import { FileText, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export const metadata = {
-  title: 'Documents - MediCRM',
+  title: 'Documents - TonIQ',
   description: 'Access and manage your medical documents.',
 }
 

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card"
 
 export const metadata = {
-  title: 'Messages - MediCRM',
+  title: 'Messages - TonIQ',
   description: 'Communicate with your healthcare team.',
 }
 

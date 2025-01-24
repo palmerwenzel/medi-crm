@@ -1,10 +1,10 @@
-# MediCRM: AI-Powered Patient Relationship Management
+# TonIQ: AI-Powered Patient Relationship Management
 
 ## Background
 
 Healthcare CRM solutions are essential to medical facilities, telehealth providers, clinics, and private practices. They help teams manage patient interactions, integrate with electronic health record (EHR) systems, and ensure compliance with healthcare regulations.
 
-Medical CRMs often guide patients to self-service medical FAQs and resources before allowing direct provider interactions. However, many inquiries still require human intervention, which can be resource-intensive. MediCRM aims to leverage generative AI to minimize workload, enhance the patient experience, and streamline case handling. By integrating existing healthcare resources with LLM-driven assistance, MediCRM delivers a highly effective—they can still escalate to human care when necessary, but the default workflows can handle most cases efficiently, boosting productivity and reducing overall costs.
+Medical CRMs often guide patients to self-service medical FAQs and resources before allowing direct provider interactions. However, many inquiries still require human intervention, which can be resource-intensive. TonIQ aims to leverage generative AI to minimize workload, enhance the patient experience, and streamline case handling. By integrating existing healthcare resources with LLM-driven assistance, TonIQ delivers a highly effective—they can still escalate to human care when necessary, but the default workflows can handle most cases efficiently, boosting productivity and reducing overall costs.
 
 ## Submission Guidelines
 
@@ -24,7 +24,7 @@ Creating a modern healthcare support system requires careful attention to clinic
 ### Core Architecture
 
 #### Case (Ticket) Data Model
-The case system is central to MediCRM, capturing the full care journey for each patient inquiry. Key components include:
+The case system is central to TonIQ, capturing the full care journey for each patient inquiry. Key components include:
 
 - Standard Identifiers & Timestamps: Basic fields like case ID, creation date, and status updates.  
 - Flexible Metadata:  

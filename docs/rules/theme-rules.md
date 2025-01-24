@@ -1,6 +1,6 @@
 # Theme Rules
 
-This document outlines the visual identity and theming guidelines for MediCRM, ensuring a cohesive look and feel across all user interactions. The goal is to provide a dark-mode–first design with glassmorphic elements, grayscale palettes, and purple accents that suit both patient and provider interfaces.
+This document outlines the visual identity and theming guidelines for TonIQ, ensuring a cohesive look and feel across all user interactions. The goal is to provide a dark-mode–first design with glassmorphic elements, grayscale palettes, and purple accents that suit both patient and provider interfaces.
 
 ---
 
@@ -126,4 +126,4 @@ This document outlines the visual identity and theming guidelines for MediCRM, e
 
 ## Conclusion
 
-These theme rules ensure MediCRM retains a high-contrast, dark-mode–first experience with glassmorphic elements and purple highlights. By pairing clear typography and subtle animations with robust accessibility features, we create a modern, engaging interface that aligns with healthcare best practices and the distinct needs of both patient-facing and staff-facing workflows.
+These theme rules ensure TonIQ retains a high-contrast, dark-mode–first experience with glassmorphic elements and purple highlights. By pairing clear typography and subtle animations with robust accessibility features, we create a modern, engaging interface that aligns with healthcare best practices and the distinct needs of both patient-facing and staff-facing workflows.

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Settings2, Users, Bell, Shield, Database } from "lucide-react"
 
 export const metadata = {
-  title: 'Settings - MediCRM',
+  title: 'Settings - TonIQ',
   description: 'System settings and configuration.',
 }
 

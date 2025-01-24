@@ -6,7 +6,7 @@ This document sets forth our internal rules and priorities for handling linting 
 
 ## 1. Introduction
 
-Our goal is to maintain a stable, readable, and high-quality codebase. Linting errors often expose important issues, including potential bugs (unused variables indicating missing logic) or code smells (untidy structures that will grow problematic over time). By creating a clear hierarchy of priorities and definitive rules for resolving errors, we aim to keep our code robust, compliant with best practices, and aligned with the MediCRM architecture.
+Our goal is to maintain a stable, readable, and high-quality codebase. Linting errors often expose important issues, including potential bugs (unused variables indicating missing logic) or code smells (untidy structures that will grow problematic over time). By creating a clear hierarchy of priorities and definitive rules for resolving errors, we aim to keep our code robust, compliant with best practices, and aligned with the TonIQ architecture.
 
 ---
 
@@ -63,7 +63,7 @@ Below are three main levels, from highest (must fix urgently) to lowest (still i
 
 ## 3. Source of Truth & Data Reliability
 
-MediCRM code often references multiple layers: Database, API, UI, and validation schemas. Here’s how we reconcile them when lint or design decisions arise:
+TonIQ code often references multiple layers: Database, API, UI, and validation schemas. Here’s how we reconcile them when lint or design decisions arise:
 
 1. Database Schema (Supabase)  
    • The ultimate source of truth for stored fields.  
@@ -132,4 +132,4 @@ If in doubt:
 • Resolve intermediate issues (Priority B).  
 • Finally, tackle minor items (Priority C).  
 
-This structured approach ensures we meet MediCRM’s quality and reliability standards every step of the way.
+This structured approach ensures we meet TonIQ’s quality and reliability standards every step of the way.

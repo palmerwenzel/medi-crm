@@ -1,6 +1,6 @@
 # Next.js Rules
 
-This document outlines how to use Next.js App Router features effectively in MediCRM.
+This document outlines how to use Next.js App Router features effectively in TonIQ.
 
 ---
 
@@ -82,4 +82,4 @@ app/
 
 ## 7. Summary
 
-By leveraging server components, route groups, server actions, and optionally minimal server gating, MediCRM remains efficient and secure. Keep references to official Next.js docs (and our other internal rules) for consistent style and performance.
+By leveraging server components, route groups, server actions, and optionally minimal server gating, TonIQ remains efficient and secure. Keep references to official Next.js docs (and our other internal rules) for consistent style and performance.

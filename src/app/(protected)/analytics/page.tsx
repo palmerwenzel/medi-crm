@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card"
 import { BarChart, LineChart, PieChart, Activity } from "lucide-react"
 
 export const metadata = {
-  title: 'Analytics - MediCRM',
+  title: 'Analytics - TonIQ',
   description: 'System analytics and statistics.',
 }
 

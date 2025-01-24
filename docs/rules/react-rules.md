@@ -1,6 +1,6 @@
 # React Rules
 
-This file describes how to build React components for MediCRM using functional and declarative approaches.
+This file describes how to build React components for TonIQ using functional and declarative approaches.
 
 ---
 

@@ -1,6 +1,6 @@
 # Tailwind & Shadcn Rules
 
-These guidelines describe how MediCRM leverages Tailwind CSS and Shadcn UI components (built on Radix) for consistent, accessible UI.
+These guidelines describe how TonIQ leverages Tailwind CSS and Shadcn UI components (built on Radix) for consistent, accessible UI.
 IMPORTANT NOTE: `shadcn-ui@latest` is deprecated. Always use just `shadcn@latest` instead.
 
 ---

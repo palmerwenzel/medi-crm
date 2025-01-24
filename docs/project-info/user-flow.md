@@ -46,9 +46,9 @@
 - Mobile-responsive drawer menu
 - Role-based menu items
 
-# MediCRM User Flow
+# TonIQ User Flow
 
-This document defines the user journey through MediCRM, showing how distinct user types (Patients, Staff, and Administrators) navigate the system. The application relies on role-based access control (RBAC) to tailor functionality, with a shared "Users" table storing common fields and role assignments.
+This document defines the user journey through TonIQ, showing how distinct user types (Patients, Staff, and Administrators) navigate the system. The application relies on role-based access control (RBAC) to tailor functionality, with a shared "Users" table storing common fields and role assignments.
 
 ---
 
@@ -60,7 +60,7 @@ This document defines the user journey through MediCRM, showing how distinct use
 ---
 
 ## 2. Authentication & Onboarding
-1. A new user (patient or staff) arrives at the MediCRM landing page.  
+1. A new user (patient or staff) arrives at the TonIQ landing page.  
 2. User selects "Create Account" or "Log In."  
 3. On successful registration, the system creates a record in the "Users" table and assigns a role (e.g., "Patient," "Staff," or "Admin").  
 4. If needed, additional data specific to each role is stored in role-specific tables (e.g., "Patients," "Staff").
@@ -129,4 +129,4 @@ This document defines the user journey through MediCRM, showing how distinct use
 ---
 
 ## 7. Conclusion
-By adopting a unified `Users` table for core fields and separating specific data by role (Patient, Staff, Admin), MediCRM can provide distinct flows for each user type while preserving a central authority for authentication and shared user info. Role-based access ensures that staff- or admin-only sections remain segregated, keeping patient data secure and making workflows efficient.
+By adopting a unified `Users` table for core fields and separating specific data by role (Patient, Staff, Admin), TonIQ can provide distinct flows for each user type while preserving a central authority for authentication and shared user info. Role-based access ensures that staff- or admin-only sections remain segregated, keeping patient data secure and making workflows efficient.

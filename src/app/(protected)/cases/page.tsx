@@ -4,7 +4,7 @@ import { CaseManagementView } from "@/components/cases/shared/case-management-vi
 import type { UserRole } from '../layout'
 
 export const metadata = {
-  title: 'Cases - MediCRM',
+  title: 'Cases - TonIQ',
   description: 'View and manage medical cases.',
 }
 

@@ -1,6 +1,6 @@
 # UI Rules
 
-These guidelines define how we build MediCRM’s user interface, incorporating desktop-first responsive design, engaging animations, and robust accessibility. They reference the flows described in [user-flow.md], the technologies in [tech-stack.md], and the best practices in [tech-stack-rules.md].
+These guidelines define how we build TonIQ’s user interface, incorporating desktop-first responsive design, engaging animations, and robust accessibility. They reference the flows described in [user-flow.md], the technologies in [tech-stack.md], and the best practices in [tech-stack-rules.md].
 
 ---
 
@@ -41,7 +41,7 @@ These guidelines define how we build MediCRM’s user interface, incorporating d
 
 1. Use Shadcn Components as Building Blocks  
    - Start with Shadcn UI’s accessible, Radix-based elements.  
-   - Extend or customize these components via Tailwind for MediCRM’s specific needs (e.g., case queue cards, triage badges).
+   - Extend or customize these components via Tailwind for TonIQ’s specific needs (e.g., case queue cards, triage badges).
 
 2. Encapsulate Common Patterns  
    - Extract repeating UI blocks (e.g., case summary, patient info card) into reusable components.  
@@ -109,4 +109,4 @@ These guidelines define how we build MediCRM’s user interface, incorporating d
 
 ## Conclusion
 
-Following these UI rules ensures a consistent, accessible, and engaging user experience across MediCRM. By combining desktop-first layouts with careful responsiveness, leveraging Shadcn UI and Tailwind for styling, and applying well-thought-out animations, MediCRM’s interface will remain intuitive for both patients and providers.
+Following these UI rules ensures a consistent, accessible, and engaging user experience across TonIQ. By combining desktop-first layouts with careful responsiveness, leveraging Shadcn UI and Tailwind for styling, and applying well-thought-out animations, TonIQ’s interface will remain intuitive for both patients and providers.

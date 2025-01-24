@@ -14,7 +14,7 @@ export default function AuthLayout({
         <div className="container flex h-14 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Logo size="sm" />
-            <span className="font-bold">MediCRM</span>
+            <span className="font-bold">TonIQ</span>
           </Link>
           <ModeToggle />
         </div>

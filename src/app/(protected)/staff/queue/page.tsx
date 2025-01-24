@@ -6,7 +6,7 @@ import { Metadata } from 'next'
 import { CaseQueueView } from '@/components/cases/staff/case-queue-view'
 
 export const metadata: Metadata = {
-  title: 'Staff Case Queue | MediCRM',
+  title: 'Staff Case Queue | TonIQ',
   description: 'Manage and process patient cases efficiently',
 }
 

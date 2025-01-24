@@ -1,6 +1,6 @@
 # Codebase Organization Rules
 
-This file describes how to structure MediCRM’s folder layout, file naming, and modular organization. By following these principles, we ensure a clean, scalable, and AI-friendly codebase.
+This file describes how to structure TonIQ’s folder layout, file naming, and modular organization. By following these principles, we ensure a clean, scalable, and AI-friendly codebase.
 
 ---
 

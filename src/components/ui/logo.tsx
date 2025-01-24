@@ -25,7 +25,7 @@ export function Logo({
     <div className={cn('relative', className)}>
       <Image
         src={src}
-        alt="MediCRM Logo"
+        alt="TonIQ Logo"
         width={dimensions}
         height={dimensions}
         className="object-contain"

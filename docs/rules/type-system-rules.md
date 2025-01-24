@@ -1,6 +1,6 @@
 # Type System Rules
 
-This document outlines MediCRM's type system architecture, ensuring consistency and compatibility across database, API, and UI layers. It serves as the central reference for type definitions, transformations, and validation patterns.
+This document outlines TonIQ's type system architecture, ensuring consistency and compatibility across database, API, and UI layers. It serves as the central reference for type definitions, transformations, and validation patterns.
 
 ---
 

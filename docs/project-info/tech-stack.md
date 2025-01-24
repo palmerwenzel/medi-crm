@@ -1,6 +1,6 @@
-# MediCRM Tech Stack
+# TonIQ Tech Stack
 
-This document outlines the core technologies selected for MediCRM development.
+This document outlines the core technologies selected for TonIQ development.
 
 ---
 

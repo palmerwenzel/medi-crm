@@ -1,7 +1,7 @@
 # Webhook API Documentation
 
 ## Overview
-The MediCRM Webhook API allows you to receive real-time notifications for case-related events. This document describes how to register webhooks, handle deliveries, and verify webhook signatures.
+The TonIQ Webhook API allows you to receive real-time notifications for case-related events. This document describes how to register webhooks, handle deliveries, and verify webhook signatures.
 
 ## Authentication
 All webhook endpoints require authentication. Only staff and admin users can manage webhooks.

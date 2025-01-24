@@ -10,8 +10,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: 'MediCRM',
-    template: '%s | MediCRM'
+    default: 'TonIQ',
+    template: '%s | TonIQ'
   },
   description: "Modern healthcare case management system",
   icons: {

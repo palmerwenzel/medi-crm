@@ -7,7 +7,7 @@ This file outlines the purpose of each ruleset in the "docs/rules" folder and wh
 ## 1. agent-rules.md
 • Location: docs/rules/agent-rules.md  
 • Purpose: Explains how the AI interacts with requests, triggers relevant workflows, and references other rules.  
-• When To Attach: Always include when the AI must follow the MediCRM agent-specific guidelines. Particularly crucial if the AI is orchestrating or tracking feature progress through ui-workflow.md or backend-workflow.md.
+• When To Attach: Always include when the AI must follow the TonIQ agent-specific guidelines. Particularly crucial if the AI is orchestrating or tracking feature progress through ui-workflow.md or backend-workflow.md.
 
 ---
 
