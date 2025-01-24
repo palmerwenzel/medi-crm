@@ -13,7 +13,7 @@ const alertVariants = cva(
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
         glass: "glass text-foreground shadow-sm",
         "glass-destructive": "glass bg-destructive/10 border-destructive/30 text-destructive dark:border-destructive/50 [&>svg]:text-destructive shadow-sm",
-        "glass-success": "glass bg-primary/10 border-primary/30 text-primary-foreground dark:border-primary/50 [&>svg]:text-primary shadow-sm",
+        "glass-success": "glass glass-sm border-primary/30 text-primary-foreground dark:border-primary/50 [&>svg]:text-primary shadow-sm",
       },
     },
     defaultVariants: {

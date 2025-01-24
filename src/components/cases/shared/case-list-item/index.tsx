@@ -70,7 +70,7 @@ export function CaseListItem({
           <Link href={`${basePath}/${case_.id}`}>
             <Card className={cn(
               'relative overflow-hidden border bg-background/95 p-6 backdrop-blur transition-colors duration-200',
-              'hover:bg-accent/5 supports-[backdrop-filter]:bg-background/60',
+              'glass-sm-hover supports-[backdrop-filter]:bg-background/60',
               isSelected && 'border-primary'
             )}>
               <div className="space-y-4">

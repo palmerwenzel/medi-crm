@@ -94,10 +94,10 @@ export function QuickActionsBar({
           const Icon = Icons[action.icon]
           return (
             <Link key={action.href} href={action.href}>
-              <Card className="hover:bg-accent/5 transition-colors">
+              <Card className="glass-sm-hover transition-colors">
                 <CardHeader>
                   <div className="flex flex-col items-center text-center space-y-2">
-                    <div className="p-2 bg-primary/10 rounded-full">
+                    <div className="p-2 glass-sm rounded-full">
                       <Icon className="h-6 w-6 text-primary" />
                     </div>
                     <h3 className="font-semibold">{action.title}</h3>

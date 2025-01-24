@@ -68,7 +68,7 @@ function CaseCard({ case: caseData }: { case: CaseResponse }) {
   const caseUrl = `/cases/${caseData.id}`
 
   return (
-    <Card className="h-full hover:bg-accent/5 transition-colors">
+    <Card className="h-full glass-sm-hover transition-colors">
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-medium line-clamp-1">{caseData.title}</h3>

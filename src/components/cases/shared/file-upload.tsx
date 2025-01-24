@@ -105,7 +105,7 @@ export function FileUploadZone({
         className={cn(
           'relative rounded-lg border-2 border-dashed border-muted-foreground/25 p-6',
           'transition-all duration-200 ease-in-out',
-          isDragActive && 'border-primary/50 bg-primary/5 scale-[1.02]',
+          isDragActive && 'border-primary/50 glass-sm scale-[1.02]',
           disabled && 'cursor-not-allowed opacity-60',
           'hover:border-primary/50'
         )}

@@ -8,7 +8,7 @@ const skeletonVariants = cva(
       variant: {
         default: "bg-muted/50",
         glass: "glass bg-background/20",
-        primary: "bg-primary/10",
+        primary: "glass-sm",
       },
     },
     defaultVariants: {

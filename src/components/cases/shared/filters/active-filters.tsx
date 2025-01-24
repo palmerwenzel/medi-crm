@@ -77,7 +77,7 @@ interface FilterBadgeProps {
 
 function FilterBadge({ label, values, onRemove }: FilterBadgeProps) {
   return (
-    <div className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm">
+  <div className="flex items-center gap-1 rounded-full glass-sm px-3 py-1 text-sm">
       <span className="font-medium">{label}:</span>
       <span>{values.join(', ')}</span>
       <Button

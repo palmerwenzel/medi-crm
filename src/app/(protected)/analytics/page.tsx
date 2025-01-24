@@ -19,7 +19,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="p-6">
           <div className="flex flex-col items-center text-center space-y-2">
-            <div className="p-2 bg-primary/10 rounded-full">
+            <div className="p-2 glass-sm rounded-full">
               <BarChart className="h-6 w-6 text-primary" />
             </div>
             <h3 className="font-semibold">Case Statistics</h3>
@@ -29,7 +29,7 @@ export default function AnalyticsPage() {
 
         <Card className="p-6">
           <div className="flex flex-col items-center text-center space-y-2">
-            <div className="p-2 bg-primary/10 rounded-full">
+            <div className="p-2 glass-sm rounded-full">
               <LineChart className="h-6 w-6 text-primary" />
             </div>
             <h3 className="font-semibold">Usage Trends</h3>
@@ -39,7 +39,7 @@ export default function AnalyticsPage() {
 
         <Card className="p-6">
           <div className="flex flex-col items-center text-center space-y-2">
-            <div className="p-2 bg-primary/10 rounded-full">
+            <div className="p-2 glass-sm rounded-full">
               <PieChart className="h-6 w-6 text-primary" />
             </div>
             <h3 className="font-semibold">User Distribution</h3>
@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
 
         <Card className="p-6">
           <div className="flex flex-col items-center text-center space-y-2">
-            <div className="p-2 bg-primary/10 rounded-full">
+            <div className="p-2 glass-sm rounded-full">
               <Activity className="h-6 w-6 text-primary" />
             </div>
             <h3 className="font-semibold">System Health</h3>

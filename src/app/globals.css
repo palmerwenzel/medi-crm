@@ -73,11 +73,19 @@
 @layer utilities {
   /* Glassmorphic utilities */
   .glass {
-    @apply bg-background/30 backdrop-blur-[8px] border border-white/10;
+    @apply bg-primary/10 backdrop-blur-[8px] border border-primary/20 shadow-sm dark:bg-white/[0.04] dark:border-white/10;
   }
   
   .glass-hover {
-    @apply hover:bg-background/40 transition-colors duration-200;
+    @apply hover:bg-primary/15 dark:hover:bg-white/[0.08] transition-all duration-200;
+  }
+
+  .glass-sm {
+    @apply bg-primary/5 backdrop-blur-[4px] border border-primary/10 dark:bg-white/[0.02] dark:border-white/5;
+  }
+
+  .glass-sm-hover {
+    @apply hover:bg-primary/10 dark:hover:bg-white/[0.06] transition-all duration-200;
   }
 
   /* Loading skeleton utilities */

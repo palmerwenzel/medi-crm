@@ -16,7 +16,7 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
         glass: "glass text-foreground",
-        "glass-primary": "glass bg-primary/20 text-primary-foreground",
+        "glass-primary": "glass glass-sm text-primary-foreground",
         "glass-secondary": "glass bg-secondary/20 text-secondary-foreground",
         "glass-destructive": "glass bg-destructive/20 text-destructive-foreground",
       },
