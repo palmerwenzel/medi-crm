@@ -131,14 +131,6 @@ export function DashboardNav() {
           </Link>
         )
       })}
-      <Button 
-        variant="destructive" 
-        className="mt-4 hover:bg-destructive/90"
-        onClick={() => signOut?.()}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        Logout
-      </Button>
     </nav>
   )
 }

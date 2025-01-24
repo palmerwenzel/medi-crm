@@ -9,6 +9,64 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      medical_conversations: {
+        Row: {
+          id: string
+          patient_id: string
+          assigned_staff_id: string | null
+          created_at: string
+          updated_at: string
+          status: 'active' | 'archived'
+          topic: string | null
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          assigned_staff_id?: string | null
+          created_at?: string
+          updated_at?: string
+          status?: 'active' | 'archived'
+          topic?: string | null
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          assigned_staff_id?: string | null
+          created_at?: string
+          updated_at?: string
+          status?: 'active' | 'archived'
+          topic?: string | null
+          metadata?: Json
+        }
+      }
+      medical_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          content: string
+          role: 'user' | 'assistant'
+          created_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          content: string
+          role: 'user' | 'assistant'
+          created_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          content?: string
+          role?: 'user' | 'assistant'
+          created_at?: string
+          metadata?: Json
+        }
+      }
       users: {
         Row: {
           id: string

@@ -42,14 +42,16 @@ export default async function ProtectedLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <div className="container flex-1 items-start md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
-        <aside className="fixed top-14 z-30 -ml-2 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 overflow-y-auto border-r md:sticky md:block">
-          <div className="relative h-full py-6 pl-8 pr-6 lg:py-8">
+      <div className="flex flex-1">
+        <aside className="w-[240px] hidden md:block border-r border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="sticky top-[80px] p-6">
             <DashboardNav />
           </div>
         </aside>
-        <main className="flex w-full flex-col overflow-hidden p-4 md:p-6 lg:p-8">
-          {children}
+        <main className="flex-1 h-[calc(100vh-80px)] overflow-hidden">
+          <div className="h-full p-6 lg:p-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>
