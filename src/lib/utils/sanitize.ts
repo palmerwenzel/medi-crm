@@ -59,7 +59,7 @@ export function sanitizeSql(value: string): string {
 /**
  * Sanitizes an object's string values recursively
  */
-export function sanitizeObject<T extends { [key: string]: any }>(
+export function sanitizeObject<T extends Record<string, unknown>>(
   obj: T,
   options: {
     htmlFields?: string[]  // Fields that should allow safe HTML
@@ -81,7 +81,7 @@ export function sanitizeObject<T extends { [key: string]: any }>(
         result[key as keyof T] = sanitizeText(value) as T[keyof T]
       }
     } else if (typeof value === 'object') {
-      result[key as keyof T] = sanitizeObject(value, options) as T[keyof T]
+      result[key as keyof T] = sanitizeObject(value as Record<string, unknown>, options) as T[keyof T]
     }
   }
 

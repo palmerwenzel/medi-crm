@@ -9,22 +9,22 @@ import type {
   CaseCategory,
   CaseDepartment,
   StaffSpecialty,
-  CaseQueryParams 
+  CaseSortField 
 } from '@/lib/validations/case'
 
 /**
  * Represents the filter state for case management views
  */
 export interface CaseFilters {
-  status?: CaseStatus[] | 'all'
-  priority?: CasePriority[] | 'all'
-  category?: CaseCategory[] | 'all'
-  department?: CaseDepartment[] | 'all'
+  status?: CaseStatus | 'all'
+  priority?: CasePriority | 'all'
+  category?: CaseCategory | 'all'
+  department?: CaseDepartment | 'all'
   specialty?: StaffSpecialty | 'all'
   tags?: string[] | 'all'
   search?: string
-  sortBy?: CaseQueryParams['sort_by']
-  sortOrder?: CaseQueryParams['sort_order']
+  sortBy?: CaseSortField
+  sortOrder?: 'asc' | 'desc'
   dateRange?: {
     from?: Date
     to?: Date
@@ -83,11 +83,11 @@ export interface DateRangeFilterProps {
  */
 export interface SortControlsProps {
   /** Current sort field */
-  sortBy: CaseQueryParams['sort_by']
+  sortBy: CaseSortField
   /** Current sort order */
-  sortOrder: CaseQueryParams['sort_order']
+  sortOrder: 'asc' | 'desc'
   /** Callback when sort changes */
-  onSortChange: (sortBy: CaseQueryParams['sort_by'], sortOrder: CaseQueryParams['sort_order']) => void
+  onSortChange: (sortBy: CaseSortField, sortOrder: 'asc' | 'desc') => void
   /** Optional className for styling */
   className?: string
 }

@@ -11,12 +11,13 @@ import {
   type ToastActionElement,
 } from "@/components/ui/toast"
 
-interface ToastProps {
+interface ToastProps extends React.ComponentPropsWithoutRef<typeof Toast> {
   id: string
   title?: string
   description?: string
   action?: ToastActionElement
-  [key: string]: any
+  variant?: 'default' | 'destructive' | 'success' | 'loading' | null
+  duration?: number
 }
 
 export function Toaster() {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { updateCaseSchema, updateCaseInternalNotesSchema, updateCaseMetadataSchema } from '@/lib/validations/case'
+import { updateCaseSchema } from '@/lib/validations/case'
 import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
 /**
@@ -43,7 +43,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, user, role } = await createApiClient()
+    const { supabase, role } = await createApiClient()
 
     // Parse and validate request body
     const json = await request.json()

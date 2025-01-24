@@ -4,7 +4,6 @@
  */
 
 import { z } from 'zod'
-import type { Database } from '@/types/supabase'
 
 // Enums
 export const caseStatusEnum = ['open', 'in_progress', 'resolved'] as const
@@ -57,6 +56,9 @@ export const slaMetadataSchema = z.object({
   response_target: z.string().datetime(),
   resolution_target: z.string().datetime(),
   last_updated: z.string().datetime(),
+  first_response_at: z.string().datetime().nullable().optional(),
+  sla_breached: z.boolean().optional(),
+  sla_tier: z.enum(slaTierEnum).optional(),
 })
 
 export type SLAMetadata = z.infer<typeof slaMetadataSchema>
@@ -165,6 +167,7 @@ export const caseQuerySchema = z.object({
   category: z.array(z.enum(caseCategoryEnum)).optional(),
   department: z.array(z.enum(caseDepartmentEnum)).optional(),
   specialty: z.enum(staffSpecialtyEnum).optional(),
+  assigned_to: z.string().uuid().optional(),
   search: z.string().optional(),
   sort_by: z.enum(caseSortFieldEnum).optional(),
   sort_order: z.enum(['asc', 'desc']).optional(),
@@ -172,6 +175,8 @@ export const caseQuerySchema = z.object({
     from: z.string().datetime().optional(),
     to: z.string().datetime().optional(),
   }).optional(),
+  offset: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).optional(),
 })
 
 export type CaseQueryParams = z.infer<typeof caseQuerySchema>

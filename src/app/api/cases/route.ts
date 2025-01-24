@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createCaseSchema, caseQuerySchema } from '@/lib/validations/case'
-import { createApiClient, handleApiError } from '@/utils/supabase/api'
+import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
+import { createCaseSchema } from '@/lib/validations/case'
+
+// Default query parameters
+const DEFAULT_QUERY_PARAMS = {
+  limit: 20,
+  offset: 0,
+  sort_by: 'created_at' as const,
+  sort_order: 'desc' as const
+}
 
 /**
  * GET /api/cases
@@ -10,93 +18,46 @@ import { createApiClient, handleApiError } from '@/utils/supabase/api'
 export async function GET(request: Request) {
   try {
     const { supabase, user, role } = await createApiClient()
-    const { searchParams } = new URL(request.url)
-
+    const searchParams = new URL(request.url).searchParams
+    
     // Parse and validate query parameters
-    const queryParams = caseQuerySchema.parse({
-      limit: searchParams.has('limit') ? Number(searchParams.get('limit')) : 20,
-      offset: searchParams.has('offset') ? Number(searchParams.get('offset')) : 0,
-      status: searchParams.get('status') || undefined,
-      priority: searchParams.get('priority') || undefined,
-      category: searchParams.get('category') || undefined,
-      department: searchParams.get('department') || undefined,
-      assigned_to: searchParams.get('assigned_to') || undefined,
-      search: searchParams.get('search') || undefined,
-      sort_by: (searchParams.get('sort_by') as any) || 'created_at',
-      sort_order: (searchParams.get('sort_order') as any) || 'desc'
-    })
+    const queryParams = {
+      ...DEFAULT_QUERY_PARAMS,
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : DEFAULT_QUERY_PARAMS.limit,
+      offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : DEFAULT_QUERY_PARAMS.offset,
+      sort_by: searchParams.get('sort_by') || DEFAULT_QUERY_PARAMS.sort_by,
+      sort_order: (searchParams.get('sort_order') || DEFAULT_QUERY_PARAMS.sort_order) as 'asc' | 'desc'
+    }
 
-    // Build query with filters
+    // Build query with role-based filtering
     let query = supabase
       .from('cases')
-      .select(`
-        *,
-        patient:users!cases_patient_id_fkey(first_name, last_name),
-        assigned_to:users!cases_assigned_to_fkey(first_name, last_name)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
 
-    // Apply role-based filters
+    // Apply role-based filtering
     if (role === 'patient') {
       query = query.eq('patient_id', user.id)
     } else if (role === 'staff') {
-      // Get staff's department
-      const { data: staffData } = await supabase
-        .from('users')
-        .select('department')
-        .eq('id', user.id)
-        .single()
-      
-      if (staffData?.department) {
-        query = query.eq('department', staffData.department)
-      }
+      query = query.eq('assigned_to', user.id)
     }
-    // Admins can see all cases (no filter needed)
-
-    // Apply additional filters
-    if (queryParams.status) {
-      query = query.eq('status', queryParams.status)
-    }
-    if (queryParams.priority) {
-      query = query.eq('priority', queryParams.priority)
-    }
-    if (queryParams.category) {
-      query = query.eq('category', queryParams.category)
-    }
-    if (queryParams.department) {
-      query = query.eq('department', queryParams.department)
-    }
-    if (queryParams.assigned_to !== undefined) {
-      query = query.eq('assigned_to', queryParams.assigned_to)
-    }
-    if (queryParams.search) {
-      query = query.or(`title.ilike.%${queryParams.search}%,description.ilike.%${queryParams.search}%`)
-    }
+    // Admin sees all cases
 
     // Execute query with sorting and pagination
     const { data: cases, error: casesError, count } = await query
-      .order(queryParams.sort_by, { ascending: queryParams.sort_order === 'asc' })
+      .order(queryParams.sort_by as string, { ascending: queryParams.sort_order === 'asc' })
       .range(
         queryParams.offset,
         queryParams.offset + queryParams.limit - 1
       )
 
     if (casesError) {
-      return NextResponse.json(
-        { error: casesError.message },
-        { status: 500 }
-      )
+      throw createApiError(500, casesError.message)
     }
-
-    // Calculate pagination metadata
-    const total = count || 0
-    const hasMore = total > queryParams.offset + (cases?.length || 0)
-    const nextOffset = hasMore ? queryParams.offset + queryParams.limit : undefined
 
     return NextResponse.json({
       cases: cases || [],
-      total,
-      hasMore,
-      nextOffset
+      total: count || 0,
+      hasMore: count ? queryParams.offset + queryParams.limit < count : false
     })
   } catch (error) {
     return handleApiError(error)

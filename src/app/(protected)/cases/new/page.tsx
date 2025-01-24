@@ -15,7 +15,7 @@ export default async function NewCasePage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create New Case</h1>
         <p className="text-muted-foreground">
-          Submit a new case and we'll get back to you as soon as possible.
+          Submit a new case and we&apos;ll get back to you as soon as possible.
         </p>
       </div>
 

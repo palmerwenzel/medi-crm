@@ -65,7 +65,6 @@ function ErrorState({ message }: { message: string }) {
 
 // Individual case card
 function CaseCard({ case: caseData }: { case: CaseResponse }) {
-  const { userRole } = useAuth()
   const caseUrl = `/cases/${caseData.id}`
 
   return (
@@ -136,9 +135,9 @@ export function CaseGridView() {
   useCaseSubscription({
     onUpdate: (updatedCase) => {
       // Only update if the case belongs to the current user (based on role)
-      const shouldInclude = userRole === 'admin' || 
-        (userRole === 'patient' && updatedCase.patient_id === user?.id) ||
-        (userRole === 'staff' && updatedCase.assigned_to === user?.id)
+      const shouldInclude = userRole === 'admin' as const || 
+        (userRole === 'patient' as const && updatedCase.patient_id === user?.id) ||
+        (userRole === 'staff' as const && updatedCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => prev.map(c => 
@@ -148,9 +147,9 @@ export function CaseGridView() {
     },
     onNew: (newCase) => {
       // Only add if the case belongs to the current user (based on role)
-      const shouldInclude = userRole === 'admin' || 
-        (userRole === 'patient' && newCase.patient_id === user?.id) ||
-        (userRole === 'staff' && newCase.assigned_to === user?.id)
+      const shouldInclude = userRole === 'admin' as const || 
+        (userRole === 'patient' as const && newCase.patient_id === user?.id) ||
+        (userRole === 'staff' as const && newCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => [newCase, ...prev])

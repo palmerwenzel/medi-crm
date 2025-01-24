@@ -10,7 +10,8 @@ import * as React from "react"
 import { createContext, useContext, useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js"
-import type { Database } from "@/types/supabase"
+import type { Database } from "@/lib/database.types"
+import { log, logPerformance } from '@/lib/utils/logging'
 
 type Role = Database['public']['Tables']['users']['Row']['role']
 
@@ -30,19 +31,6 @@ const AuthContext = createContext<AuthContextType>({
   loading: true
 })
 
-// Development-only logging
-const log = process.env.NODE_ENV === 'development' 
-  ? (...args: any[]) => console.log('[Auth]:', ...args)
-  : () => {}
-
-// Add performance logging
-const logPerformance = process.env.NODE_ENV === 'development'
-  ? (label: string, startTime: number) => {
-      const duration = performance.now() - startTime
-      console.log(`[Auth Performance]: ${label} took ${duration.toFixed(2)}ms`)
-    }
-  : () => {}
-
 // Add utility for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -53,7 +41,7 @@ async function retryWithBackoff<T>(
   initialDelay = 1000
 ): Promise<T> {
   let attempt = 1
-  let lastError: any
+  let lastError: Error | unknown
 
   while (attempt <= maxAttempts) {
     try {
@@ -72,13 +60,13 @@ async function retryWithBackoff<T>(
 }
 
 // Add debounce utility at the top with other utilities
-function debounce<T extends (...args: any[]) => any>(
-  fn: T,
+function debounce<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
   wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
+): (...args: TArgs) => void {
+  let timeout: NodeJS.Timeout
+  return (...args: TArgs) => {
+    clearTimeout(timeout)
     timeout = setTimeout(() => fn(...args), wait)
   }
 }
@@ -112,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const roleStartTime = performance.now()
       const { data: userData, error: roleError } = await retryWithBackoff<{
         data: Pick<Database['public']['Tables']['users']['Row'], 'role'> | null,
-        error: any
+        error: Error | null
       }>(
         async () => {
           const rolePromise = supabase
@@ -132,22 +120,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (roleError) {
         log('Error fetching role after retries:', roleError)
-        setState(prev => ({
+        setState({
           user,
           userRole: null,
           loading: false
-        }))
+        })
         logPerformance('Total role fetch (error)', startTime)
         return
       }
 
       if (!userData) {
         log('No user data found in users table for ID:', user.id)
-        setState(prev => ({
+        setState({
           user,
           userRole: null,
           loading: false
-        }))
+        })
         return
       }
 
@@ -170,17 +158,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       log('All role fetch retries failed:', error)
       logPerformance('Total role fetch (failed)', startTime)
-      setState(prev => ({
+      setState({
         user,
         userRole: null,
         loading: false
-      }))
+      })
     }
   }, [supabase])
 
   // Debounced version of fetchUserRole
   const debouncedFetchUserRole = useMemo(
-    () => debounce((user: User) => fetchUserRole(user), 100),
+    () =>
+      debounce((user: User | null) => {
+        if (!user) return
+        return fetchUserRole(user)
+      }, 100),
     [fetchUserRole]
   )
 
@@ -197,19 +189,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchUserRole(user)
         } else {
           log('No user found, setting loading to false')
-          setState(prev => ({
+          setState({
             user: null,
             userRole: null,
             loading: false
-          }))
+          })
         }
       } catch (error) {
         log('Error getting initial user:', error)
-        setState(prev => ({ 
+        setState({ 
           user: null,
           userRole: null,
           loading: false 
-        }))
+        })
       }
     }
 
@@ -226,11 +218,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           debouncedFetchUserRole(user)
         } else {
           log('No user in session, setting loading to false')
-          setState(prev => ({
+          setState({
             user: null,
             userRole: null,
             loading: false
-          }))
+          })
         }
       }
     )

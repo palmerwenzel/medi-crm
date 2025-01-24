@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { validateFile, validateFiles, AllowedMimeType } from '../file-validation'
+import { validateFile, validateFiles } from '../file-validation'
 
 // Helper to create a mock file with specific content
 function createMockFile(

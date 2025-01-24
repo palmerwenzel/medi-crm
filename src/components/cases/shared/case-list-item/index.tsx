@@ -1,20 +1,32 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { CaseStatusBadge } from '@/components/cases/case-status-badge'
-import { CasePriorityBadge } from '@/components/cases/case-priority-badge'
 import { CaseMetadata } from '@/components/cases/case-metadata'
 import { SLAIndicator } from '../sla-indicator'
 import { cn } from '@/lib/utils'
-import { formatDate, statusColors, priorityColors } from '@/lib/utils/case-formatting'
+import { priorityColors } from '@/lib/utils/case-formatting'
 import type { CaseResponse } from '@/lib/validations/case'
 
+interface CaseMetadata {
+  sla?: {
+    response_target: string
+    resolution_target: string
+    last_updated: string
+  }
+  tags?: string[]
+  internal_notes?: string
+  specialties?: string[]
+}
+
 interface CaseListItemProps {
-  case_: CaseResponse
+  case_: CaseResponse & {
+    metadata?: CaseMetadata
+  }
   isSelected?: boolean
   onSelect?: (id: string) => void
   showNotes?: boolean
@@ -32,8 +44,6 @@ export function CaseListItem({
   isStaffOrAdmin = false,
   className
 }: CaseListItemProps) {
-  const [isHovered, setIsHovered] = useState(false)
-
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -44,8 +54,6 @@ export function CaseListItem({
   return (
     <div 
       className={cn('group relative', className)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-start gap-2">
         {onSelect && (

@@ -18,7 +18,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Progress } from '@/components/ui/progress'
 import { Clock, CheckCircle2, AlertTriangle, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CaseResponse } from '@/lib/validations/case'
@@ -105,7 +104,8 @@ function calculateMetrics(cases: CaseResponse[]): CaseMetrics | null {
   
   // Calculate SLA metrics
   const slaBreached = cases.filter(c => 
-    hasSLAMetadata(c.metadata) && c.metadata.sla.sla_breached
+    hasSLAMetadata(c.metadata) && 
+    new Date(c.metadata.sla.last_updated) > new Date(c.metadata.sla.resolution_target)
   ).length
   const slaCompliance = total ? ((total - slaBreached) / total) * 100 : 100
   

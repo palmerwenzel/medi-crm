@@ -8,21 +8,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { FilterBar } from '@/components/cases/shared/filter-bar'
-import { StaffToolbar } from '@/components/cases/staff/staff-toolbar'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import Link from 'next/link'
 import { useAuth } from '@/providers/auth-provider'
 import { CaseListItem } from './case-list-item/index'
 import { useCaseManagement } from '@/hooks/cases/use-case-management'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { CaseFilters } from '@/types/filters'
 import { BulkOperationsBar } from './bulk-operations'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { CaseResponse } from '@/lib/validations/case'
+import { motion } from 'framer-motion'
 
 interface CaseManagementViewProps {
   basePath?: string
@@ -30,37 +26,6 @@ interface CaseManagementViewProps {
   isDashboard?: boolean
   showActions?: boolean
   className?: string
-  viewType?: 'staff' | 'patient'
-  showBulkActions?: boolean
-  showStaffTools?: boolean
-  limit?: number
-}
-
-// Loading skeleton for case items
-function CaseItemSkeleton() {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-start gap-2">
-        <div className="pt-4">
-          <Skeleton className="h-4 w-4 rounded" />
-        </div>
-        <div className="flex-1">
-          <div className="space-y-3 rounded-lg border p-6 backdrop-blur-[2px] bg-background/95">
-            <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-5 w-24" />
-            </div>
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <div className="flex flex-wrap gap-4">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export function CaseManagementView({ 
@@ -69,10 +34,6 @@ export function CaseManagementView({
   isDashboard = false,
   showActions = true,
   className,
-  viewType,
-  showBulkActions = false,
-  showStaffTools = false,
-  limit
 }: CaseManagementViewProps) {
   const { userRole } = useAuth()
   const { ref, inView } = useInView()
@@ -84,11 +45,7 @@ export function CaseManagementView({
     sortOrder: 'desc'
   })
 
-  // If viewType is not specified, infer from userRole
-  const effectiveViewType = viewType || (userRole === 'staff' ? 'staff' : 'patient')
-
   const {
-    cases,
     filteredCases,
     selectedCases,
     isLoading,

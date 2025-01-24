@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -68,12 +67,6 @@ export function InternalNotesEditor({
   const { toast } = useToast()
   const supabase = createClient()
 
-  // Only staff and admin can access this component
-  if (!user || !['staff', 'admin'].includes(userRole || '')) {
-    router.push('/dashboard')
-    return null
-  }
-
   const form = useForm<NotesFormValues>({
     resolver: zodResolver(notesSchema),
     defaultValues: {
@@ -81,8 +74,20 @@ export function InternalNotesEditor({
     },
   })
 
+  // Handle unauthorized access
+  React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      router.push('/dashboard')
+      return
+    }
+  }, [router, user, userRole])
+
   // Load notes using server action
   React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      return
+    }
+
     async function fetchNotes() {
       try {
         const data = await loadCaseNotes(caseId)
@@ -98,10 +103,14 @@ export function InternalNotesEditor({
     }
 
     fetchNotes()
-  }, [caseId, toast])
+  }, [caseId, toast, user, userRole])
 
   // Subscribe to realtime updates
   React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      return
+    }
+
     const channel = supabase
       .channel('case_notes')
       .on(
@@ -127,7 +136,12 @@ export function InternalNotesEditor({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [caseId, supabase])
+  }, [caseId, supabase, user, userRole])
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    return null
+  }
 
   async function onSubmit(data: NotesFormValues) {
     if (!user) return

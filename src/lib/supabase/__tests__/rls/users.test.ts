@@ -202,7 +202,7 @@ describe('User RLS Policies', () => {
       if (error) throw new Error(`Failed to log in as admin: ${error.message}`)
 
       // Verify we're signed in as admin
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user?.id) {
         throw new Error('Admin session not established')
       }

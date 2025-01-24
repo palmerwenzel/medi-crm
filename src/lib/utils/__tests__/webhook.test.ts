@@ -5,8 +5,7 @@ import {
   prepareWebhookHeaders,
   deliverWebhook,
   isRateLimited,
-  resetRateLimits,
-  getCurrentTimestamp
+  resetRateLimits
 } from '../webhook'
 import { WebhookPayload } from '@/lib/validations/webhook'
 

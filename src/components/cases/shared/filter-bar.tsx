@@ -5,9 +5,7 @@
  */
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { Search, Calendar, Save, RotateCcw, Check, Loader2 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { RotateCcw, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -16,30 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { Badge } from '@/components/ui/badge'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { format } from 'date-fns'
-import type { 
-  CaseStatus, 
-  CasePriority, 
-  CaseCategory,
-  CaseDepartment,
-  StaffSpecialty,
-  CaseQueryParams 
-} from '@/lib/validations/case'
 import { cn } from '@/lib/utils'
 import { useFilterPreferences } from './hooks/use-filter-preferences'
 import { MultiSelectFilter } from './filters/multi-select-filter'
@@ -47,13 +21,18 @@ import { DateRangeFilter } from './filters/date-range-filter'
 import { SortControls } from './filters/sort-controls'
 import { ActiveFilters } from './filters/active-filters'
 import { TagFilter } from './filters/tag-filter'
-import type { CaseFilters, FilterBarProps } from '@/types/filters'
+import type { FilterBarProps } from '@/types/filters'
 import {
   caseStatusEnum,
   casePriorityEnum,
   caseCategoryEnum,
   caseDepartmentEnum,
-  staffSpecialtyEnum
+  staffSpecialtyEnum,
+  type StaffSpecialty,
+  type CaseStatus,
+  type CasePriority,
+  type CaseCategory,
+  type CaseDepartment
 } from '@/lib/validations/case'
 
 export function FilterBar({
@@ -62,7 +41,6 @@ export function FilterBar({
   className
 }: FilterBarProps) {
   const {
-    filters: savedFilters,
     isLoading,
     isSaving,
     savePreferences,
@@ -79,32 +57,42 @@ export function FilterBar({
     })
   }
 
+  const handleMultiSelectChange = <T extends string>(
+    key: keyof typeof filters,
+    values: T[] | 'all'
+  ) => {
+    onFilterChange({
+      ...filters,
+      [key]: values === 'all' || values.length === 0 ? 'all' : values[0]
+    })
+  }
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectFilter
           label="Status"
           options={caseStatusEnum}
-          values={filters.status === 'all' ? 'all' : Array.isArray(filters.status) ? filters.status : []}
-          onChange={values => onFilterChange({ ...filters, status: values })}
+          values={filters.status === 'all' ? 'all' : [filters.status as CaseStatus]}
+          onChange={values => handleMultiSelectChange('status', values)}
         />
         <MultiSelectFilter
           label="Priority"
           options={casePriorityEnum}
-          values={filters.priority === 'all' ? 'all' : Array.isArray(filters.priority) ? filters.priority : []}
-          onChange={values => onFilterChange({ ...filters, priority: values })}
+          values={filters.priority === 'all' ? 'all' : [filters.priority as CasePriority]}
+          onChange={values => handleMultiSelectChange('priority', values)}
         />
         <MultiSelectFilter
           label="Category"
           options={caseCategoryEnum}
-          values={filters.category === 'all' ? 'all' : Array.isArray(filters.category) ? filters.category : []}
-          onChange={values => onFilterChange({ ...filters, category: values })}
+          values={filters.category === 'all' ? 'all' : [filters.category as CaseCategory]}
+          onChange={values => handleMultiSelectChange('category', values)}
         />
         <MultiSelectFilter
           label="Department"
           options={caseDepartmentEnum}
-          values={filters.department === 'all' ? 'all' : Array.isArray(filters.department) ? filters.department : []}
-          onChange={values => onFilterChange({ ...filters, department: values })}
+          values={filters.department === 'all' ? 'all' : [filters.department as CaseDepartment]}
+          onChange={values => handleMultiSelectChange('department', values)}
         />
         <Select
           onValueChange={value => onFilterChange({ ...filters, specialty: value === 'all' ? 'all' : value as StaffSpecialty })}
@@ -115,9 +103,9 @@ export function FilterBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Specialties</SelectItem>
-            {staffSpecialtyEnum.map(specialty => (
+            {staffSpecialtyEnum.map((specialty: StaffSpecialty) => (
               <SelectItem key={specialty} value={specialty}>
-                {specialty.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                {specialty.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
               </SelectItem>
             ))}
           </SelectContent>

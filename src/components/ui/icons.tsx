@@ -12,8 +12,7 @@ import {
   PlusCircle,
   AlertCircle,
   Clock,
-  User,
-  type LucideIcon
+  User
 } from 'lucide-react'
 
 export type IconKey = keyof typeof Icons

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useToast } from '@/components/ui/use-toast'
 import { getDashboardStats } from '@/lib/actions/staff'
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Icons } from '@/components/ui/icons'
-import { CaseManagementView } from '@/components/cases/shared/case-management-view'
+import { CaseManagementView } from '@/components/cases/case-management-view'
 import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 
 interface DashboardStats {
@@ -21,7 +21,7 @@ interface DashboardStats {
 }
 
 export function StaffDashboard() {
-  const { user, userRole } = useAuth()
+  const { user, userRole, loading } = useAuth()
   const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats>({
     activeCases: 0,
@@ -30,8 +30,8 @@ export function StaffDashboard() {
   })
   const [isLoading, setIsLoading] = useState(true)
 
-  // Move loadStats outside useEffect for better type safety
-  const loadStats = async (userId: string) => {
+  // Move loadStats into useCallback to prevent it from changing on every render
+  const loadStats = useCallback(async (userId: string) => {
     try {
       const stats = await getDashboardStats(userId)
       setStats(stats)
@@ -45,28 +45,23 @@ export function StaffDashboard() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     if (!user?.id) return
     loadStats(user.id)
-  }, [user?.id, toast])
+  }, [user?.id, loadStats])
 
-  if (!user || userRole !== 'staff') {
-    return null
-  }
-
-  const firstName = user?.user_metadata?.first_name || 'Staff Member'
+  // Only show for staff
+  if (loading || !user || userRole !== 'staff') return null
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Header Section */}
-      <div className="flex flex-col gap-2 rounded-lg bg-gradient-to-r from-blue-600/10 via-blue-800/10 to-purple-800/10 p-6 backdrop-blur-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome back, {firstName}
-        </h1>
+    <div className="space-y-8">
+      {/* Header Section with Glassmorphic Effect */}
+      <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <h1 className="text-3xl font-bold tracking-tight">Staff Dashboard</h1>
         <p className="text-muted-foreground">
-          Here's an overview of your assigned cases and patient statistics
+          Manage your assigned cases and monitor patient progress.
         </p>
       </div>
 
@@ -116,23 +111,22 @@ export function StaffDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <QuickActionsBar />
+      <QuickActionsBar variant="cards" />
 
-      {/* Recent Cases */}
-      <div className="rounded-lg border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Recent Cases</h2>
+      {/* Recent Cases with Glassmorphic Effect */}
+      <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Assigned Cases</h2>
           <Button variant="outline" asChild>
             <Link href="/cases">View All Cases</Link>
           </Button>
         </div>
-        
+
         <CaseManagementView 
           isDashboard={true}
-          viewType="staff"
-          showBulkActions={false}
-          showStaffTools={true}
+          viewType={'staff' as const}
           limit={5}
+          showStaffTools={true}
         />
       </div>
     </div>

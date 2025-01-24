@@ -108,7 +108,7 @@ function formatActivityDetails(entry: CaseHistoryResponse) {
     case 'note_added':
       return `${actorName} added a note: ${new_value?.note}`
     case 'file_added':
-      const addedFiles = new_value?.attachments?.length - (old_value?.attachments?.length || 0)
+      const addedFiles = (new_value?.attachments?.length || 0) - (old_value?.attachments?.length || 0)
       return `${actorName} added ${addedFiles} file${addedFiles > 1 ? 's' : ''}`
     case 'file_removed':
       const removedFiles = (old_value?.attachments?.length || 0) - (new_value?.attachments?.length || 0)

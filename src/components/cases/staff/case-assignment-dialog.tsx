@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createClient } from '@/utils/supabase/client'
 import { assignCases } from '@/lib/actions/cases'
 import { useAuth } from '@/providers/auth-provider'
 
@@ -65,17 +64,23 @@ export function CaseAssignmentDialog({
   const [open, setOpen] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const { toast } = useToast()
-  const supabase = createClient()
-
-  // Only staff and admin can access this component
-  if (!user || !['staff', 'admin'].includes(userRole || '')) {
-    router.push('/dashboard')
-    return null
-  }
 
   const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema),
   })
+
+  // Handle unauthorized access
+  React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      router.push('/dashboard')
+      return
+    }
+  }, [router, user, userRole])
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    return null
+  }
 
   async function onSubmit(data: AssignmentFormValues) {
     try {

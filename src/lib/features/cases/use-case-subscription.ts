@@ -23,7 +23,7 @@ export function useCaseSubscription({ onUpdate, onNew }: UseCaseSubscriptionOpti
     const shouldIncludeCase = (caseData: CaseResponse) => {
       return userRole === 'admin' || 
         (userRole === 'patient' && caseData.patient_id === user.id) ||
-        (userRole === 'staff' && caseData.assigned_to === user.id)
+        (userRole === 'staff' && caseData.assigned_to?.id === user.id)
     }
 
     // Set up subscription with role-based filtering

@@ -14,7 +14,6 @@ export function MultiSelectFilter<T extends string>({
   options,
   values,
   onChange,
-  placeholder = 'Select...',
   emptyMessage = 'No options found.',
   className
 }: MultiSelectFilterProps<T>) {

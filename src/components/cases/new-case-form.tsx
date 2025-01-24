@@ -4,7 +4,7 @@
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,12 +33,6 @@ export function NewCaseForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
 
-  // Only patients can create cases
-  if (!user || userRole !== 'patient') {
-    router.push('/dashboard')
-    return null
-  }
-
   const form = useForm<CreateCaseInput>({
     resolver: zodResolver(createCaseSchema),
     defaultValues: {
@@ -48,6 +42,18 @@ export function NewCaseForm() {
       attachments: [],
     },
   })
+
+  // Handle unauthorized access
+  useEffect(() => {
+    if (!user || userRole !== 'patient') {
+      router.push('/dashboard')
+    }
+  }, [router, user, userRole])
+
+  // Only patients can create cases
+  if (!user || userRole !== 'patient') {
+    return null
+  }
 
   const handleFilesSelected = (files: File[]) => {
     // Simulate upload progress for each file
@@ -82,7 +88,8 @@ export function NewCaseForm() {
       attachments.filter((url) => !url.includes(fileName))
     )
     setUploadProgress((prev) => {
-      const { [fileName]: removed, ...rest } = prev
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [fileName]: ignored, ...rest } = prev
       return rest
     })
   }

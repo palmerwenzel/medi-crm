@@ -1,101 +1,46 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useAuth } from '@/providers/auth-provider'
-import { getSystemStats } from '@/lib/actions/admin'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useToast } from '@/components/ui/use-toast'
-import { Users, FileText, UserCheck } from 'lucide-react'
-
-interface SystemStats {
-  totalUsers: number
-  totalCases: number
-  activeStaff: number
-}
+import { Button } from '@/components/ui/button'
+import { CaseManagementView } from '@/components/cases/case-management-view'
+import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
+import Link from 'next/link'
 
 export function AdminDashboard() {
-  const { user, userRole } = useAuth()
-  const { toast } = useToast()
-  const [stats, setStats] = useState<SystemStats>({
-    totalUsers: 0,
-    totalCases: 0,
-    activeStaff: 0
-  })
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, userRole, loading } = useAuth()
 
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        setIsLoading(true)
-        const data = await getSystemStats()
-        setStats(data)
-      } catch (error) {
-        console.error('Error loading system stats:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load system statistics',
-          variant: 'destructive'
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    // Only load stats if user is an admin
-    if (userRole === 'admin') {
-      loadStats()
-    }
-  }, [toast, userRole])
-
-  // Only render for admin users
-  if (!user || userRole !== 'admin') return null
+  // Only show for admin
+  if (loading || !user || userRole !== 'admin') return null
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-7 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            )}
-          </CardContent>
-        </Card>
+    <div className="space-y-8">
+      {/* Header Section with Glassmorphic Effect */}
+      <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+        <p className="text-muted-foreground">
+          Monitor system activity and manage all cases.
+        </p>
+      </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-7 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats.totalCases}</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Quick Actions */}
+      <QuickActionsBar variant="cards" />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-7 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats.activeStaff}</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Recent Cases with Glassmorphic Effect */}
+      <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Recent Cases</h2>
+          <Button variant="outline" asChild>
+            <Link href="/cases">View All Cases</Link>
+          </Button>
+        </div>
+
+        <CaseManagementView 
+          isDashboard={true}
+          viewType={'admin' as const}
+          limit={5}
+          showBulkActions={true}
+          showStaffTools={true}
+        />
       </div>
     </div>
   )

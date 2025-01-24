@@ -6,7 +6,6 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { validateFile, type AllowedMimeType } from '@/lib/utils/file-validation'
-import { sanitizeFileName } from '@/lib/utils/sanitize'
 import { randomUUID } from 'crypto'
 
 type UploadResponse = {
@@ -41,7 +40,7 @@ export async function uploadFile(
     const secureFileName = `${randomUUID()}.${fileExt}`
 
     // Upload to case-specific folder
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('case-attachments')
       .upload(`${caseId}/${secureFileName}`, file, {
         contentType: file.type,

@@ -10,8 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { getCaseHistory } from '@/lib/actions/case-history'
 import type { 
   CaseHistoryResponse, 
-  CaseHistoryQueryParams,
-  CaseActivityType 
+  CaseHistoryQueryParams
 } from '@/lib/validations/case-history'
 
 interface UseCaseHistoryOptions {
@@ -89,8 +88,10 @@ export function useCaseHistory({
         throw new Error(result.error || 'Failed to load more history')
       }
 
-      setHistory(prev => [...prev, ...result.data.history])
-      setHasMore(result.data.hasMore)
+      const { history: newHistory, hasMore: moreAvailable } = result.data
+
+      setHistory(prev => [...prev, ...newHistory])
+      setHasMore(moreAvailable)
       setOffset(prev => prev + limit)
     } catch (error) {
       console.error('Error loading more history:', error)

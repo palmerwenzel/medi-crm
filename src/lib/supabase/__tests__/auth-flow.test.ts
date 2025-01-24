@@ -4,7 +4,7 @@ import { Database } from '@/types/supabase'
 type User = Database['public']['Tables']['users']['Row']
 
 describe('Auth Flow', () => {
-  let testUsers: { email: string }[] = []
+  const testUsers: { email: string }[] = []
 
   beforeAll(async () => {
     // Verify database connection

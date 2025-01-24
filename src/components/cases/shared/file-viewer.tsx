@@ -5,6 +5,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Eye, Download, FileIcon, FileText, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,14 +27,6 @@ function getFileIcon(mimeType: AllowedMimeType) {
   if (mimeType.startsWith('image/')) return ImageIcon
   if (mimeType === 'application/pdf') return FileText
   return FileIcon
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
 export function FileViewer({ url, mimeType, fileName, className }: FileViewerProps) {
@@ -64,11 +57,13 @@ export function FileViewer({ url, mimeType, fileName, className }: FileViewerPro
               <DialogContent className="max-w-4xl">
                 {isImage && (
                   <div className="relative aspect-video">
-                    <img
+                    <Image
                       src={url}
                       alt={fileName}
+                      fill
                       className="object-contain"
                       loading="lazy"
+                      unoptimized={url.startsWith('blob:')}
                     />
                   </div>
                 )}
@@ -97,11 +92,13 @@ export function FileViewer({ url, mimeType, fileName, className }: FileViewerPro
       </div>
       {isImage && (
         <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
-          <img
+          <Image
             src={url}
             alt={fileName}
+            fill
             className="object-cover"
             loading="lazy"
+            unoptimized={url.startsWith('blob:')}
           />
         </div>
       )}

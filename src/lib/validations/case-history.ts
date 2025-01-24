@@ -24,12 +24,32 @@ export type CaseActivityType = (typeof caseActivityTypeEnum)[number]
 export type CaseHistoryRow = Database['public']['Tables']['case_history']['Row']
 
 // Extended case history type with actor details
-export type CaseHistoryResponse = CaseHistoryRow & {
+export type CaseHistoryResponse = Omit<CaseHistoryRow, 'details'> & {
   actor: {
     id: string
     first_name: string | null
     last_name: string | null
     role: string
+  }
+  activity_type: CaseActivityType
+  old_value?: {
+    status?: string
+    priority?: string
+    category?: string
+    department?: string
+    assigned_to?: string
+    attachments?: string[]
+    [key: string]: unknown
+  }
+  new_value?: {
+    status?: string
+    priority?: string
+    category?: string
+    department?: string
+    assigned_to?: string
+    note?: string
+    attachments?: string[]
+    [key: string]: unknown
   }
 }
 

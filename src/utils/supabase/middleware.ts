@@ -1,13 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Define public routes that don't require authentication
-const publicRoutes = ['/login', '/signup']
-
-function logRedirect(from: string, to: string, reason: string) {
-  console.log(`[REDIRECT] From: ${from} -> To: ${to} | Reason: ${reason}`)
-}
-
 /**
  * Minimal middleware for basic auth protection
  * Only checks if user has a valid session token
@@ -16,10 +9,21 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   console.log(`[MIDDLEWARE] Processing route: ${pathname}`)
 
-  // Create initial response
+  // Create a new headers object with only safe headers
+  const safeHeaders = new Headers()
+  request.headers.forEach((value, key) => {
+    // Only forward safe headers, explicitly exclude auth-related ones
+    if (!key.toLowerCase().includes('authorization') && 
+        !key.toLowerCase().includes('cookie') &&
+        !key.toLowerCase().includes('auth')) {
+      safeHeaders.set(key, value)
+    }
+  })
+
+  // Create initial response with sanitized headers
   let response = NextResponse.next({
     request: {
-      headers: request.headers,
+      headers: safeHeaders,
     },
   })
 
@@ -40,7 +44,7 @@ export async function updateSession(request: NextRequest) {
           })
           response = NextResponse.next({
             request: {
-              headers: request.headers,
+              headers: safeHeaders,
             },
           })
           response.cookies.set({
@@ -57,7 +61,7 @@ export async function updateSession(request: NextRequest) {
           })
           response = NextResponse.next({
             request: {
-              headers: request.headers,
+              headers: safeHeaders,
             },
           })
           response.cookies.set({

@@ -4,11 +4,9 @@
  */
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import type { 
   CaseHistoryQueryParams, 
-  CaseHistoryResponse,
   PaginatedCaseHistoryResponse 
 } from '@/lib/validations/case-history'
 

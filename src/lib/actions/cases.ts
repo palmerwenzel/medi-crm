@@ -8,7 +8,6 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { 
-  createCaseSchema, 
   type CreateCaseInput, 
   type CaseResponse,
   type CaseQueryParams,
@@ -74,10 +73,10 @@ export async function getCases(params?: Partial<CaseQueryParams>): Promise<Actio
 
     // Apply sorting and pagination
     const { data: cases, error: fetchError, count } = await query
-      .order(validatedParams.sort_by, { ascending: validatedParams.sort_order === 'asc' })
+      .order(validatedParams.sort_by || 'created_at', { ascending: validatedParams.sort_order === 'asc' })
       .range(
-        validatedParams.offset,
-        validatedParams.offset + validatedParams.limit - 1
+        validatedParams.offset || 0,
+        (validatedParams.offset || 0) + (validatedParams.limit || 20) - 1
       )
 
     if (fetchError) {
@@ -90,13 +89,15 @@ export async function getCases(params?: Partial<CaseQueryParams>): Promise<Actio
 
     // Calculate pagination metadata
     const total = count || 0
-    const hasMore = total > validatedParams.offset + cases.length
-    const nextOffset = hasMore ? validatedParams.offset + validatedParams.limit : undefined
+    const currentOffset = validatedParams.offset || 0
+    const currentLimit = validatedParams.limit || 20
+    const hasMore = total > currentOffset + cases.length
+    const nextOffset = hasMore ? currentOffset + currentLimit : undefined
 
     return {
       success: true,
       data: {
-        cases: cases || [],
+        cases,
         total,
         hasMore,
         nextOffset

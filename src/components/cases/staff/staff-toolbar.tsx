@@ -33,18 +33,23 @@ export function StaffToolbar({
   const { user, userRole } = useAuth()
   const router = useRouter()
   const [staffMembers, setStaffMembers] = React.useState<StaffMember[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
   const { toast } = useToast()
   const supabase = createClient()
 
-  // Only staff and admin can access this component
-  if (!user || !['staff', 'admin'].includes(userRole || '')) {
-    router.push('/dashboard')
-    return null
-  }
+  // Handle unauthorized access
+  React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      router.push('/dashboard')
+      return
+    }
+  }, [router, user, userRole])
 
   // Load staff members
   React.useEffect(() => {
+    if (!user || !['staff', 'admin'].includes(userRole || '')) {
+      return
+    }
+
     async function loadStaffMembers() {
       const { data, error } = await supabase
         .from('users')
@@ -68,11 +73,15 @@ export function StaffToolbar({
           name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim()
         }))
       )
-      setIsLoading(false)
     }
 
     loadStaffMembers()
-  }, [])
+  }, [supabase, toast, user, userRole])
+
+  // Only staff and admin can access this component
+  if (!user || !['staff', 'admin'].includes(userRole || '')) {
+    return null
+  }
 
   return (
     <div className={className}>

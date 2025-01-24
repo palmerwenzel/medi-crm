@@ -7,7 +7,6 @@ import { useAuth } from "@/providers/auth-provider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileText, MessageSquare, Calendar, Clock } from "lucide-react"
 import type { Database } from "@/types/supabase"
-import { Skeleton } from "@/components/ui/skeleton"
 
 type Patient = Database['public']['Tables']['users']['Row']
 type Case = Database['public']['Tables']['cases']['Row']
@@ -35,15 +34,10 @@ interface PatientDetailsProps {
 export function PatientDetails({ patient }: PatientDetailsProps) {
   const { userRole } = useAuth()
   const [activeTab, setActiveTab] = React.useState("overview")
-  const [isLoading, setIsLoading] = React.useState(false)
 
   const canEdit = userRole === "staff" || userRole === "admin"
   const activeCases = patient.cases?.filter(c => c.status === "open" || c.status === "in_progress") || []
   
-  if (isLoading) {
-    return <PatientDetailsSkeleton />
-  }
-
   return (
     <div className="space-y-6">
       {/* Patient Overview Card */}
@@ -108,7 +102,7 @@ export function PatientDetails({ patient }: PatientDetailsProps) {
           <Card>
             <CardHeader>
               <CardTitle>Medical History</CardTitle>
-              <CardDescription>Patient's medical background and notes</CardDescription>
+              <CardDescription>Patient&apos;s medical background and notes</CardDescription>
             </CardHeader>
             <CardContent>
               {patient.medical_history ? (
@@ -175,35 +169,3 @@ export function PatientDetails({ patient }: PatientDetailsProps) {
     </div>
   )
 }
-
-function PatientDetailsSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-[200px] w-full" />
-      </div>
-    </div>
-  )
-} 

@@ -72,7 +72,7 @@ export interface CaseFilters {
   /** Department filter */
   department?: CaseDepartment | CaseDepartment[] | 'all'
   /** Specialty filter */
-  specialties?: StaffSpecialty | StaffSpecialty[] | 'all'
+  specialty?: StaffSpecialty | 'all'
   /** Sort field */
   sortBy?: CaseSortField
   /** Sort direction */

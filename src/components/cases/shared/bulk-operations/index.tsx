@@ -124,7 +124,7 @@ export function BulkOperationsBar({
             <AlertDialogHeader>
               <AlertDialogTitle>Update Case Status</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to change the status of {selectedCount} cases to "{selectedStatus}"?
+                Are you sure you want to change the status of {selectedCount} cases to &quot;{selectedStatus}&quot;?
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

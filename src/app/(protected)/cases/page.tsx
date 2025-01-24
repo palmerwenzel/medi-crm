@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { headers } from 'next/headers'
 import { CaseManagementView } from "@/components/cases/shared/case-management-view"
 import type { UserRole } from '../layout'
 
@@ -16,7 +15,6 @@ export const metadata = {
  * - Patient: Simple list view of their own cases
  */
 export default async function CasesPage() {
-  const headersList = headers()
   const supabase = createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -41,10 +39,9 @@ export default async function CasesPage() {
     <div className="container py-8">
       <h1 className="text-3xl font-bold mb-8">Cases</h1>
       <CaseManagementView 
-        showBulkActions={isStaffOrAdmin}
-        showStaffTools={isStaffOrAdmin}
         showActions={isStaffOrAdmin}
-        viewType={isStaffOrAdmin ? 'staff' : 'patient'}
+        showNotes={isStaffOrAdmin}
+        isDashboard={false}
       />
     </div>
   )

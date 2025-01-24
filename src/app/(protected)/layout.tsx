@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { headers } from 'next/headers'
 import { Header } from '@/components/dashboard/header'
 import { DashboardNav } from '@/components/dashboard/dashboard-nav'
 
@@ -12,7 +11,6 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode
 }) {
-  const headersList = headers()
   const supabase = createClient()
 
   // Verify auth and get user data

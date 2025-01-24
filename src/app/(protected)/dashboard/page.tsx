@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { headers } from 'next/headers'
 import type { UserRole } from '../layout'
 
 // Role-specific dashboard components
@@ -9,7 +8,6 @@ import { PatientDashboard } from '@/components/dashboard/views/patient-dashboard
 import { AdminDashboard } from '@/components/dashboard/views/admin-dashboard'
 
 export default async function DashboardPage() {
-  const headersList = headers()
   const supabase = createClient()
 
   // Get user role from the protected layout

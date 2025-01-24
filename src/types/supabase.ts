@@ -94,6 +94,32 @@ export interface Database {
           updated_at?: string
         }
       }
+      case_history: {
+        Row: {
+          id: string
+          case_id: string
+          actor_id: string
+          action: string
+          details: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          actor_id: string
+          action: string
+          details: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          actor_id?: string
+          action?: string
+          details?: Json
+          created_at?: string
+        }
+      }
       webhooks: {
         Row: {
           id: string

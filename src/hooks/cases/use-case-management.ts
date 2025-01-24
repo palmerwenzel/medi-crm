@@ -5,15 +5,10 @@ import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import { staffSpecialtyEnum } from '@/lib/validations/case'
 import type { 
   CaseResponse, 
-  CaseStatus, 
+  CaseStatus,
   CaseQueryParams,
-  CasePriority,
-  CaseCategory,
-  CaseDepartment,
-  StaffSpecialty
 } from '@/lib/validations/case'
 import type { CaseFilters, CaseManagementOptions, CaseManagementReturn } from '@/types/cases'
 import type { StaffMember } from '@/types/staff'
@@ -24,8 +19,7 @@ import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
  * Hook for managing case data, including filtering, selection, and bulk actions
  */
 export function useCaseManagement({ 
-  limit = 20, 
-  isDashboard 
+  limit = 20
 }: CaseManagementOptions = {}): CaseManagementReturn {
   const { user, userRole } = useAuth()
   const [cases, setCases] = useState<CaseResponse[]>([])
@@ -33,8 +27,6 @@ export function useCaseManagement({
   const [selectedCases, setSelectedCases] = useState<string[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(false)
-  const [offset, setOffset] = useState(0)
   const [currentFilters, setCurrentFilters] = useState<Partial<CaseQueryParams>>({})
   const supabase = createClient()
   const { toast } = useToast()
@@ -91,10 +83,10 @@ export function useCaseManagement({
 
     // Apply pagination
     if (limit) {
-      query = query.range(offset, offset + limit - 1)
+      query = query.range(0, limit - 1)
     }
 
-    const { data, error, count } = await query
+    const { data, error } = await query
 
     if (error) {
       console.error('Failed to fetch cases:', error)
@@ -103,28 +95,22 @@ export function useCaseManagement({
 
     setCases(data || [])
     setFilteredCases(data || [])
-    setHasMore(count ? offset + limit < count : false)
     setIsLoading(false)
-  }, [user, userRole, limit, offset, currentFilters, supabase])
-
-  // Load more cases (pagination)
-  const loadMore = useCallback(async () => {
-    if (!hasMore) return
-    setOffset(prev => prev + limit)
-  }, [hasMore, limit])
+  }, [user, userRole, limit, currentFilters, supabase])
 
   // Handle filter changes
   const handleFilterChange = useCallback((filters: CaseFilters) => {
+    // Convert UI filters to API query params
     const queryParams: Partial<CaseQueryParams> = {
-      status: filters.status === 'all' ? undefined : 
-        (Array.isArray(filters.status) ? filters.status.filter((s): s is CaseStatus => Boolean(s)) : [filters.status].filter((s): s is CaseStatus => Boolean(s))),
-      priority: filters.priority === 'all' ? undefined :
-        (Array.isArray(filters.priority) ? filters.priority.filter((p): p is CasePriority => Boolean(p)) : [filters.priority].filter((p): p is CasePriority => Boolean(p))),
-      category: filters.category === 'all' ? undefined :
-        (Array.isArray(filters.category) ? filters.category.filter((c): c is CaseCategory => Boolean(c)) : [filters.category].filter((c): c is CaseCategory => Boolean(c))),
-      department: filters.department === 'all' ? undefined :
-        (Array.isArray(filters.department) ? filters.department.filter((d): d is CaseDepartment => Boolean(d)) : [filters.department].filter((d): d is CaseDepartment => Boolean(d))),
-      specialty: filters.specialty === 'all' ? undefined : filters.specialty,
+      status: filters.status === 'all' || !filters.status ? undefined : 
+        Array.isArray(filters.status) ? filters.status : [filters.status],
+      priority: filters.priority === 'all' || !filters.priority ? undefined :
+        Array.isArray(filters.priority) ? filters.priority : [filters.priority],
+      category: filters.category === 'all' || !filters.category ? undefined :
+        Array.isArray(filters.category) ? filters.category : [filters.category],
+      department: filters.department === 'all' || !filters.department ? undefined :
+        Array.isArray(filters.department) ? filters.department : [filters.department],
+      specialty: filters.specialty === 'all' || !filters.specialty ? undefined : filters.specialty,
       search: filters.search,
       sort_by: filters.sortBy,
       sort_order: filters.sortOrder,
@@ -135,8 +121,7 @@ export function useCaseManagement({
     }
 
     setCurrentFilters(queryParams)
-    setOffset(0) // Reset pagination
-    loadCases()
+    loadCases() // Reload with new filters
   }, [loadCases])
 
   // Subscribe to real-time updates
@@ -283,14 +268,14 @@ export function useCaseManagement({
     selectedCases,
     staffMembers,
     isLoading,
-    hasMore,
     loadCases,
-    loadMore,
     handleFilterChange,
     handleSelectAll,
     handleDeselectAll,
     handleCaseSelect,
     handleBulkStatusChange,
     handleBulkAssignmentChange,
+    hasMore: false,
+    loadMore: () => Promise.resolve()
   }
 } 

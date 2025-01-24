@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
-import { CaseManagementView } from '@/components/cases/shared/case-management-view'
+import { CaseManagementView } from '@/components/cases/case-management-view'
 import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 import Link from 'next/link'
 
@@ -36,7 +36,7 @@ export function PatientDashboard() {
 
         <CaseManagementView 
           isDashboard={true}
-          viewType="patient"
+          viewType={'patient' as const}
           limit={5}
         />
       </div>
