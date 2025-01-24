@@ -43,10 +43,8 @@ export default async function ProtectedLayout({
     <div className="flex min-h-screen flex-col">
       <Header />
       <div className="flex flex-1">
-        <aside className="w-[240px] hidden md:block border-r border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="sticky top-[80px] p-6">
-            <DashboardNav />
-          </div>
+        <aside className="hidden md:block w-[80px]">
+          <DashboardNav />
         </aside>
         <main className="flex-1 h-[calc(100vh-80px)] overflow-hidden">
           <div className="h-full p-6 lg:p-8">

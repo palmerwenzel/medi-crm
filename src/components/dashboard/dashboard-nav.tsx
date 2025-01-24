@@ -106,31 +106,39 @@ export function DashboardNav() {
   const pathname = usePathname()
   const { userRole, signOut } = useAuth()
 
-  // Filter nav items based on user role
-  const filteredItems = navItems.filter(
+  // Filter items based on user role
+  const filteredNavItems = navItems.filter(
     item => userRole && item.roles.includes(userRole)
   )
 
   return (
-    <nav className="grid items-start gap-2">
-      {filteredItems.map((item, index) => {
-        const Icon = item.icon
-        return (
-          <Link
-            key={index}
-            href={item.href}
-          >
-            <span className={cn(
-              "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-              pathname === item.href ? "bg-accent" : "transparent",
-              "transition-all duration-200"
-            )}>
-              <Icon className="mr-2 h-4 w-4" />
-              <span>{item.title}</span>
-            </span>
-          </Link>
-        )
-      })}
+    <nav className="group absolute w-[80px] hover:w-64 h-[calc(100vh-80px)] transition-all duration-300 ease-in-out border-r border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+      {/* Content Container */}
+      <div className="h-full py-6 px-4 cursor-pointer flex flex-col overflow-y-auto">
+        {/* Navigation Items */}
+        <div className="flex-1 flex flex-col gap-3 items-center group-hover:items-start">
+          {filteredNavItems.map((item, index) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-4 rounded-lg px-3 py-3 text-sm transition-colors whitespace-nowrap min-h-[48px] w-full",
+                  isActive 
+                    ? "glass text-white font-medium" 
+                    : "text-foreground glass-sm-hover",
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
+                  {item.title}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
     </nav>
   )
 }

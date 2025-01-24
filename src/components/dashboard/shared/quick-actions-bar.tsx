@@ -72,7 +72,7 @@ const quickActions: QuickAction[] = [
 ]
 
 interface QuickActionsBarProps {
-  variant?: 'default' | 'cards'
+  variant?: 'default' | 'cards' | 'vertical'
   className?: string
 }
 
@@ -86,6 +86,35 @@ export function QuickActionsBar({
   const filteredActions = quickActions.filter(
     action => userRole && action.roles.includes(userRole)
   )
+
+  if (variant === 'vertical') {
+    return (
+      <div className={cn('flex flex-col gap-2', className)}>
+        {filteredActions.map((action) => {
+          const Icon = Icons[action.icon]
+          return (
+            <Link key={action.href} href={action.href}>
+              <Card className="glass-sm-hover transition-colors h-[4.5rem]">
+                <CardHeader className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 glass-sm rounded-full shrink-0">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-sm leading-none mb-1">{action.title}</h3>
+                      <CardDescription className="text-xs leading-none">
+                        {action.description}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+          )
+        })}
+      </div>
+    )
+  }
 
   if (variant === 'cards') {
     return (

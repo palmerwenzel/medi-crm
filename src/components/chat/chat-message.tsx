@@ -34,7 +34,7 @@ export function ChatMessage({
   return (
     <Card
       className={cn(
-        'flex max-w-[80%] items-start space-x-2 p-4',
+        'flex max-w-[80%] items-start space-x-2 px-4 py-2',
         isUser ? 'ml-auto bg-primary text-primary-foreground' : 'mr-auto',
         className
       )}
