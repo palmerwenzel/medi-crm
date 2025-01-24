@@ -74,6 +74,12 @@ export function RichTextEditor({
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm dark:prose-invert max-w-none outline-none',
+      }
+    },
+    immediatelyRender: false
   })
 
   if (!editor) {

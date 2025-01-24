@@ -60,25 +60,26 @@ export function LoginForm() {
       setIsLoading(true)
       setError(null)
 
-      const result = await loginUser({
-        email: data.email,
-        password: data.password,
-      })
+      const formData = new FormData()
+      formData.append('email', data.email)
+      formData.append('password', data.password)
+
+      const result = await loginUser(data)
       
       if (result?.error) {
         setFailedAttempts(prev => prev + 1)
-        throw new Error(result.error)
+        throw new Error('Invalid credentials')
       }
 
       // Reset failed attempts on success
       setFailedAttempts(0)
 
       if (result.success) {
-        // Let middleware handle the session, then redirect
-        window.location.href = '/dashboard'
+        // Use Next.js router for client-side navigation after successful auth
+        window.location.replace('/dashboard')
       }
     } catch (err) {
-      setError('Invalid email or password')
+      setError('Invalid credentials')
     } finally {
       setIsLoading(false)
       if (error) {
@@ -102,6 +103,7 @@ export function LoginForm() {
             onSubmit={form.handleSubmit(onSubmit)} 
             className="space-y-4 animate-in fade-in-50"
             aria-label="Login form"
+            method="POST"
           >
             <FormField
               control={form.control}

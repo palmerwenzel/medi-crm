@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -57,6 +58,7 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [failedAttempts, setFailedAttempts] = useState(0)
+  const router = useRouter()
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signupSchema),
@@ -71,7 +73,6 @@ export function SignUpForm() {
 
   async function onSubmit(data: SignUpFormValues) {
     try {
-      // Prevent rapid signup attempts
       if (failedAttempts > 3) {
         await new Promise(resolve => setTimeout(resolve, Math.min(failedAttempts * 1000, 5000)))
       }
@@ -79,27 +80,20 @@ export function SignUpForm() {
       setIsLoading(true)
       setError(null)
 
-      const result = await signUpUser({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-      })
+      const result = await signUpUser(data)
 
       if (result?.error) {
         setFailedAttempts(prev => prev + 1)
-        throw new Error(result.error)
+        throw new Error('Failed to create account')
       }
 
-      // Reset failed attempts on success
       setFailedAttempts(0)
 
       if (result.success) {
-        // Let middleware handle the session, then redirect
-        window.location.href = '/dashboard'
+        router.replace('/dashboard')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account')
+      setError('Failed to create account. Please try again.')
     } finally {
       setIsLoading(false)
       if (error) {
