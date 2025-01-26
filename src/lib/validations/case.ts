@@ -12,6 +12,7 @@ export const caseCategoryEnum = ['general', 'followup', 'prescription', 'test_re
 export const caseDepartmentEnum = ['admin', 'emergency', 'primary_care', 'specialty_care', 'surgery', 'mental_health'] as const
 export const staffSpecialtyEnum = ['general_practice', 'pediatrics', 'cardiology', 'neurology', 'orthopedics', 'dermatology', 'psychiatry', 'oncology'] as const
 export const caseSortFieldEnum = ['priority', 'created_at', 'updated_at', 'sla_breach'] as const
+export const chatStatusEnum = ['needs_response', 'active', 'completed'] as const
 
 // Types
 export type CaseStatus = typeof caseStatusEnum[number]
@@ -20,6 +21,7 @@ export type CaseCategory = typeof caseCategoryEnum[number]
 export type CaseDepartment = typeof caseDepartmentEnum[number]
 export type StaffSpecialty = typeof staffSpecialtyEnum[number]
 export type CaseSortField = typeof caseSortFieldEnum[number]
+export type ChatStatus = typeof chatStatusEnum[number]
 
 /**
  * SLA tier configuration for case prioritization
@@ -88,7 +90,8 @@ export const caseResponseSchema = z.object({
   metadata: z.object({
     sla: slaMetadataSchema.optional(),
     tags: z.array(z.string()).optional(),
-    internal_notes: z.string().optional()
+    internal_notes: z.string().optional(),
+    chat_status: z.enum(chatStatusEnum).nullable().optional()
   }).optional(),
   patient: z.object({
     first_name: z.string().nullable(),

@@ -5,11 +5,15 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { MessageSquare, UserPlus2 } from 'lucide-react'
 import { CaseStatusBadge } from '@/components/cases/case-status-badge'
 import { CaseMetadata } from '@/components/cases/case-metadata'
 import { SLAIndicator } from '../sla-indicator'
 import { cn } from '@/lib/utils'
 import { priorityColors } from '@/lib/utils/case-formatting'
+import { claimCase } from '@/lib/services/case-service'
+import { useToast } from '@/hooks/use-toast'
 import type { CaseResponse } from '@/lib/validations/case'
 
 interface CaseMetadata {
@@ -21,6 +25,7 @@ interface CaseMetadata {
   tags?: string[]
   internal_notes?: string
   specialties?: string[]
+  chat_status?: 'needs_response' | 'active' | 'completed' | null
 }
 
 interface CaseListItemProps {
@@ -35,6 +40,12 @@ interface CaseListItemProps {
   className?: string
 }
 
+const chatStatusColors = {
+  needs_response: 'bg-red-500/10 text-red-500 border-red-500/20',
+  active: 'bg-green-500/10 text-green-500 border-green-500/20',
+  completed: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+}
+
 export function CaseListItem({
   case_,
   isSelected,
@@ -44,12 +55,31 @@ export function CaseListItem({
   isStaffOrAdmin = false,
   className
 }: CaseListItemProps) {
+  const { toast } = useToast()
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       onSelect?.(case_.id)
     }
   }, [case_.id, onSelect])
+
+  const handleClaim = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      await claimCase(case_.id)
+      toast({
+        title: 'Case claimed',
+        description: 'You have successfully claimed this case.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to claim case',
+        variant: 'destructive',
+      })
+    }
+  }, [case_.id, toast])
 
   return (
     <div 
@@ -82,6 +112,11 @@ export function CaseListItem({
                       {case_.priority}
                     </Badge>
                   )}
+                  {case_.metadata?.chat_status && (
+                    <Badge variant="outline" className={cn(chatStatusColors[case_.metadata.chat_status])}>
+                      {case_.metadata.chat_status.replace('_', ' ')}
+                    </Badge>
+                  )}
                   {case_.metadata?.sla && (
                     <SLAIndicator sla={case_.metadata.sla} />
                   )}
@@ -103,6 +138,37 @@ export function CaseListItem({
                       ))}
                     </div>
                   )}
+                  <div className="ml-auto flex gap-2">
+                    {isStaffOrAdmin && !case_.assigned_to && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="gap-2"
+                        onClick={handleClaim}
+                      >
+                        <UserPlus2 className="h-4 w-4" />
+                        Claim Case
+                      </Button>
+                    )}
+                    {isStaffOrAdmin && (
+                      <Link 
+                        href={`${basePath}/${case_.id}?panel=chat`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className={cn(
+                            "gap-2",
+                            case_.metadata?.chat_status === 'needs_response' && "border-red-500 text-red-500 hover:bg-red-500/10"
+                          )}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {case_.metadata?.chat_status === 'needs_response' ? 'Needs Response' : 'View Chat'}
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {case_.description}
@@ -117,9 +183,9 @@ export function CaseListItem({
                   variant="compact"
                   iconSize="sm"
                 />
-                {showNotes && case_.internal_notes && (
+                {showNotes && case_.metadata?.internal_notes && (
                   <div className="mt-2 text-sm font-medium text-foreground">
-                    Notes: {case_.internal_notes}
+                    Notes: {case_.metadata.internal_notes}
                   </div>
                 )}
               </div>

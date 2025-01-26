@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { ChatMessages } from './chat-messages'
 import { ChatInput } from './chat-input'
 import { ConversationList } from './conversation-list'
+import { MessagesSquare } from 'lucide-react'
 
 interface ChatContainerProps {
   patientId: string
@@ -100,17 +101,29 @@ export function ChatContainer({
 
       {/* Chat Area */}
       <Card className="md:col-span-3 flex flex-col overflow-hidden">
-        <ChatMessages
-          messages={messages}
-          typingUsers={typingUsersArray}
-          onMarkAsRead={markAsRead}
-          className="flex-1"
-        />
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          isLoading={isLoading}
-          className="border-t"
-        />
+        {!activeConversationId && !isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <MessagesSquare className="h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mt-4 text-lg font-medium">Welcome to Medical Chat</h3>
+            <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+              Start a new conversation from the sidebar to begin your medical consultation. Our AI assistant will help gather your information.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ChatMessages
+              messages={messages}
+              typingUsers={typingUsersArray}
+              onMarkAsRead={markAsRead}
+              className="flex-1"
+            />
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              className="border-t"
+            />
+          </>
+        )}
       </Card>
     </div>
   )

@@ -9,7 +9,8 @@ import type {
   CaseCategory,
   CaseDepartment,
   StaffSpecialty,
-  CaseSortField 
+  CaseSortField,
+  ChatStatus
 } from '@/lib/validations/case'
 
 /**
@@ -21,6 +22,7 @@ export interface CaseFilters {
   category?: CaseCategory | 'all'
   department?: CaseDepartment | 'all'
   specialty?: StaffSpecialty | 'all'
+  chat_status?: ChatStatus | 'all'
   tags?: string[] | 'all'
   search?: string
   sortBy?: CaseSortField

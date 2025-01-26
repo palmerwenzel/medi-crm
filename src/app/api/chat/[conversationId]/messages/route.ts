@@ -3,12 +3,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getMessages, sendMessage } from '@/lib/actions/chat'
+import { processAIMessage } from '@/lib/actions/ai'
 import { messageQuerySchema, messageInsertSchema } from '@/lib/validations/chat'
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
 
 export async function GET(
   req: NextRequest,
@@ -33,16 +29,19 @@ export async function GET(
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error || 'Failed to fetch messages' },
+        { success: false, error: result.error || 'Failed to fetch messages' },
         { status: 400 }
       )
     }
 
-    return NextResponse.json(result.data)
+    return NextResponse.json({
+      success: true,
+      data: result.data || []
+    })
   } catch (error) {
     console.error('Messages API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      { success: false, error: 'Failed to fetch messages' },
       { status: 500 }
     )
   }
@@ -73,57 +72,50 @@ export async function POST(
 
     if (!userResult.success) {
       return NextResponse.json(
-        { error: userResult.error || 'Failed to send message' },
+        { success: false, error: userResult.error || 'Failed to send message' },
         { status: 400 }
       )
     }
 
-    // Return user message immediately
+    // Return user message with success wrapper
     const response = NextResponse.json({
-      userMessage: userResult.data
+      success: true,
+      data: userResult.data
     })
 
-    // Get AI response asynchronously
-    const aiPromise = (async () => {
-      try {
-        // Get previous messages for context
-        const history = await getMessages(message.conversation_id, 1, 10)
-        if (!history.success || !history.data) throw new Error('Failed to get message history')
+    // Get AI response asynchronously if needed
+    if (metadata?.requireAIResponse) {
+      const aiPromise = (async () => {
+        try {
+          // Get previous messages for context
+          const history = await getMessages(message.conversation_id, 1, 10)
+          if (!history.success || !history.data) throw new Error('Failed to get message history')
 
-        const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-          // Include system prompt if provided
-          ...(metadata?.systemPrompt ? [{ role: 'system' as const, content: metadata.systemPrompt }] : []),
-          // Include recent message history
-          ...history.data.map(msg => ({
-            role: msg.role as 'system' | 'user' | 'assistant',
-            content: msg.content
-          })),
-          // Include current message
-          { role: message.role as 'system' | 'user' | 'assistant', content: message.content }
-        ]
+          const aiResult = await processAIMessage(history.data, metadata?.systemPrompt)
+          
+          if (!aiResult.success) throw new Error(aiResult.error)
 
-        const aiResponse = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages
-        })
+          // Store AI response
+          await sendMessage(
+            aiResult.data.message,
+            message.conversation_id,
+            'assistant',
+            aiResult.data.metadata
+          )
+        } catch (error) {
+          console.error('AI response error:', error)
+        }
+      })()
 
-        const aiMessage = aiResponse.choices[0].message.content || ''
-
-        // Store AI response
-        await sendMessage(aiMessage, message.conversation_id, 'assistant')
-      } catch (error) {
-        console.error('AI response error:', error)
-      }
-    })()
-
-    // Don't await the AI response
-    aiPromise.catch(console.error)
+      // Don't await the AI response
+      aiPromise.catch(console.error)
+    }
 
     return response
   } catch (error) {
     console.error('Message API error:', error)
     return NextResponse.json(
-      { error: 'Failed to send message' },
+      { success: false, error: 'Failed to send message' },
       { status: 500 }
     )
   }

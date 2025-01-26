@@ -41,7 +41,7 @@ export function PatientDashboard() {
       {/* Main Content */}
       <div className="mt-6 h-[calc(100vh-16rem)]">
         {/* Medical Intake Chatbot */}
-        <div className="rounded-lg border bg-background/95 p-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden h-full">
+        <div className="rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden h-full">
           <ChatContainer 
             patientId={user.id}
             className="h-full"

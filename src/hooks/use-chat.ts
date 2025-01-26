@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
 import {
   type MedicalMessage,
   type UIMessage,
@@ -9,7 +10,10 @@ import {
   type MessageStatus,
   type PresenceState,
   type MedicalConversation,
-  type MedicalConversationWithMessages
+  type MedicalConversationWithMessages,
+  type ChatAccess,
+  type MessageInsert,
+  type TriageDecision
 } from '@/types/chat'
 import {
   subscribeToConversation,
@@ -22,6 +26,10 @@ import {
   updateConversationStatus,
   deleteConversation
 } from '@/lib/services/chat-service'
+import { useAuth } from '@/providers/auth-provider'
+import { LLMController } from '@/lib/ai/llm-controller'
+import { createClient } from '@/utils/supabase/client'
+import { processAIMessage, makeTriageDecision } from '@/lib/actions/ai'
 
 interface UseChatOptions {
   conversationId?: string
@@ -29,48 +37,242 @@ interface UseChatOptions {
   onError?: (error: Error) => void
 }
 
+function logError(context: string, error: unknown, data?: any) {
+  console.error(`[Chat Hook] ${context}:`, {
+    error: error instanceof Error ? error.message : error,
+    stack: error instanceof Error ? error.stack : undefined,
+    data: JSON.stringify(data, null, 2)
+  })
+}
+
+function logDebug(context: string, data?: any) {
+  console.debug(`[Chat Hook] ${context}:`, 
+    typeof data === 'object' ? JSON.stringify(data, null, 2) : data
+  )
+}
+
+function logWarning(context: string, data?: any) {
+  console.warn(`[Chat Hook] ${context}:`, 
+    typeof data === 'object' ? JSON.stringify(data, null, 2) : data
+  )
+}
+
 export function useChat({ 
   conversationId, 
   patientId,
   onError 
 }: UseChatOptions = {}) {
-  // Messages state
+  const { user, userRole } = useAuth()
   const [messages, setMessages] = useState<UIMessage[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-
-  // Conversations state
   const [conversations, setConversations] = useState<MedicalConversationWithMessages[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
-
-  // Real-time states
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingStatus>>(new Map())
   const [presenceState, setPresenceState] = useState<PresenceState>({})
+  const [chatAccess, setChatAccess] = useState<ChatAccess>({
+    canAccess: 'ai',
+  })
   const channelRef = useRef<RealtimeChannel | null>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const llmController = useRef<LLMController | null>(null)
+  const supabase = createClient()
+
+  // Initialize LLM controller if needed
+  useEffect(() => {
+    if (!llmController.current) {
+      llmController.current = new LLMController()
+    }
+  }, [])
+
+  // Log initial state
+  useEffect(() => {
+    logDebug('Initial chat hook state', {
+      conversationId,
+      patientId,
+      userRole,
+      userId: user?.id,
+      isOwnData: user?.id === patientId
+    })
+  }, [conversationId, patientId, user?.id, userRole])
+
+  // Handle chat access based on role and case assignment
+  useEffect(() => {
+    let mounted = true
+
+    async function checkAccess() {
+      try {
+        logDebug('Checking chat access', { conversationId, userRole })
+
+        // If no conversationId, handle initial access state
+        if (!conversationId) {
+          let access: ChatAccess
+          if (userRole === 'admin') {
+            access = { canAccess: 'both' }
+          } else if (userRole === 'staff') {
+            access = { 
+              canAccess: 'provider',
+              providerId: user?.id as UserId
+            }
+          } else if (userRole === 'patient') {
+            access = { canAccess: 'both' }
+          } else {
+            access = { canAccess: 'ai' }
+          }
+          logDebug('Setting initial access', { access, userRole })
+          setChatAccess(access)
+          return
+        }
+
+        // For existing conversations, check specific access
+        const { data: conversation, error: dbError } = await supabase
+          .from('medical_conversations')
+          .select('case_id, can_create_case, assigned_staff_id, patient_id')
+          .eq('id', conversationId)
+          .single()
+
+        if (dbError) {
+          logError('Database error checking access', dbError, { conversationId })
+          // Don't default to AI access on error for patients
+          if (userRole === 'patient') {
+            setChatAccess({ canAccess: 'both' })
+          } else {
+            setChatAccess({ canAccess: 'ai' })
+          }
+          return
+        }
+
+        if (!mounted || !conversation) {
+          logWarning('No conversation found or component unmounted', { 
+            conversationId,
+            mounted,
+            conversation 
+          })
+          // Don't default to AI access for patients
+          if (userRole === 'patient') {
+            setChatAccess({ canAccess: 'both' })
+          } else {
+            setChatAccess({ canAccess: 'ai' })
+          }
+          return
+        }
+
+        logDebug('Found conversation for access check', conversation)
+
+        // Check if staff has access through case assignment
+        let hasStaffAccess = false
+        if (conversation.case_id && userRole === 'staff') {
+          const { data: case_, error: caseError } = await supabase
+            .from('cases')
+            .select('assigned_to')
+            .eq('id', conversation.case_id)
+            .single()
+          
+          if (caseError) {
+            logError('Error checking case assignment', caseError, { 
+              caseId: conversation.case_id 
+            })
+          } else {
+            hasStaffAccess = case_?.assigned_to === user?.id
+            logDebug('Checked staff case access', { 
+              hasAccess: hasStaffAccess,
+              caseId: conversation.case_id,
+              assignedTo: case_?.assigned_to
+            })
+          }
+        }
+
+        // Determine access level based on role and ownership
+        let access: ChatAccess
+        if (userRole === 'patient' && conversation.patient_id === user?.id) {
+          // Patients always have access to their own conversations
+          access = { canAccess: 'both' }
+        } else if (userRole === 'admin') {
+          access = { canAccess: 'both' }
+        } else if (userRole === 'staff' && (conversation.assigned_staff_id === user?.id || hasStaffAccess)) {
+          access = { 
+            canAccess: 'provider',
+            providerId: user?.id as UserId
+          }
+        } else if (conversation.can_create_case) {
+          // If no specific access and case can be created, default to AI
+          access = { canAccess: 'ai' }
+        } else {
+          // Default to AI access for non-owners
+          access = { canAccess: 'ai' }
+        }
+
+        logDebug('Setting conversation access', { 
+          access,
+          userRole,
+          isPatientOwner: conversation.patient_id === user?.id,
+          isStaffAssigned: conversation.assigned_staff_id === user?.id,
+          hasStaffAccess,
+          canCreateCase: conversation.can_create_case
+        })
+
+        if (mounted) {
+          setChatAccess(access)
+        }
+      } catch (err) {
+        logError('Error checking chat access', err)
+        // Don't default to AI access on error for patients
+        if (mounted) {
+          if (userRole === 'patient') {
+            setChatAccess({ canAccess: 'both' })
+          } else {
+            setChatAccess({ canAccess: 'ai' })
+          }
+        }
+      }
+    }
+
+    checkAccess()
+    return () => { mounted = false }
+  }, [conversationId, user?.id, userRole, supabase])
 
   // Load conversations (metadata only)
   useEffect(() => {
-    if (!patientId || typeof patientId !== 'string') return
-
     let mounted = true
+    setLoadingConversations(true)
 
     async function loadConversations() {
       try {
-        setLoadingConversations(true)
-        const data = await getConversations(patientId!, 1, 20, 'active')
+        logDebug('Loading conversations', { userRole, patientId: user?.id })
+
+        // For patients, use their own ID, for staff/admin use provided patientId
+        const targetPatientId = userRole === 'patient' ? user?.id : patientId
+        
+        // Early return with empty conversations if no valid ID
+        if (!targetPatientId) {
+          logWarning('No valid patient ID for loading conversations', {
+            userRole,
+            userId: user?.id,
+            providedPatientId: patientId
+          })
+          setConversations([])
+          return
+        }
+
+        const data = await getConversations(targetPatientId as UserId, 1, 20, 'active')
         if (mounted && Array.isArray(data)) {
-          setConversations(data.map(conv => ({
-            ...conv,
-            messages: [], // Initialize empty messages array
-            status: conv.status || 'active' // Ensure status is set
-          })))
+          logDebug('Loaded conversations', { 
+            count: data.length,
+            conversations: data.map(c => ({
+              id: c.id,
+              messageCount: c.messages.length,
+              access: c.access
+            }))
+          })
+          setConversations(data)
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to load conversations')
+        logError('Failed to load conversations', error)
         if (mounted) {
           setError(error)
           onError?.(error)
+          setConversations([])
         }
       } finally {
         if (mounted) {
@@ -79,41 +281,45 @@ export function useChat({
       }
     }
 
-    loadConversations()
-    return () => { mounted = false }
-  }, [patientId, onError])
-
-  // Load messages only when a conversation is selected
-  useEffect(() => {
-    if (!conversationId || typeof conversationId !== 'string') {
-      setMessages([])
-      return
+    if (user?.id || patientId) {
+      loadConversations()
+    } else {
+      logWarning('No user ID or patient ID available', { userId: user?.id, patientId })
+      setLoadingConversations(false)
+      setConversations([])
     }
 
+    return () => { mounted = false }
+  }, [user?.id, userRole, patientId, onError])
+
+  // Load messages for current conversation
+  useEffect(() => {
     let mounted = true
+    let unsubscribe: (() => void) | undefined
 
-    async function loadMessages(id: string) {
+    async function loadMessages() {
+      if (!conversationId) {
+        logWarning('No conversation ID provided for loading messages')
+        return
+      }
+
+      setIsLoading(true)
       try {
-        setIsLoading(true)
-        const data = await getMessages(id)
-        if (mounted) {
-          // Handle empty messages gracefully
-          const messages = data || []
-          setMessages(messages.map(msg => ({
-            ...msg,
-            state: { status: 'sent', id: msg.id },
-            metadata: { status: 'delivered' }
-          })))
+        logDebug('Loading messages for conversation', { conversationId })
+        const { data: messages, unsubscribe: unsub } = await subscribeToMessages(conversationId)
+        unsubscribe = unsub
 
-          // Update the messages in the conversations list too
-          setConversations(prev => prev.map(conv => 
-            conv.id === id 
-              ? { ...conv, messages } 
-              : conv
-          ))
+        if (mounted && Array.isArray(messages)) {
+          logDebug('Loaded messages', { 
+            count: messages.length,
+            firstMessage: messages[0]?.id,
+            lastMessage: messages[messages.length - 1]?.id
+          })
+          setMessages(messages)
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to load messages')
+        logError('Failed to load messages', error, { conversationId })
         if (mounted) {
           setError(error)
           onError?.(error)
@@ -125,10 +331,94 @@ export function useChat({
       }
     }
 
-    // Type assertion is safe here because we've checked the type above
-    loadMessages(conversationId as string)
-    return () => { mounted = false }
+    if (conversationId) {
+      loadMessages()
+    } else {
+      setMessages([])
+      setIsLoading(false)
+    }
+
+    return () => {
+      mounted = false
+      unsubscribe?.()
+    }
   }, [conversationId, onError])
+
+  // Handle typing indicators
+  useEffect(() => {
+    let mounted = true
+    let unsubscribe: (() => void) | undefined
+
+    async function subscribeToTyping() {
+      if (!conversationId) {
+        logWarning('No conversation ID provided for typing subscription')
+        return
+      }
+
+      try {
+        logDebug('Subscribing to typing indicators', { conversationId })
+        const { unsubscribe: unsub } = await subscribeToTypingIndicators(
+          conversationId,
+          (typingStatus) => {
+            if (mounted) {
+              logDebug('Received typing update', typingStatus)
+              setTypingUsers(new Map(Object.entries(typingStatus)))
+            }
+          }
+        )
+        unsubscribe = unsub
+      } catch (err) {
+        logError('Failed to subscribe to typing indicators', err, { conversationId })
+      }
+    }
+
+    if (conversationId) {
+      subscribeToTyping()
+    }
+
+    return () => {
+      mounted = false
+      unsubscribe?.()
+    }
+  }, [conversationId])
+
+  // Handle presence
+  useEffect(() => {
+    let mounted = true
+    let unsubscribe: (() => void) | undefined
+
+    async function subscribeToPresenceUpdates() {
+      if (!conversationId) {
+        logWarning('No conversation ID provided for presence subscription')
+        return
+      }
+
+      try {
+        logDebug('Subscribing to presence updates', { conversationId })
+        const { unsubscribe: unsub } = await subscribeToPresence(
+          conversationId,
+          (presence) => {
+            if (mounted) {
+              logDebug('Received presence update', presence)
+              setPresenceState(presence)
+            }
+          }
+        )
+        unsubscribe = unsub
+      } catch (err) {
+        logError('Failed to subscribe to presence updates', err, { conversationId })
+      }
+    }
+
+    if (conversationId) {
+      subscribeToPresenceUpdates()
+    }
+
+    return () => {
+      mounted = false
+      unsubscribe?.()
+    }
+  }, [conversationId])
 
   // Set up real-time subscription
   useEffect(() => {
@@ -164,7 +454,7 @@ export function useChat({
         })
       },
       // Message status handler
-      (status) => {
+      (status: { messageId: string; status: MessageStatus }) => {
         setMessages(prev => prev.map(msg => 
           msg.id === status.messageId
             ? { ...msg, metadata: { ...msg.metadata, status: status.status } }
@@ -184,46 +474,116 @@ export function useChat({
     }
   }, [conversationId])
 
-  // Send message handler
-  const handleSendMessage = useCallback(async (content: string) => {
+  // Handle message sending with access control and notifications
+  const handleSendMessage = async (content: string) => {
+    if (!conversationId || !user?.id) {
+      logWarning('Cannot send message - missing conversation ID or user ID', {
+        conversationId,
+        userId: user?.id
+      })
+      return
+    }
+
     try {
-      if (!patientId) throw new Error('Patient ID is required')
+      logDebug('Sending message', { 
+        conversationId,
+        userId: user.id,
+        contentLength: content.length 
+      })
 
-      // Create conversation if none exists
-      let id = conversationId
-      if (!id) {
-        const conversation = await createConversation(patientId)
-        id = conversation.id
-      }
+      const message = await sendChatMessage(conversationId, {
+        content,
+        role: chatAccess.canAccess === 'provider' ? 'provider' : 'user',
+        metadata: {
+          type: 'standard'
+        }
+      })
 
-      if (!id) throw new Error('Failed to get conversation ID')
-
-      // Send message with system prompt in metadata
-      const message = await sendMessage(content, id, 'user', {
-        systemPrompt: `You are a compassionate medical intake assistant designed to help patients provide preliminary medical information. Your role is to:
-1. Gather relevant medical history, symptoms, and concerns from patients
-2. Ask follow-up questions to clarify medical information when needed
-3. Provide empathetic responses while maintaining professional medical communication
-4. Guide patients through the intake process step by step
-5. Escalate to human medical staff when necessary
-6. Respect patient privacy and maintain medical confidentiality
-
-Remember to:
-- Use clear, patient-friendly medical terminology
-- Show empathy while maintaining professional boundaries
-- Ask one question at a time to avoid overwhelming patients
-- Acknowledge patient concerns and validate their experiences
-- Flag any urgent medical concerns for immediate staff attention
-- Maintain HIPAA-compliant communication standards`
+      logDebug('Message sent successfully', { 
+        messageId: message.id,
+        role: message.role
       })
 
       return message
-    } catch (error) {
-      console.error('Failed to send message:', error)
-      onError?.(error instanceof Error ? error : new Error('Failed to send message'))
-      return null
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to send message')
+      logError('Failed to send message', error)
+      throw error
     }
-  }, [patientId, conversationId, sendMessage, createConversation, onError])
+  }
+
+  // Handle AI-to-staff handoff with notifications
+  const handleHandoff = async (triageDecision: TriageDecision) => {
+    if (!conversationId) return
+
+    try {
+      // Update conversation to disable AI
+      const { error: updateError } = await supabase
+        .from('medical_conversations')
+        .update({ can_create_case: false })
+        .eq('id', conversationId)
+
+      if (updateError) throw updateError
+
+      // Send handoff message
+      const handoffMessage: MessageInsert = {
+        conversation_id: conversationId,
+        content: `Based on our conversation, I recommend speaking with a medical provider. ${
+          triageDecision === 'EMERGENCY' ? 'This appears to be urgent.' : 
+          'They will review your information and assist you further.'
+        }`,
+        role: 'assistant',
+        metadata: {
+          handoffStatus: 'initiated',
+          triageDecision
+        }
+      }
+
+      const { error: messageError } = await supabase
+        .from('medical_messages')
+        .insert(handoffMessage)
+
+      if (messageError) throw messageError
+
+      // Get available staff in the appropriate department
+      const { data: staffMembers } = await supabase
+        .from('users')
+        .select('id, department')
+        .eq('role', 'staff')
+        .eq('department', triageDecision === 'EMERGENCY' ? 'emergency' : 'triage')
+
+      // Send notifications to available staff
+      if (staffMembers?.length) {
+        for (const staff of staffMembers) {
+          await supabase.rpc('send_notification', {
+            p_user_id: staff.id,
+            p_type: 'handoff_request',
+            p_title: triageDecision === 'EMERGENCY' ? 'Urgent: New patient requires immediate attention' : 'New patient requires review',
+            p_content: 'AI has completed initial assessment and recommends provider review.',
+            p_metadata: {
+              handoff: {
+                from_ai: true,
+                reason: triageDecision,
+                urgency: triageDecision === 'EMERGENCY' ? 'high' : 'medium'
+              },
+              conversation: {
+                id: conversationId
+              }
+            },
+            p_priority: triageDecision === 'EMERGENCY' ? 'urgent' : 'high'
+          })
+        }
+      }
+
+      // Update access state
+      setChatAccess(prev => ({
+        ...prev,
+        canAccess: 'both'
+      }))
+    } catch (err) {
+      console.error('Error handling handoff:', err)
+    }
+  }
 
   // Send typing indicator
   const handleTyping = useCallback((isTyping: boolean) => {
@@ -309,6 +669,7 @@ Remember to:
     error,
     typingUsers,
     presenceState,
+    chatAccess,
     
     // Actions
     sendMessage: handleSendMessage,
@@ -316,6 +677,7 @@ Remember to:
     markAsRead: handleMarkAsRead,
     createConversation: handleCreateConversation,
     updateStatus: handleUpdateStatus,
-    deleteConversation: handleDeleteConversation
+    deleteConversation: handleDeleteConversation,
+    handleHandoff
   }
 } 

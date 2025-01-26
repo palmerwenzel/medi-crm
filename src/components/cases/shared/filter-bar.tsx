@@ -28,11 +28,13 @@ import {
   caseCategoryEnum,
   caseDepartmentEnum,
   staffSpecialtyEnum,
+  chatStatusEnum,
   type StaffSpecialty,
   type CaseStatus,
   type CasePriority,
   type CaseCategory,
-  type CaseDepartment
+  type CaseDepartment,
+  type ChatStatus
 } from '@/lib/validations/case'
 
 export function FilterBar({
@@ -110,6 +112,12 @@ export function FilterBar({
             ))}
           </SelectContent>
         </Select>
+        <MultiSelectFilter
+          label="Chat Status"
+          options={chatStatusEnum}
+          values={filters.chat_status === 'all' ? 'all' : [filters.chat_status as ChatStatus]}
+          onChange={values => handleMultiSelectChange('chat_status', values)}
+        />
         <TagFilter
           values={filters.tags === 'all' ? 'all' : Array.isArray(filters.tags) ? filters.tags : []}
           onChange={values => onFilterChange({ ...filters, tags: values })}

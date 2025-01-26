@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createCaseSchema, caseDepartmentEnum } from '@/lib/validations/case'
+import { createCaseSchema, caseDepartmentEnum, casePriorityEnum } from '@/lib/validations/case'
 import type { CreateCaseInput } from '@/lib/validations/case'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +39,7 @@ export function NewCaseForm() {
       title: '',
       description: '',
       department: 'primary_care',
+      priority: 'low',
       attachments: [],
     },
   })
@@ -145,6 +146,31 @@ export function NewCaseForm() {
               <FormControl>
                 <Input placeholder="Enter case title" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="priority"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {['low', 'medium', 'high'].map(priority => (
+                    <SelectItem key={priority} value={priority}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

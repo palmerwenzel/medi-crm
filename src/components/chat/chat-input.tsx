@@ -64,6 +64,13 @@ export function ChatInput({
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      form.handleSubmit(onSubmit)()
+    }
+  }
+
   return (
     <Form {...form}>
       <form
@@ -82,6 +89,7 @@ export function ChatInput({
                     placeholder="Type a message..."
                     className="min-h-[80px] flex-1 resize-none"
                     disabled={isLoading}
+                    onKeyDown={handleKeyDown}
                   />
                   <Button
                     type="submit"

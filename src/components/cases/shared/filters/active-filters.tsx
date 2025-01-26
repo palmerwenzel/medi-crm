@@ -51,6 +51,13 @@ export function ActiveFilters({
           onRemove={() => onRemoveFilter('department')}
         />
       )}
+      {filters.chat_status && filters.chat_status !== 'all' && (
+        <FilterBadge
+          label="Chat Status"
+          values={Array.isArray(filters.chat_status) ? filters.chat_status : [filters.chat_status]}
+          onRemove={() => onRemoveFilter('chat_status')}
+        />
+      )}
       {filters.search && (
         <FilterBadge
           label="Search"

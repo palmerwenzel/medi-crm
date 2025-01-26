@@ -46,7 +46,7 @@ export interface Database {
           id: string
           conversation_id: string
           content: string
-          role: 'user' | 'assistant'
+          role: 'user' | 'assistant' | 'provider' | 'system'
           created_at: string
           metadata: Json
         }
@@ -54,7 +54,7 @@ export interface Database {
           id?: string
           conversation_id: string
           content: string
-          role: 'user' | 'assistant'
+          role: 'user' | 'assistant' | 'provider' | 'system'
           created_at?: string
           metadata?: Json
         }
@@ -62,7 +62,7 @@ export interface Database {
           id?: string
           conversation_id?: string
           content?: string
-          role?: 'user' | 'assistant'
+          role?: 'user' | 'assistant' | 'provider' | 'system'
           created_at?: string
           metadata?: Json
         }
