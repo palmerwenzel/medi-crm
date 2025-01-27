@@ -11,14 +11,13 @@ import { FilterBar } from '@/components/cases/shared/filter-bar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/providers/auth-provider'
-import { CaseListItem } from './case-list-item/index'
 import { useCaseManagement } from './hooks/use-case-management'
 import { useInView } from 'react-intersection-observer'
 import { CaseFilters } from '@/types/domain/cases'
 import { BulkOperationsBar } from './bulk-operations'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+import { CaseListViewer } from './case-list-viewer'
 
 interface CaseManagementViewProps {
   basePath?: string
@@ -97,26 +96,20 @@ export function CaseManagementView({
 
   if (isLoading) {
     return (
-      <div className={cn('space-y-4', className)}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="p-6">
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[400px]" />
-              <div className="flex gap-2">
-                <Skeleton className="h-4 w-[100px]" />
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className={cn('flex flex-col h-full', className)}>
+        <Card className="p-6 mb-4">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[400px]" />
+          </div>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
-      <div className="flex items-center justify-between">
+    <div className={cn('flex flex-col h-full', className)}>
+      <div className="flex items-center justify-between mb-4">
         <FilterBar 
           filters={filters} 
           onFilterChange={onFilterChange} 
@@ -150,49 +143,18 @@ export function CaseManagementView({
         )}
       </div>
 
-      <div 
-        className="space-y-2" 
-        role="list" 
-        aria-label="Case list"
-        aria-live="polite"
-      >
-        {filteredCases.map((case_) => (
-          <motion.div
-            key={case_.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            <CaseListItem
-              case_={case_}
-              isSelected={selectedCases.includes(case_.id)}
-              onSelect={handleCaseSelect}
-              showNotes={showNotes}
-              basePath={basePath}
-              isStaffOrAdmin={userRole === 'staff' || userRole === 'admin'}
-            />
-          </motion.div>
-        ))}
-        {hasMore && (
-          <div 
-            ref={ref} 
-            className="h-20 flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <Skeleton className="h-12 w-full" />
-          </div>
-        )}
-        {!hasMore && filteredCases.length === 0 && (
-          <div 
-            className="text-center py-8 text-muted-foreground"
-            role="status"
-            aria-label="No cases found"
-          >
-            No cases found
-          </div>
-        )}
-      </div>
+      <Card className="flex-1 min-h-0 border-0 bg-transparent shadow-none">
+        <CaseListViewer
+          cases={filteredCases}
+          selectedCases={selectedCases}
+          onSelect={handleCaseSelect}
+          showNotes={showNotes}
+          basePath={basePath}
+          isStaffOrAdmin={userRole === 'staff' || userRole === 'admin'}
+          hasMore={hasMore}
+          loadMoreRef={ref}
+        />
+      </Card>
 
       {showActions && selectedCases.length > 0 && (
         <BulkOperationsBar

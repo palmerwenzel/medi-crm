@@ -703,7 +703,8 @@ export function useChat({
     // State
     messages,
     conversations,
-    isLoading: isLoading || loadingConversations,
+    isLoading,
+    loadingConversations,
     error,
     typingUsers,
     presenceState,

@@ -26,7 +26,7 @@ import { createCase } from '@/lib/actions/cases'
 import { RichTextEditor } from './shared/rich-text-editor'
 import { FileUploadZone } from './shared/file-upload'
 
-type FormData = Omit<CaseInsert, 'attachments' | 'department'> & {
+type FormData = Omit<CaseInsert, 'attachments' | 'department' | 'patient_id' | 'status' | 'category'> & {
   attachments: string[]
   department: CaseDepartment
 }
@@ -39,7 +39,7 @@ export function NewCaseForm() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
 
   const form = useForm<FormData>({
-    resolver: zodResolver(casesInsertSchema),
+    resolver: zodResolver(casesInsertSchema.omit({ patient_id: true, status: true, category: true })),
     defaultValues: {
       title: '',
       description: '',
@@ -102,50 +102,56 @@ export function NewCaseForm() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      setIsSubmitting(true)
+      console.log('Starting case creation with data:', data);
+      setIsSubmitting(true);
       const loadingToast = toast({
         title: 'Creating case...',
         description: 'Please wait while we create your case.',
         variant: 'loading',
-      })
+      });
 
-      const result = await createCase(data)
+      // Add required fields that are not in the form
+      const fullData = {
+        ...data,
+        patient_id: user.id,
+        status: 'open' as const,
+        category: 'general' as const,
+      };
+
+      console.log('Calling createCase server action with:', fullData);
+      const result = await createCase(fullData);
+      console.log('Got result from createCase:', result);
       
       if (!result.success) {
-        loadingToast.dismiss()
+        console.error('Case creation failed:', result.error);
+        loadingToast.dismiss();
         toast({
           title: 'Error',
           description: result.error || 'Failed to create case',
           variant: 'destructive',
-        })
-        return
+        });
+        return;
       }
 
-      loadingToast.dismiss()
+      console.log('Case created successfully:', result.data);
+      loadingToast.dismiss();
       toast({
         title: 'Success',
         description: 'Case created successfully',
-      })
-      form.reset()
-      router.push('/cases')
+      });
+      form.reset();
+      router.push('/cases');
     } catch (error) {
+      console.error('Error in case creation:', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to create case. Please try again.',
         variant: 'destructive'
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
-
-  const departments: CaseDepartment[] = [
-    'primary_care',
-    'specialty_care',
-    'emergency',
-    'surgery',
-    'mental_health'
-  ]
 
   return (
     <Form {...form}>
@@ -202,7 +208,7 @@ export function NewCaseForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {departments.map(dept => (
+                  {['primary_care', 'specialty_care', 'emergency', 'surgery', 'mental_health'].map(dept => (
                     <SelectItem key={dept} value={dept}>
                       {dept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </SelectItem>

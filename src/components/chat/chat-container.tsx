@@ -25,6 +25,7 @@ export function ChatContainer({
     messages,
     conversations,
     isLoading,
+    loadingConversations,
     typingUsers,
     sendMessage,
     markAsRead,
@@ -89,7 +90,7 @@ export function ChatContainer({
         <ConversationList
           conversations={conversations}
           activeId={activeConversationId}
-          isLoading={isLoading}
+          isLoading={loadingConversations}
           onCreateConversation={handleCreateConversation}
           onUpdateStatus={updateStatus}
           onDeleteConversation={handleDeleteConversation}

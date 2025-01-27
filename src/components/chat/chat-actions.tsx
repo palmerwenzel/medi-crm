@@ -10,6 +10,7 @@ import { generateChatResponse } from '@/lib/ai/openai';
 import { CONSENT_REQUEST_PROMPT } from '@/lib/ai/prompts';
 import { isAIProcessingMetadata } from '@/types/domain/ai';
 import type { CaseSummary } from '@/types/domain/ui'
+import { useAuth } from '@/providers/auth-provider';
 
 interface ChatActionsProps {
   conversationId: string;
@@ -26,6 +27,7 @@ export function ChatActions({
   patientId,
   onCaseCreated
 }: ChatActionsProps) {
+  const { userRole } = useAuth();
   const [isCreatingCase, setIsCreatingCase] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,32 +37,48 @@ export function ChatActions({
   // Request consent with AI explanation
   const handleRequestConsent = async () => {
     try {
+      console.log('Starting handleRequestConsent', { userRole, conversationId, messages });
+
+      // Check if user is a patient
+      if (userRole !== 'patient') {
+        console.log('User is not a patient', { userRole });
+        setError('Only patients can create cases');
+        return;
+      }
+
       // Generate AI response explaining case creation
+      console.log('Generating AI response');
       const consentResponse = await generateChatResponse([
         ...messages,
         { role: 'system', content: CONSENT_REQUEST_PROMPT }
       ]);
+      console.log('Got AI response', { consentResponse });
 
       // Add AI's consent request to message history
       // TODO: Implement message addition through chat service
       console.log('AI Consent Request:', consentResponse);
 
       // Show consent dialog with case summary
+      console.log('Checking if case can be created', { metadata });
       const { canCreate, missingInfo, confidence } = await canCreateCase(messages, metadata);
+      console.log('Case creation check result', { canCreate, missingInfo, confidence });
       
       if (!canCreate) {
-        setError(
-          `Cannot create case yet. Missing information: ${missingInfo.join(', ')}. ` +
-          `Confidence: ${Math.round(confidence * 100)}%`
-        );
+        const error = `Cannot create case yet. Missing information: ${missingInfo.join(', ')}. ` +
+          `Confidence: ${Math.round(confidence * 100)}%`;
+        console.log('Cannot create case', { error });
+        setError(error);
         return;
       }
 
       // Generate case summary for review
+      console.log('Generating case summary');
       const summary = await generateCaseSummary();
+      console.log('Got case summary', { summary });
       setCaseSummary(summary);
       setShowConsentDialog(true);
     } catch (err) {
+      console.error('Error in handleRequestConsent:', err);
       setError('Failed to prepare case summary. Please try again.');
     }
   };
@@ -133,13 +151,15 @@ export function ChatActions({
 
       {/* Actions */}
       <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={handleRequestConsent}
-          disabled={isCreatingCase}
-        >
-          Create Case
-        </Button>
+        {userRole === 'patient' && (
+          <Button
+            variant="outline"
+            onClick={handleRequestConsent}
+            disabled={isCreatingCase}
+          >
+            Create Case
+          </Button>
+        )}
       </div>
 
       {/* Consent Dialog */}

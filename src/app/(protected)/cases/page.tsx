@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { CaseManagementView } from "@/components/cases/shared/case-management-view"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import Link from "next/link"
 import type { UserRole } from '../layout'
 
 export const metadata = {
@@ -34,10 +37,21 @@ export default async function CasesPage() {
 
   const role = userData.role as UserRole
   const isStaffOrAdmin = role === 'staff' || role === 'admin'
+  const isPatient = role === 'patient'
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">Cases</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Cases</h1>
+        {isPatient && (
+          <Button asChild>
+            <Link href="/cases/new" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Case
+            </Link>
+          </Button>
+        )}
+      </div>
       <CaseManagementView 
         showActions={isStaffOrAdmin}
         showNotes={isStaffOrAdmin}

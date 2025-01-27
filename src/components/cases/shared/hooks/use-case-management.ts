@@ -38,7 +38,6 @@ interface UseCaseManagementReturn {
 
 export function useCaseManagement({ limit = 20, isDashboard = false }: UseCaseManagementOptions = {}): UseCaseManagementReturn {
   const [cases, setCases] = useState<CaseResponse[]>([])
-  const [filteredCases, setFilteredCases] = useState<CaseResponse[]>([])
   const [selectedCases, setSelectedCases] = useState<string[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMemberBasic[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -54,8 +53,29 @@ export function useCaseManagement({ limit = 20, isDashboard = false }: UseCaseMa
   useCaseSubscription({
     onUpdate: (updatedCase) => {
       setCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c))
-      setFilteredCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c))
     }
+  })
+
+  // Apply filters to get filtered cases
+  const filteredCases = cases.filter(case_ => {
+    if (currentFilters.status && currentFilters.status !== 'all' && case_.status !== currentFilters.status) {
+      return false
+    }
+    if (currentFilters.priority && currentFilters.priority !== 'all' && case_.priority !== currentFilters.priority) {
+      return false
+    }
+    if (currentFilters.category && currentFilters.category !== 'all' && case_.category !== currentFilters.category) {
+      return false
+    }
+    if (currentFilters.department && currentFilters.department !== 'all' && case_.department !== currentFilters.department) {
+      return false
+    }
+    if (currentFilters.search) {
+      const searchLower = currentFilters.search.toLowerCase()
+      return case_.title.toLowerCase().includes(searchLower) || 
+             case_.description.toLowerCase().includes(searchLower)
+    }
+    return true
   })
 
   const loadCases = useCallback(async () => {
@@ -101,8 +121,7 @@ export function useCaseManagement({ limit = 20, isDashboard = false }: UseCaseMa
       if (response.error) throw response.error
 
       const newCases = response.data as CaseResponse[]
-      setCases(prev => [...prev, ...newCases])
-      setFilteredCases(prev => [...prev, ...newCases])
+      setCases(prev => currentOffset === 0 ? newCases : [...prev, ...newCases])
       setHasMore(newCases.length === limit)
     } catch (error) {
       console.error('Error loading cases:', error)
@@ -124,7 +143,6 @@ export function useCaseManagement({ limit = 20, isDashboard = false }: UseCaseMa
     setCurrentFilters(filters)
     setCurrentOffset(0)
     setCases([])
-    setFilteredCases([])
   }, [])
 
   const handleSelectAll = useCallback(() => {
