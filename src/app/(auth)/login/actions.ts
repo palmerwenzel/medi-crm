@@ -6,13 +6,13 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { User } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 type LoginResponse = {
   success?: boolean
   error?: string
-  user?: any
+  user?: User
 }
 
 /**
@@ -28,7 +28,6 @@ export async function loginUser(formData: FormData | { email: string; password: 
       return { error: 'Invalid credentials' }
     }
 
-    const cookieStore = cookies()
     const supabase = createClient()
 
     const { data: { session }, error } = await supabase.auth.signInWithPassword({

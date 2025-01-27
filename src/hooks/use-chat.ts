@@ -13,7 +13,9 @@ import {
   type MedicalConversationWithMessages,
   type ChatAccess,
   type MessageInsert,
-  type TriageDecision
+  type TriageDecision,
+  ConversationId,
+  UserId
 } from '@/types/chat'
 import {
   subscribeToConversation,
@@ -359,7 +361,7 @@ export function useChat({
         logDebug('Subscribing to typing indicators', { conversationId })
         const { unsubscribe: unsub } = await subscribeToTypingIndicators(
           conversationId,
-          (typingStatus) => {
+          (typingStatus: TypingStatus) => {
             if (mounted) {
               logDebug('Received typing update', typingStatus)
               setTypingUsers(new Map(Object.entries(typingStatus)))
@@ -397,7 +399,7 @@ export function useChat({
         logDebug('Subscribing to presence updates', { conversationId })
         const { unsubscribe: unsub } = await subscribeToPresence(
           conversationId,
-          (presence) => {
+          (presence: PresenceState) => {
             if (mounted) {
               logDebug('Received presence update', presence)
               setPresenceState(presence)
@@ -432,13 +434,13 @@ export function useChat({
     }
 
     const channel = subscribeToConversation(
-      conversationId,
+      conversationId as ConversationId,
       // New message handler
       (message) => {
         setMessages(prev => [...prev, {
           ...message,
           state: { status: 'sent', id: message.id },
-          metadata: { status: 'delivered' }
+          metadata: { status: 'delivered', type: 'standard' }
         }])
       },
       // Typing indicator handler
@@ -491,17 +493,31 @@ export function useChat({
         contentLength: content.length 
       })
 
-      const message = await sendChatMessage(conversationId, {
+      // Always send as user for AI responses unless explicitly in provider mode
+      const role = chatAccess.canAccess === 'provider' ? 'assistant' : 'user'
+      const requireAI = chatAccess.canAccess !== 'provider'
+
+      const message = await sendMessage(
         content,
-        role: chatAccess.canAccess === 'provider' ? 'provider' : 'user',
-        metadata: {
-          type: 'standard'
+        conversationId as ConversationId,
+        role,
+        requireAI ? {
+          type: 'ai_processing',
+          status: 'sending',
+          confidenceScore: 0,
+          collectedInfo: {
+            urgencyIndicators: []
+          }
+        } : {
+          type: 'standard',
+          status: 'sending'
         }
-      })
+      )
 
       logDebug('Message sent successfully', { 
         messageId: message.id,
-        role: message.role
+        role: message.role,
+        requiresAI: requireAI
       })
 
       return message
@@ -593,12 +609,12 @@ export function useChat({
       clearTimeout(typingTimeoutRef.current)
     }
 
-    sendTypingIndicator(conversationId, isTyping)
+    sendTypingIndicator(conversationId as ConversationId, isTyping)
 
     if (isTyping) {
       typingTimeoutRef.current = setTimeout(() => {
         if (conversationId) {
-          sendTypingIndicator(conversationId, false)
+          sendTypingIndicator(conversationId as ConversationId, false)
         }
       }, 3000)
     }
@@ -620,9 +636,9 @@ export function useChat({
     if (!patientId || typeof patientId !== 'string') throw new Error('No patient ID provided')
 
     try {
-      const conversation = await createConversation(patientId)
+      const conversation = await createConversation(patientId as UserId)
       if (conversation) {
-        setConversations(prev => [...prev, { ...conversation, messages: [], status: 'active' }])
+        setConversations(prev => [...prev, { ...conversation, messages: [], status: 'active' } as MedicalConversationWithMessages])
       }
       return conversation
     } catch (err) {
@@ -636,7 +652,7 @@ export function useChat({
   // Update conversation status
   const handleUpdateStatus = useCallback(async (id: string, status: 'active' | 'archived') => {
     try {
-      await updateConversationStatus(id, status)
+      await updateConversationStatus(id as ConversationId, status)
       setConversations(prev => prev.map(conv => 
         conv.id === id ? { ...conv, status } : conv
       ))
@@ -651,7 +667,7 @@ export function useChat({
   // Delete conversation
   const handleDeleteConversation = useCallback(async (id: string) => {
     try {
-      await deleteConversation(id)
+      await deleteConversation(id as ConversationId)
       setConversations(prev => prev.filter(conv => conv.id !== id))
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to delete conversation')

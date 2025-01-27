@@ -1,75 +1,31 @@
-/**
- * Case history validation schemas and types
- * Uses Zod for runtime validation
- */
+import { z } from 'zod'
+import { caseActivityTypeEnum } from '@/lib/validations/shared-enums'
 
-import * as z from 'zod'
-import type { Database } from '@/types/supabase'
-
-// Activity types enum
-export const caseActivityTypeEnum = [
-  'status_change',
-  'priority_change',
-  'category_change',
-  'department_change',
-  'assignment_change',
-  'note_added',
-  'file_added',
-  'file_removed',
-  'metadata_change'
-] as const
-export type CaseActivityType = (typeof caseActivityTypeEnum)[number]
-
-// Base case history type from database
-export type CaseHistoryRow = Database['public']['Tables']['case_history']['Row']
-
-// Extended case history type with actor details
-export type CaseHistoryResponse = Omit<CaseHistoryRow, 'details'> & {
-  actor: {
-    id: string
-    first_name: string | null
-    last_name: string | null
-    role: string
-  }
-  activity_type: CaseActivityType
-  old_value?: {
-    status?: string
-    priority?: string
-    category?: string
-    department?: string
-    assigned_to?: string
-    attachments?: string[]
-    [key: string]: unknown
-  }
-  new_value?: {
-    status?: string
-    priority?: string
-    category?: string
-    department?: string
-    assigned_to?: string
-    note?: string
-    attachments?: string[]
-    [key: string]: unknown
-  }
-}
-
-// Schema for querying case history
-export const caseHistoryQuerySchema = z.object({
-  case_id: z.string().uuid(),
-  limit: z.number().min(1).max(100).default(50),
-  offset: z.number().min(0).default(0),
-  activity_type: z.enum(caseActivityTypeEnum).optional(),
-  from_date: z.string().datetime().optional(),
-  to_date: z.string().datetime().optional(),
-  sort_order: z.enum(['asc', 'desc']).default('desc')
+export const caseHistoryRowSchema = z.object({
+  id: z.string(),
+  activity_type: caseActivityTypeEnum,
+  actor_id: z.string(),
+  case_id: z.string(),
+  created_at: z.string(),
+  metadata: z.any().nullable(),
+  new_value: z.any().nullable(),
+  old_value: z.any().nullable(),
 })
 
-export type CaseHistoryQueryParams = z.infer<typeof caseHistoryQuerySchema>
+export type CaseHistoryRow = z.infer<typeof caseHistoryRowSchema>
 
-// Schema for paginated history response
-export interface PaginatedCaseHistoryResponse {
-  history: CaseHistoryResponse[]
-  total: number
-  hasMore: boolean
-  nextOffset?: number
-} 
+export const caseHistoryInsertSchema = z.object({
+  activity_type: caseActivityTypeEnum,
+  actor_id: z.string(),
+  case_id: z.string(),
+  created_at: z.string().optional(),
+  id: z.string().optional(),
+  metadata: z.any().nullable().optional(),
+  new_value: z.any().nullable().optional(),
+  old_value: z.any().nullable().optional(),
+})
+
+export type CaseHistoryInsert = z.infer<typeof caseHistoryInsertSchema>
+
+export const caseHistoryUpdateSchema = caseHistoryInsertSchema.partial()
+export type CaseHistoryUpdate = z.infer<typeof caseHistoryUpdateSchema>

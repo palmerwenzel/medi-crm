@@ -15,10 +15,39 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { signUpUser } from './actions'
+
+// Constants for form options
+const DEPARTMENTS = [
+  'primary_care',
+  'emergency',
+  'pediatrics',
+  'cardiology',
+  'neurology',
+  'orthopedics',
+  'internal_medicine',
+] as const
+
+const SPECIALTIES = [
+  'general_practice',
+  'emergency_medicine',
+  'pediatrics',
+  'cardiology',
+  'neurology',
+  'orthopedics',
+  'internal_medicine',
+] as const
 
 // Form validation schema
 const signupSchema = z.object({
@@ -47,9 +76,22 @@ const signupSchema = z.object({
     .min(6, 'Password must be at least 6 characters')
     .max(72, 'Password is too long'),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
+  role: z.enum(['patient', 'staff'], {
+    required_error: 'Please select a role',
+  }),
+  department: z.enum(DEPARTMENTS).optional(),
+  specialty: z.enum(SPECIALTIES).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: "Passwords don&apos;t match",
   path: ['confirmPassword'],
+}).refine((data) => {
+  if (data.role === 'staff') {
+    return data.department && data.specialty
+  }
+  return true
+}, {
+  message: 'Department and specialty are required for staff members',
+  path: ['department'],
 })
 
 type SignUpFormValues = z.infer<typeof signupSchema>
@@ -68,8 +110,11 @@ export function SignUpForm() {
       email: '',
       password: '',
       confirmPassword: '',
+      role: 'patient',
     },
   })
+
+  const watchRole = form.watch('role')
 
   async function onSubmit(data: SignUpFormValues) {
     try {
@@ -84,7 +129,7 @@ export function SignUpForm() {
 
       if (result?.error) {
         setFailedAttempts(prev => prev + 1)
-        throw new Error('Failed to create account')
+        throw new Error(result.error)
       }
 
       setFailedAttempts(0)
@@ -93,7 +138,7 @@ export function SignUpForm() {
         router.replace('/dashboard')
       }
     } catch (err) {
-      setError('Failed to create account. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
     } finally {
       setIsLoading(false)
       if (error) {
@@ -119,6 +164,35 @@ export function SignUpForm() {
             className="space-y-4 animate-in fade-in-50"
             aria-label="Sign up form"
           >
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your account type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="patient">Patient</SelectItem>
+                      <SelectItem value="staff">Medical Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Choose whether you're a patient or medical staff member
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -188,6 +262,72 @@ export function SignUpForm() {
               )}
             />
             
+            {watchRole === 'staff' && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DEPARTMENTS.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="specialty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Specialty</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your specialty" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SPECIALTIES.map((specialty) => (
+                            <SelectItem key={specialty} value={specialty}>
+                              {specialty.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
             <FormField
               control={form.control}
               name="password"
@@ -248,29 +388,20 @@ export function SignUpForm() {
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading || failedAttempts > 5} // Prevent excessive attempts
-              aria-disabled={isLoading || failedAttempts > 5}
+              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <span className="sr-only">Creating account...</span>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  <span aria-hidden="true">Creating account...</span>
-                </>
-              ) : (
-                'Create account'
-              )}
+              {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
 
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
-              <Link 
-                href="/login" 
-                className="font-medium text-primary hover:text-primary/90 hover:underline focus-visible:underline"
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link
+                href="/login"
+                className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 Log in
               </Link>
-            </div>
+            </p>
           </form>
         </Form>
       </div>

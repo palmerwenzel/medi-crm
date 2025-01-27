@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { MessageMetadata } from '@/types/chat';
+import { MessageMetadata, UIMessage } from '@/types/chat';
 import { canCreateCase, createCaseFromChat } from '@/lib/services/case-from-chat';
 import { ConsentDialog } from './consent-dialog';
 import { generateChatResponse } from '@/lib/ai/openai';
@@ -10,7 +10,7 @@ import { CONSENT_REQUEST_PROMPT } from '@/lib/ai/prompts';
 
 interface ChatActionsProps {
   conversationId: string;
-  messages: any[];
+  messages: UIMessage[];
   metadata: MessageMetadata;
   patientId: string;
   onCaseCreated?: (caseId: string) => void;

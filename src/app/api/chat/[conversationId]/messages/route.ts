@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMessages, sendMessage } from '@/lib/actions/chat'
 import { processAIMessage } from '@/lib/actions/ai'
 import { messageQuerySchema, messageInsertSchema } from '@/lib/validations/chat'
+import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
 
 export async function GET(
   req: NextRequest,
@@ -83,24 +84,29 @@ export async function POST(
       data: userResult.data
     })
 
-    // Get AI response asynchronously if needed
-    if (metadata?.requireAIResponse) {
+    // Get AI response if metadata indicates AI processing
+    if (metadata?.type === 'ai_processing') {
       const aiPromise = (async () => {
         try {
           // Get previous messages for context
           const history = await getMessages(message.conversation_id, 1, 10)
           if (!history.success || !history.data) throw new Error('Failed to get message history')
 
-          const aiResult = await processAIMessage(history.data, metadata?.systemPrompt)
+          const aiResult = await processAIMessage(history.data, MEDICAL_INTAKE_PROMPT)
           
           if (!aiResult.success) throw new Error(aiResult.error)
 
-          // Store AI response
+          // Store AI response with metadata
           await sendMessage(
             aiResult.data.message,
             message.conversation_id,
             'assistant',
-            aiResult.data.metadata
+            {
+              type: 'ai_processing',
+              status: 'delivered',
+              confidenceScore: aiResult.data.metadata?.confidenceScore,
+              collectedInfo: aiResult.data.metadata?.collectedInfo
+            }
           )
         } catch (error) {
           console.error('AI response error:', error)

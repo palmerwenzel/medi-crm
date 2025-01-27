@@ -91,7 +91,7 @@ export function subscribeToConversation(
             state: { status: 'sent', id: dbMessage.id },
             metadata: metadataSchema.parse(dbMessage.metadata)
           })
-          onMessage(message)
+          onMessage(message as UIMessage)
         } catch (error) {
           logError('Failed to process new message', error, payload)
         }
@@ -480,7 +480,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
       timestamp: new Date().toISOString()
     })
 
-    return parsedConversation
+    return parsedConversation as MedicalConversation
   } catch (error) {
     logError('Failed to create conversation', error, {
       patientId,
@@ -754,4 +754,131 @@ export async function updateChatStatus(
     .eq('id', caseId)
 
   if (error) throw error
+}
+
+/**
+ * Subscribes to presence updates for a conversation
+ */
+export async function subscribeToPresence(
+  conversationId: ConversationId,
+  onPresence: (state: PresenceState) => void
+) {
+  const channel = supabase
+    .channel(`presence:${conversationId}`)
+    .on('presence', { event: 'sync' }, () => {
+      try {
+        const state = channel.presenceState()
+        onPresence(state as unknown as PresenceState)
+      } catch (error) {
+        logError('Failed to process presence sync', error)
+      }
+    })
+
+  await channel.subscribe(async (status) => {
+    logDebug('Presence channel status changed', { status })
+    if (status === 'SUBSCRIBED') {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await channel.track({
+          user_id: castToUserId(user.id),
+          online_at: new Date().toISOString()
+        })
+      }
+    }
+  })
+
+  return {
+    unsubscribe: () => {
+      channel.unsubscribe()
+    }
+  }
+}
+
+/**
+ * Subscribes to typing indicators for a conversation
+ */
+export async function subscribeToTypingIndicators(
+  conversationId: ConversationId,
+  onTyping: (status: TypingStatus) => void
+) {
+  const channel = supabase
+    .channel(`typing:${conversationId}`)
+    .on('broadcast', { event: 'typing' }, (payload) => {
+      try {
+        logDebug('Typing indicator', payload)
+        const typingStatus = payload.payload as TypingStatus
+        onTyping(typingStatus)
+      } catch (error) {
+        logError('Failed to process typing indicator', error, payload)
+      }
+    })
+
+  await channel.subscribe()
+
+  return {
+    unsubscribe: () => {
+      channel.unsubscribe()
+    }
+  }
+}
+
+/**
+ * Subscribes to messages for a conversation
+ */
+export async function subscribeToMessages(
+  conversationId: ConversationId
+): Promise<{ data: UIMessage[]; unsubscribe: () => void }> {
+  // First fetch existing messages
+  const { data: messages, error } = await supabase
+    .from('medical_messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  // Transform messages to UI format
+  const uiMessages = messages.map(msg => ({
+    ...msg,
+    conversation_id: castToConversationId(msg.conversation_id),
+    state: { status: 'sent', id: msg.id },
+    metadata: metadataSchema.parse(msg.metadata)
+  })) as UIMessage[]
+
+  // Then set up real-time subscription
+  const channel = supabase
+    .channel(`messages:${conversationId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'medical_messages',
+        filter: `conversation_id=eq.${conversationId}`
+      },
+      (payload) => {
+        try {
+          logDebug('New message received', payload.new)
+          const dbMessage = messageSchema.parse(payload.new)
+          const message = uiMessageSchema.parse({
+            ...dbMessage,
+            conversation_id: castToConversationId(dbMessage.conversation_id),
+            state: { status: 'sent', id: dbMessage.id },
+            metadata: metadataSchema.parse(dbMessage.metadata)
+          })
+          uiMessages.push(message)
+        } catch (error) {
+          logError('Failed to process new message', error, payload)
+        }
+      }
+    )
+
+  await channel.subscribe()
+
+  return {
+    data: uiMessages,
+    unsubscribe: () => {
+      channel.unsubscribe()
+    }
+  }
 }

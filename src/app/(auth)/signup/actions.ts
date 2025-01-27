@@ -6,12 +6,12 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import { User } from '@supabase/supabase-js'
 
 type SignUpResponse = {
   success?: boolean
   error?: string
-  user?: any
+  user?: User
 }
 
 type SignUpData = {
@@ -20,6 +20,9 @@ type SignUpData = {
   email: string
   password: string
   confirmPassword?: string
+  role: 'patient' | 'staff'
+  department?: string
+  specialty?: string
 }
 
 export async function signUpUser(formData: FormData | SignUpData): Promise<SignUpResponse> {
@@ -32,40 +35,76 @@ export async function signUpUser(formData: FormData | SignUpData): Promise<SignU
         lastName: formData.get('lastName') as string,
         email: formData.get('email') as string,
         password: formData.get('password') as string,
+        role: formData.get('role') as 'patient' | 'staff',
+        department: formData.get('department') as string,
+        specialty: formData.get('specialty') as string,
       }
     } else {
       data = formData
     }
 
-    if (!data.email || !data.password || !data.firstName || !data.lastName) {
-      return { error: 'All fields are required' }
+    if (!data.email || !data.password || !data.firstName || !data.lastName || !data.role) {
+      return { error: 'All required fields must be filled' }
+    }
+
+    // Validate staff-specific fields
+    if (data.role === 'staff' && (!data.department || !data.specialty)) {
+      return { error: 'Department and specialty are required for staff members' }
     }
 
     const supabase = createClient()
 
-    const { data: { user }, error } = await supabase.auth.signUp({
+    // First create the auth user
+    const { data: { user }, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
         data: {
           first_name: data.firstName,
           last_name: data.lastName,
+          role: data.role,
+          department: data.department,
+          specialty: data.specialty
         }
       }
     })
 
-    if (error) {
-      console.error('Signup error occurred')
-      return { error: 'Failed to create account' }
+    if (authError) {
+      console.error('Auth signup error:', authError)
+      return { error: authError.message }
     }
 
     if (!user) {
       return { error: 'Failed to create account' }
     }
 
+    // Then create the user profile with role-specific data
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert({
+        id: user.id,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        role: data.role,
+        department: data.department,
+        specialty: data.specialty,
+        metadata: {
+          created_at: new Date().toISOString(),
+          auth_provider: 'email'
+        }
+      })
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError)
+      // Clean up auth user if profile creation fails
+      await supabase.auth.admin.deleteUser(user.id)
+      return { error: 'Failed to create user profile' }
+    }
+
     return { success: true, user }
   } catch (err) {
-    console.error('Signup error occurred')
-    return { error: 'An unexpected error occurred' }
+    console.error('Signup error:', err)
+    return { error: err instanceof Error ? err.message : 'An unexpected error occurred' }
   }
 } 
