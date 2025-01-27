@@ -22,10 +22,10 @@ import {
   UserCog,
   Users
 } from 'lucide-react'
-import type { CaseHistoryResponse, CaseActivityType } from '@/lib/validations/case-history'
+import type { CaseHistoryWithActor, CaseActivityType } from '@/types/domain/cases'
 
 interface CaseTimelineProps {
-  history: CaseHistoryResponse[]
+  history: CaseHistoryWithActor[]
   isLoading: boolean
   hasMore: boolean
   onLoadMore: () => void
@@ -75,44 +75,60 @@ const activityConfig: Record<CaseActivityType, { icon: React.ReactNode; color: s
 // Loading skeleton for timeline items
 function TimelineItemSkeleton() {
   return (
-    <div className="flex gap-4 pb-8">
+    <div className="flex gap-4">
       <div className="flex flex-col items-center">
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="h-full w-px bg-border" />
       </div>
       <div className="flex-1 space-y-2">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/4" />
       </div>
     </div>
   )
 }
 
 // Format activity details based on type
-function formatActivityDetails(entry: CaseHistoryResponse) {
+function formatActivityDetails(entry: CaseHistoryWithActor) {
   const { activity_type, old_value, new_value, actor } = entry
   const actorName = `${actor.first_name || ''} ${actor.last_name || ''}`.trim() || actor.role
 
-  switch (activity_type as CaseActivityType) {
+  // Type guard for JSON values
+  const getJsonValue = (value: unknown) => {
+    if (typeof value === 'object' && value !== null) {
+      return value as Record<string, unknown>
+    }
+    return undefined
+  }
+
+  const oldJson = getJsonValue(old_value)
+  const newJson = getJsonValue(new_value)
+
+  switch (activity_type) {
     case 'status_change':
-      return `${actorName} changed status from ${old_value?.status || 'none'} to ${new_value?.status}`
+      return `${actorName} changed status from ${oldJson?.status || 'none'} to ${newJson?.status}`
     case 'priority_change':
-      return `${actorName} changed priority from ${old_value?.priority || 'none'} to ${new_value?.priority}`
+      return `${actorName} changed priority from ${oldJson?.priority || 'none'} to ${newJson?.priority}`
     case 'category_change':
-      return `${actorName} changed category from ${old_value?.category || 'none'} to ${new_value?.category}`
+      return `${actorName} changed category from ${oldJson?.category || 'none'} to ${newJson?.category}`
     case 'department_change':
-      return `${actorName} moved case from ${old_value?.department || 'none'} to ${new_value?.department}`
+      return `${actorName} moved case from ${oldJson?.department || 'none'} to ${newJson?.department}`
     case 'assignment_change':
-      return `${actorName} ${new_value?.assigned_to ? 'assigned case to' : 'unassigned case from'} ${new_value?.assigned_to || old_value?.assigned_to}`
+      return `${actorName} ${newJson?.assigned_to ? 'assigned case to' : 'unassigned case from'} ${newJson?.assigned_to || oldJson?.assigned_to}`
     case 'note_added':
-      return `${actorName} added a note: ${new_value?.note}`
-    case 'file_added':
-      const addedFiles = (new_value?.attachments?.length || 0) - (old_value?.attachments?.length || 0)
+      return `${actorName} added a note: ${newJson?.note}`
+    case 'file_added': {
+      const oldFiles = Array.isArray(oldJson?.attachments) ? oldJson.attachments.length : 0
+      const newFiles = Array.isArray(newJson?.attachments) ? newJson.attachments.length : 0
+      const addedFiles = newFiles - oldFiles
       return `${actorName} added ${addedFiles} file${addedFiles > 1 ? 's' : ''}`
-    case 'file_removed':
-      const removedFiles = (old_value?.attachments?.length || 0) - (new_value?.attachments?.length || 0)
+    }
+    case 'file_removed': {
+      const oldFiles = Array.isArray(oldJson?.attachments) ? oldJson.attachments.length : 0
+      const newFiles = Array.isArray(newJson?.attachments) ? newJson.attachments.length : 0
+      const removedFiles = oldFiles - newFiles
       return `${actorName} removed ${removedFiles} file${removedFiles > 1 ? 's' : ''}`
+    }
     case 'metadata_change':
       return `${actorName} updated case metadata`
     default:
@@ -129,7 +145,7 @@ export function CaseTimeline({
 }: CaseTimelineProps) {
   // Group history entries by date
   const groupedHistory = useMemo(() => {
-    const groups = new Map<string, CaseHistoryResponse[]>()
+    const groups = new Map<string, CaseHistoryWithActor[]>()
     
     history.forEach(entry => {
       const date = format(new Date(entry.created_at), 'yyyy-MM-dd')
@@ -183,7 +199,7 @@ export function CaseTimeline({
             </div>
 
             {entries.map(entry => {
-              const config = activityConfig[entry.activity_type as CaseActivityType]
+              const config = activityConfig[entry.activity_type]
               return (
                 <div key={entry.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
@@ -210,7 +226,7 @@ export function CaseTimeline({
         ))}
 
         {hasMore && (
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center">
             <Button 
               variant="outline" 
               onClick={onLoadMore}

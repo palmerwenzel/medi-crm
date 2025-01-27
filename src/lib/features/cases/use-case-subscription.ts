@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { subscribeToCases } from './case-subscription'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
 
 interface UseCaseSubscriptionOptions {
   onUpdate?: (updatedCase: CaseResponse) => void

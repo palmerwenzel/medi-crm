@@ -17,7 +17,7 @@ import { CaseMetadata } from './case-metadata'
 import { useAuth } from '@/providers/auth-provider'
 import { getCases } from '@/lib/actions/cases'
 import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
 
 // Loading skeleton for cases
 function CaseCardSkeleton() {

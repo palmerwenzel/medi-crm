@@ -5,7 +5,6 @@
 
 import { createClient } from '@/utils/supabase/client'
 import type { 
-  Message, 
   MessageRole, 
   MessageMetadata,
   MedicalConversation,
@@ -19,12 +18,7 @@ import type {
   PresenceState 
 } from '@/types/domain/ui'
 import { 
-  isAIProcessingMetadata,
-  isHandoffMetadata 
-} from '@/types/domain/ai'
-import { 
   medicalMessagesRowSchema,
-  medicalMessagesInsertSchema,
   type MedicalMessagesRow
 } from '@/lib/validations/medical-messages'
 import { 
@@ -33,11 +27,10 @@ import {
 } from '@/lib/validations/medical-conversations'
 import { 
   uiMessageSchema,
-  uiMessageMetadataSchema,
-  messageStatusEnum
+  uiMessageMetadataSchema
 } from '@/lib/validations/ui'
 import { messageMetadataSchema } from '@/lib/validations/message-metadata'
-import { rawToConversationIdSchema, rawToUserIdSchema } from '@/lib/validations/shared-schemas'
+import { rawToUserIdSchema } from '@/lib/validations/shared-schemas'
 
 const supabase = createClient()
 

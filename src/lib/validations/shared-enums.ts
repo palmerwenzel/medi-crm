@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import type { DbConversationStatus } from '@/types/domain/db'
 
 /**
  * Because Database['public']['Enums'] is only a type, we must define
@@ -45,7 +44,6 @@ const caseStatusValues = [
 ] as const
 export const caseStatusEnum = z.enum(caseStatusValues)
 
-type ConversationStatus = DbConversationStatus
 const conversationStatusValues = [
   'active',
   'archived',

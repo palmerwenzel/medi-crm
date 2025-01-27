@@ -1,5 +1,5 @@
 import { AlertCircle, Clock, FileText, User, Calendar } from 'lucide-react'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
 import { formatDistanceToNow, format } from 'date-fns'
 import { cn } from '@/lib/utils'
 

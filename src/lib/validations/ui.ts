@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { UIMessage, MessageState, MessageStatus } from '@/types/domain/ui'
 import type { MessageMetadata } from '@/types/domain/chat'
 import { messageRoleEnum } from './shared-enums'
-import { conversationIdSchema, userIdSchema } from './shared-schemas'
+import { conversationIdSchema } from './shared-schemas'
 import { 
   standardMetadataSchema, 
   aiProcessingMetadataSchema, 

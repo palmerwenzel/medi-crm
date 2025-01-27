@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import type { CaseStatus } from '@/lib/validations/case'
+import type { CaseStatus } from '@/types/domain/cases'
 
 const statusColors: Record<CaseStatus, string> = {
   open: 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',

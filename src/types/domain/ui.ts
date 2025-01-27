@@ -1,7 +1,4 @@
 import type {
-  CaseStatus,
-  CasePriority,
-  CaseCategory,
   CaseDepartment,
   CaseSortField,
   CaseFilters,
@@ -17,7 +14,6 @@ import type {
 } from './notifications'
 import type {
   ConversationId,
-  MessageRole,
   MessageMetadata,
   Message,
   MedicalConversation,

@@ -18,8 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
-
-type CasePriority = 'low' | 'medium' | 'high' | 'urgent'
+import type { CasePriority } from '@/types/domain/cases'
 
 const priorityColors: Record<CasePriority, string> = {
   low: 'bg-slate-500/10 text-slate-500 hover:bg-slate-500/20',

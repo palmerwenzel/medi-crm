@@ -14,11 +14,10 @@ import { cn } from '@/lib/utils'
 import { priorityColors } from '@/lib/utils/case-formatting'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/utils/supabase/client'
-import type { CasesRow } from '@/lib/validations/cases'
-import type { CasePriority, ConversationStatus } from '@/types/domain/cases'
+import type { CaseResponse, CasePriority, ConversationStatus } from '@/types/domain/cases'
 
 interface CaseListItemProps {
-  case_: CasesRow & {
+  case_: CaseResponse & {
     metadata?: {
       sla?: {
         response_target: string

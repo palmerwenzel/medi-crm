@@ -186,7 +186,7 @@ export function SignUpForm() {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Choose whether you're a patient or medical staff member
+                    Choose whether you&apos;re a patient or medical staff member
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

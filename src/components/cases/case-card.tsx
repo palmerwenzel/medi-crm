@@ -11,10 +11,10 @@ import { Button } from '@/components/ui/button'
 import { CaseStatusBadge } from './case-status-badge'
 import { CaseMetadata } from './case-metadata'
 import { useAuth } from '@/providers/auth-provider'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { Case } from '@/types/domain/cases'
 
 interface CaseCardProps {
-  case: CaseResponse & {
+  case: Case & {
     patient: {
       first_name: string | null
       last_name: string | null

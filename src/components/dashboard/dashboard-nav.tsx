@@ -8,7 +8,6 @@ import {
   Users, 
   FileText, 
   Settings, 
-  LogOut,
   Calendar,
   BarChart,
   MessageSquare,
@@ -16,7 +15,6 @@ import {
   PlusCircle
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/providers/auth-provider"
 
 interface NavItem {

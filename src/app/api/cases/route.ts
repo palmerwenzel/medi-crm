@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
-import { createCaseSchema } from '@/lib/validations/case'
+import { casesInsertSchema } from '@/lib/validations/cases'
+import type { CaseQueryParams, CaseSortField } from '@/types/domain/cases'
+
+// Required query parameters that must always have values
+interface RequiredQueryParams {
+  limit: number
+  offset: number
+  sort_by: CaseSortField
+  sort_order: 'asc' | 'desc'
+}
 
 // Default query parameters
-const DEFAULT_QUERY_PARAMS = {
+const DEFAULT_QUERY_PARAMS: RequiredQueryParams = {
   limit: 20,
   offset: 0,
-  sort_by: 'created_at' as const,
-  sort_order: 'desc' as const
+  sort_by: 'created_at',
+  sort_order: 'desc'
 }
 
 /**
@@ -20,13 +29,22 @@ export async function GET(request: Request) {
     const { supabase, user, role } = await createApiClient()
     const searchParams = new URL(request.url).searchParams
     
-    // Parse and validate query parameters
-    const queryParams = {
-      ...DEFAULT_QUERY_PARAMS,
+    // Parse and validate required query parameters
+    const requiredParams: RequiredQueryParams = {
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : DEFAULT_QUERY_PARAMS.limit,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : DEFAULT_QUERY_PARAMS.offset,
-      sort_by: searchParams.get('sort_by') || DEFAULT_QUERY_PARAMS.sort_by,
-      sort_order: (searchParams.get('sort_order') || DEFAULT_QUERY_PARAMS.sort_order) as 'asc' | 'desc'
+      sort_by: (searchParams.get('sort_by') as CaseSortField) || DEFAULT_QUERY_PARAMS.sort_by,
+      sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || DEFAULT_QUERY_PARAMS.sort_order
+    }
+
+    // Parse optional filter parameters
+    const filterParams: Partial<CaseQueryParams> = {
+      status: searchParams.get('status') as CaseQueryParams['status'] || undefined,
+      priority: searchParams.get('priority') as CaseQueryParams['priority'] || undefined,
+      category: searchParams.get('category') as CaseQueryParams['category'] || undefined,
+      department: searchParams.get('department') as CaseQueryParams['department'] || undefined,
+      assigned_to: searchParams.get('assigned_to') || undefined,
+      search: searchParams.get('search') || undefined
     }
 
     // Build query with role-based filtering
@@ -40,14 +58,21 @@ export async function GET(request: Request) {
     } else if (role === 'staff') {
       query = query.eq('assigned_to', user.id)
     }
-    // Admin sees all cases
+
+    // Apply optional filters
+    if (filterParams.status) query = query.eq('status', filterParams.status)
+    if (filterParams.priority) query = query.eq('priority', filterParams.priority)
+    if (filterParams.category) query = query.eq('category', filterParams.category)
+    if (filterParams.department) query = query.eq('department', filterParams.department)
+    if (filterParams.assigned_to) query = query.eq('assigned_to', filterParams.assigned_to)
+    if (filterParams.search) query = query.ilike('title', `%${filterParams.search}%`)
 
     // Execute query with sorting and pagination
     const { data: cases, error: casesError, count } = await query
-      .order(queryParams.sort_by as string, { ascending: queryParams.sort_order === 'asc' })
+      .order(requiredParams.sort_by, { ascending: requiredParams.sort_order === 'asc' })
       .range(
-        queryParams.offset,
-        queryParams.offset + queryParams.limit - 1
+        requiredParams.offset,
+        requiredParams.offset + requiredParams.limit - 1
       )
 
     if (casesError) {
@@ -57,7 +82,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       cases: cases || [],
       total: count || 0,
-      hasMore: count ? queryParams.offset + queryParams.limit < count : false
+      hasMore: count ? requiredParams.offset + requiredParams.limit < count : false
     })
   } catch (error) {
     return handleApiError(error)
@@ -75,7 +100,7 @@ export async function POST(request: Request) {
 
     // Parse and validate request body
     const json = await request.json()
-    const validatedData = createCaseSchema.parse(json)
+    const validatedData = casesInsertSchema.parse(json)
 
     // Only patients can create cases (enforced by RLS)
     if (role !== 'patient') {

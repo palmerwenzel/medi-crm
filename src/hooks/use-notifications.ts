@@ -3,15 +3,12 @@ import { useAuth } from '@/providers/auth-provider'
 import {
   type Notification,
   type NotificationType,
-  type NotificationChannel,
   type NotificationMetadata
 } from '@/types/domain/notifications'
 import {
   getNotifications,
-  getNotificationPreferences,
   markAsRead,
   markAllAsRead,
-  updateNotificationPreferences,
   subscribeToNotifications,
   requestNotificationPermission,
   showBrowserNotification

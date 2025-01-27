@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { updateCaseSchema } from '@/lib/validations/case'
+import { casesUpdateSchema } from '@/lib/validations/cases'
 import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
 /**
@@ -16,7 +16,11 @@ export async function GET(
     // Get the case (RLS will ensure user has access)
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
-      .select('*')
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(first_name, last_name, role, specialty)
+      `)
       .eq('id', params.id)
       .single()
 
@@ -47,7 +51,7 @@ export async function PATCH(
 
     // Parse and validate request body
     const json = await request.json()
-    const validatedData = updateCaseSchema.parse(json)
+    const validatedData = casesUpdateSchema.parse(json)
 
     // Staff/admin check for internal notes
     if (validatedData.internal_notes !== undefined && role === 'patient') {
@@ -62,7 +66,11 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.id)
-      .select()
+      .select(`
+        *,
+        patient:users!cases_patient_id_fkey(first_name, last_name),
+        assigned_to:users!cases_assigned_to_fkey(first_name, last_name, role, specialty)
+      `)
       .single()
 
     if (updateError) {

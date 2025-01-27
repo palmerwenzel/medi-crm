@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
 
 interface CaseSubscriptionCallbacks {
   onUpdate?: (updatedCase: CaseResponse) => void

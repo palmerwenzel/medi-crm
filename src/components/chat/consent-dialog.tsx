@@ -38,7 +38,7 @@ export function ConsentDialog({
         <DialogHeader>
           <DialogTitle>Create Medical Case</DialogTitle>
           <DialogDescription>
-            Review the information below and confirm if you'd like to create a medical case.
+            Review the information below and confirm if you&apos;d like to create a medical case.
             This will help us connect you with the right healthcare provider.
           </DialogDescription>
         </DialogHeader>

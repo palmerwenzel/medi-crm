@@ -179,7 +179,7 @@ describe('Case RLS Policies', () => {
     })
 
     it('cannot view other patients cases', async () => {
-      const { data: otherPatientCase, error: createError } = await adminClient
+      const { error: createError } = await adminClient
         .from('cases')
         .insert<DbCaseInsert>({
           title: 'Other Patient Case',

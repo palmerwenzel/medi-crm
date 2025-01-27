@@ -1,6 +1,6 @@
-import { MessageMetadata, TriageDecision } from '@/types/domain/chat';
+import { MessageMetadata } from '@/types/domain/chat';
 import { ChatRequest, isAIProcessingMetadata, isHandoffMetadata } from '@/types/domain/ai';
-import { generateChatResponse, extractStructuredData } from '@/lib/ai/openai';
+import { generateChatResponse } from '@/lib/ai/openai';
 import { createCase } from '@/lib/actions/cases';
 import { createClient } from '@/utils/supabase/client';
 import { MEDICAL_SUMMARY_PROMPT } from '@/lib/ai/prompts';

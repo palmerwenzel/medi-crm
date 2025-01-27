@@ -9,9 +9,11 @@ import type {
   CaseResponse, 
   CaseStatus,
   CaseQueryParams,
-} from '@/lib/validations/case'
-import type { CaseFilters, CaseManagementOptions, CaseManagementReturn } from '@/types/cases'
-import type { StaffMember } from '@/types/staff'
+  CaseFilters,
+  CaseManagementOptions,
+  CaseManagementReturn,
+} from '@/types/domain/cases'
+import type { StaffMember } from '@/types/domain/users'
 import { updateCaseStatuses, assignCases } from '@/lib/actions/cases'
 import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
 
@@ -19,7 +21,7 @@ import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
  * Hook for managing case data, including filtering, selection, and bulk actions
  */
 export function useCaseManagement({ 
-  limit = 20
+  limit = 20,
 }: CaseManagementOptions = {}): CaseManagementReturn {
   const { user, userRole } = useAuth()
   const [cases, setCases] = useState<CaseResponse[]>([])
@@ -27,6 +29,7 @@ export function useCaseManagement({
   const [selectedCases, setSelectedCases] = useState<string[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(false)
   const [currentFilters, setCurrentFilters] = useState<Partial<CaseQueryParams>>({})
   const supabase = createClient()
   const { toast } = useToast()
@@ -39,8 +42,18 @@ export function useCaseManagement({
       .from('cases')
       .select(`
         *,
-        assigned_to:users!cases_assigned_to_fkey(id, first_name, last_name),
-        patient:users!cases_patient_id_fkey(id, first_name, last_name)
+        assigned_to:users!cases_assigned_to_fkey(
+          id,
+          first_name,
+          last_name,
+          role,
+          specialty
+        ),
+        patient:users!cases_patient_id_fkey(
+          id,
+          first_name,
+          last_name
+        )
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
 
@@ -57,28 +70,19 @@ export function useCaseManagement({
 
     // Apply current filters
     if (currentFilters.status) {
-      query = query.in('status', currentFilters.status)
+      query = query.eq('status', currentFilters.status)
     }
     if (currentFilters.priority) {
-      query = query.in('priority', currentFilters.priority)
+      query = query.eq('priority', currentFilters.priority)
     }
     if (currentFilters.category) {
-      query = query.in('category', currentFilters.category)
+      query = query.eq('category', currentFilters.category)
     }
     if (currentFilters.department) {
-      query = query.in('department', currentFilters.department)
-    }
-    if (currentFilters.specialty) {
-      query = query.eq('specialty', currentFilters.specialty)
+      query = query.eq('department', currentFilters.department)
     }
     if (currentFilters.search) {
       query = query.or(`title.ilike.%${currentFilters.search}%,description.ilike.%${currentFilters.search}%`)
-    }
-    if (currentFilters.date_range?.from) {
-      query = query.gte('created_at', currentFilters.date_range.from)
-    }
-    if (currentFilters.date_range?.to) {
-      query = query.lte('created_at', currentFilters.date_range.to)
     }
 
     // Apply pagination
@@ -86,38 +90,41 @@ export function useCaseManagement({
       query = query.range(0, limit - 1)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
 
     if (error) {
       console.error('Failed to fetch cases:', error)
       return
     }
 
-    setCases(data || [])
-    setFilteredCases(data || [])
+    setCases(data as CaseResponse[])
+    setFilteredCases(data as CaseResponse[])
+    setHasMore(!!count && count > (data?.length || 0))
     setIsLoading(false)
   }, [user, userRole, limit, currentFilters, supabase])
+
+  // Load more cases
+  const loadMore = useCallback(async () => {
+    // Implementation of loadMore...
+    // This is a placeholder as the actual implementation would depend on your pagination strategy
+    return Promise.resolve()
+  }, [])
 
   // Handle filter changes
   const handleFilterChange = useCallback((filters: CaseFilters) => {
     // Convert UI filters to API query params
     const queryParams: Partial<CaseQueryParams> = {
-      status: filters.status === 'all' || !filters.status ? undefined : 
-        Array.isArray(filters.status) ? filters.status : [filters.status],
-      priority: filters.priority === 'all' || !filters.priority ? undefined :
-        Array.isArray(filters.priority) ? filters.priority : [filters.priority],
-      category: filters.category === 'all' || !filters.category ? undefined :
-        Array.isArray(filters.category) ? filters.category : [filters.category],
-      department: filters.department === 'all' || !filters.department ? undefined :
-        Array.isArray(filters.department) ? filters.department : [filters.department],
-      specialty: filters.specialty === 'all' || !filters.specialty ? undefined : filters.specialty,
+      status: filters.status === 'all' ? undefined : 
+        Array.isArray(filters.status) ? filters.status[0] : filters.status,
+      priority: filters.priority === 'all' ? undefined :
+        Array.isArray(filters.priority) ? filters.priority[0] : filters.priority,
+      category: filters.category === 'all' ? undefined :
+        Array.isArray(filters.category) ? filters.category[0] : filters.category,
+      department: filters.department === 'all' ? undefined :
+        Array.isArray(filters.department) ? filters.department[0] : filters.department,
       search: filters.search,
       sort_by: filters.sortBy,
       sort_order: filters.sortOrder,
-      date_range: filters.dateRange ? {
-        from: filters.dateRange.from?.toISOString(),
-        to: filters.dateRange.to?.toISOString()
-      } : undefined
     }
 
     setCurrentFilters(queryParams)
@@ -170,7 +177,7 @@ export function useCaseManagement({
   const loadStaffMembers = useCallback(async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, role, specialty')
+      .select('id, first_name, last_name, role, specialty, department, email')
       .eq('role', 'staff')
       .order('first_name')
 
@@ -179,14 +186,7 @@ export function useCaseManagement({
       return
     }
 
-    setStaffMembers(
-      data.map(staff => ({
-        id: staff.id,
-        name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
-        role: 'staff' as const,
-        specialties: staff.specialty ? [staff.specialty] : undefined
-      }))
-    )
+    setStaffMembers(data as StaffMember[])
   }, [supabase])
 
   // Handle bulk selection
@@ -258,24 +258,25 @@ export function useCaseManagement({
 
   // Initial load
   useEffect(() => {
-    loadCases()
-    loadStaffMembers()
-  }, [loadCases, loadStaffMembers])
+    if (user) {
+      loadCases()
+      loadStaffMembers()
+    }
+  }, [user, loadCases, loadStaffMembers])
 
   return {
     cases,
     filteredCases,
     selectedCases,
-    staffMembers,
     isLoading,
+    hasMore,
     loadCases,
+    loadMore,
     handleFilterChange,
     handleSelectAll,
     handleDeselectAll,
     handleCaseSelect,
     handleBulkStatusChange,
     handleBulkAssignmentChange,
-    hasMore: false,
-    loadMore: () => Promise.resolve()
   }
 } 

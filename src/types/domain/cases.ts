@@ -62,6 +62,16 @@ export type CaseHistoryInsert = DbCaseHistoryInsert
 export type CaseHistoryUpdate = DbCaseHistoryUpdate
 export type CaseActivityType = DbCaseActivityType
 
+// Case history with joined fields
+export interface CaseHistoryWithActor extends CaseHistory {
+  actor: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    role: string
+  }
+}
+
 export type CaseInsert = Partial<Case> & {
   category: CaseCategory
   description: string
@@ -93,6 +103,15 @@ export interface CaseMetadata {
   custom_fields?: Record<string, string | number | boolean>
   last_contact?: string
   follow_up_date?: string
+}
+
+// SLA metadata interface
+export interface SLAMetadata {
+  sla_breached: boolean
+  response_target: string
+  resolution_target: string
+  first_response_at: string | null
+  sla_tier: string
 }
 
 // Domain-specific history details

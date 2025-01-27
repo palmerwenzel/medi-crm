@@ -1,9 +1,6 @@
 'use client'
 
 import { useAuth } from '@/providers/auth-provider'
-import { Button } from '@/components/ui/button'
-import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { ChatContainer } from '@/components/chat/chat-container'
 import { Skeleton } from '@/components/ui/skeleton'
 

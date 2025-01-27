@@ -7,7 +7,6 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { User } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 
 type LoginResponse = {
   success?: boolean

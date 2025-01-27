@@ -1,6 +1,6 @@
 import { ChatSession, MessageMetadata, TriageDecision, ChatAccess } from '@/types/domain/chat';
 import { UIMessage, MessageStatus } from '@/types/domain/ui';
-import { StaffMember, UserId } from '@/types/domain/users';
+import { UserId } from '@/types/domain/users';
 import { processMessage } from './llm-controller';
 import { createClient } from '@/utils/supabase/client';
 

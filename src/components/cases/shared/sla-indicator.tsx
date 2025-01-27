@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { SLAMetadata } from '@/lib/validations/case'
+import type { SLAMetadata } from '@/types/domain/cases'
 
 /**
  * Props for the SLA Indicator component

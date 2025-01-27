@@ -8,8 +8,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createCaseSchema, caseDepartmentEnum, casePriorityEnum } from '@/lib/validations/case'
-import type { CreateCaseInput } from '@/lib/validations/case'
+import { casesInsertSchema } from '@/lib/validations/cases'
+import type { CaseInsert, CaseDepartment } from '@/types/domain/cases'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,6 +26,11 @@ import { createCase } from '@/lib/actions/cases'
 import { RichTextEditor } from './shared/rich-text-editor'
 import { FileUploadZone } from './shared/file-upload'
 
+type FormData = Omit<CaseInsert, 'attachments' | 'department'> & {
+  attachments: string[]
+  department: CaseDepartment
+}
+
 export function NewCaseForm() {
   const { toast } = useToast()
   const router = useRouter()
@@ -33,8 +38,8 @@ export function NewCaseForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
 
-  const form = useForm<CreateCaseInput>({
-    resolver: zodResolver(createCaseSchema),
+  const form = useForm<FormData>({
+    resolver: zodResolver(casesInsertSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -83,10 +88,10 @@ export function NewCaseForm() {
   }
 
   const handleFileRemoved = (fileName: string) => {
-    const attachments = form.getValues('attachments') || []
+    const attachments = form.getValues('attachments')
     form.setValue(
       'attachments',
-      attachments.filter((url) => !url.includes(fileName))
+      attachments.filter(url => !url.includes(fileName))
     )
     setUploadProgress((prev) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -95,7 +100,7 @@ export function NewCaseForm() {
     })
   }
 
-  const onSubmit = async (data: CreateCaseInput) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true)
       const loadingToast = toast({
@@ -133,6 +138,14 @@ export function NewCaseForm() {
       setIsSubmitting(false)
     }
   }
+
+  const departments: CaseDepartment[] = [
+    'primary_care',
+    'specialty_care',
+    'emergency',
+    'surgery',
+    'mental_health'
+  ]
 
   return (
     <Form {...form}>
@@ -189,7 +202,7 @@ export function NewCaseForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {caseDepartmentEnum.map(dept => (
+                  {departments.map(dept => (
                     <SelectItem key={dept} value={dept}>
                       {dept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </SelectItem>

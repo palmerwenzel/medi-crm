@@ -4,8 +4,7 @@ import type {
   CaseInsert, 
   CaseUpdate, 
   CaseResponse,
-  CaseQueryParams,
-  CaseSortField 
+  CaseQueryParams
 } from '@/types/domain/cases'
 import {
   caseCategoryEnum,

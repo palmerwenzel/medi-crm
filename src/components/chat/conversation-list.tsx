@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Archive, MessageSquare, Plus, MessagesSquare } from 'lucide-react'
 import { type UIMedicalConversation } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'

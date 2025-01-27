@@ -9,9 +9,19 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getCaseHistory } from '@/lib/actions/case-history'
 import type { 
-  CaseHistoryResponse, 
-  CaseHistoryQueryParams
-} from '@/lib/validations/case-history'
+  CaseHistoryWithActor,
+  CaseActivityType
+} from '@/types/domain/cases'
+
+interface CaseHistoryQueryParams {
+  case_id: string
+  activity_type?: CaseActivityType
+  from_date?: string
+  to_date?: string
+  offset?: number
+  limit?: number
+  sort_order?: 'asc' | 'desc'
+}
 
 interface UseCaseHistoryOptions {
   caseId: string
@@ -19,7 +29,7 @@ interface UseCaseHistoryOptions {
 }
 
 interface UseCaseHistoryReturn {
-  history: CaseHistoryResponse[]
+  history: CaseHistoryWithActor[]
   isLoading: boolean
   hasMore: boolean
   filters: Partial<CaseHistoryQueryParams>
@@ -28,17 +38,36 @@ interface UseCaseHistoryReturn {
   setFilters: (filters: Partial<CaseHistoryQueryParams>) => void
 }
 
+interface CaseHistoryResponse {
+  history: unknown[]
+  total: number
+  hasMore: boolean
+  nextOffset?: number
+}
+
 export function useCaseHistory({ 
   caseId, 
   limit = 50 
 }: UseCaseHistoryOptions): UseCaseHistoryReturn {
-  const [history, setHistory] = useState<CaseHistoryResponse[]>([])
+  const [history, setHistory] = useState<CaseHistoryWithActor[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasMore, setHasMore] = useState(false)
   const [offset, setOffset] = useState(0)
   const [filters, setFilters] = useState<Partial<CaseHistoryQueryParams>>({})
   const supabase = createClient()
   const { toast } = useToast()
+
+  // Type guard for case history response
+  const isCaseHistoryResponse = (data: unknown): data is CaseHistoryResponse => {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'history' in data &&
+      Array.isArray((data as CaseHistoryResponse).history) &&
+      'hasMore' in data &&
+      typeof (data as CaseHistoryResponse).hasMore === 'boolean'
+    )
+  }
 
   // Load case history
   const loadHistory = useCallback(async () => {
@@ -52,12 +81,13 @@ export function useCaseHistory({
         ...filters
       })
 
-      if (!result.success || !result.data) {
+      if (!result.success || !result.data || !isCaseHistoryResponse(result.data)) {
         throw new Error(result.error || 'Failed to load case history')
       }
 
-      setHistory(result.data.history)
-      setHasMore(result.data.hasMore)
+      const data = result.data as CaseHistoryResponse
+      setHistory(data.history as CaseHistoryWithActor[])
+      setHasMore(data.hasMore)
       setOffset(limit)
     } catch (error) {
       console.error('Error loading case history:', error)
@@ -73,25 +103,24 @@ export function useCaseHistory({
 
   // Load more history entries
   const loadMore = useCallback(async () => {
-    if (!hasMore || isLoading) return
+    if (!hasMore) return
 
     try {
       const result = await getCaseHistory({
         case_id: caseId,
         limit,
         offset,
-        sort_order: 'desc', // Default to descending order
+        sort_order: 'desc',
         ...filters
       })
 
-      if (!result.success || !result.data) {
+      if (!result.success || !result.data || !isCaseHistoryResponse(result.data)) {
         throw new Error(result.error || 'Failed to load more history')
       }
 
-      const { history: newHistory, hasMore: moreAvailable } = result.data
-
-      setHistory(prev => [...prev, ...newHistory])
-      setHasMore(moreAvailable)
+      const data = result.data as CaseHistoryResponse
+      setHistory(prev => [...prev, ...(data.history as CaseHistoryWithActor[])])
+      setHasMore(data.hasMore)
       setOffset(prev => prev + limit)
     } catch (error) {
       console.error('Error loading more history:', error)
@@ -101,13 +130,7 @@ export function useCaseHistory({
         variant: 'destructive',
       })
     }
-  }, [caseId, limit, offset, hasMore, isLoading, filters, toast])
-
-  // Update filters
-  const handleFilterChange = useCallback((newFilters: Partial<CaseHistoryQueryParams>) => {
-    setFilters(newFilters)
-    setOffset(0)
-  }, [])
+  }, [caseId, limit, offset, hasMore, filters, toast])
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -116,30 +139,14 @@ export function useCaseHistory({
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'case_history',
           filter: `case_id=eq.${caseId}`
         },
-        async (payload) => {
-          // Fetch the complete history entry with actor details
-          const { data: newEntry } = await supabase
-            .from('case_history')
-            .select(`
-              *,
-              actor:users!case_history_actor_id_fkey(
-                id,
-                first_name,
-                last_name,
-                role
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single()
-
-          if (newEntry) {
-            setHistory(prev => [newEntry, ...prev])
-          }
+        async () => {
+          // Reload history to ensure we have the latest data with proper ordering
+          await loadHistory()
         }
       )
       .subscribe()
@@ -147,7 +154,7 @@ export function useCaseHistory({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [caseId, supabase])
+  }, [caseId, supabase, loadHistory])
 
   // Initial load
   useEffect(() => {
@@ -161,6 +168,6 @@ export function useCaseHistory({
     filters,
     loadHistory,
     loadMore,
-    setFilters: handleFilterChange
+    setFilters
   }
 } 
