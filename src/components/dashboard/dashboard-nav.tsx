@@ -102,7 +102,7 @@ const navItems: NavItem[] = [
 
 export function DashboardNav() {
   const pathname = usePathname()
-  const { userRole, signOut } = useAuth()
+  const { userRole } = useAuth()
 
   // Filter items based on user role
   const filteredNavItems = navItems.filter(

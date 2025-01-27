@@ -15,7 +15,8 @@ import type {
   UIMessage, 
   MessageStatus,
   TypingStatus,
-  PresenceState 
+  PresenceState,
+  LogData
 } from '@/types/domain/ui'
 import { 
   medicalMessagesRowSchema,
@@ -34,7 +35,7 @@ import { rawToUserIdSchema } from '@/lib/validations/shared-schemas'
 
 const supabase = createClient()
 
-function logError(context: string, error: unknown, data?: any) {
+function logError(context: string, error: unknown, data?: LogData) {
   console.error(`[Chat Service] ${context}:`, {
     error: error instanceof Error ? error.message : error,
     stack: error instanceof Error ? error.stack : undefined,
@@ -42,13 +43,13 @@ function logError(context: string, error: unknown, data?: any) {
   })
 }
 
-function logDebug(context: string, data?: any) {
+function logDebug(context: string, data?: LogData) {
   console.debug(`[Chat Service] ${context}:`, 
     typeof data === 'object' ? JSON.stringify(data, null, 2) : data
   )
 }
 
-function logWarning(context: string, data?: any) {
+function logWarning(context: string, data?: LogData) {
   console.warn(`[Chat Service] ${context}:`, 
     typeof data === 'object' ? JSON.stringify(data, null, 2) : data
   )
@@ -128,8 +129,28 @@ export function subscribeToConversation(
     .on('broadcast', { event: 'typing' }, (payload) => {
       try {
         logDebug('Typing indicator', payload)
-        const typingStatus = payload.payload as TypingStatus
-        onTyping(typingStatus)
+        if (
+          payload?.payload &&
+          typeof payload.payload === 'object' &&
+          'conversationId' in payload.payload &&
+          'userId' in payload.payload &&
+          'isTyping' in payload.payload &&
+          'timestamp' in payload.payload &&
+          typeof payload.payload.conversationId === 'string' &&
+          typeof payload.payload.userId === 'string' &&
+          typeof payload.payload.isTyping === 'boolean' &&
+          typeof payload.payload.timestamp === 'string'
+        ) {
+          const typingStatus: TypingStatus = {
+            conversationId: payload.payload.conversationId,
+            userId: rawToUserIdSchema.parse(payload.payload.userId),
+            isTyping: payload.payload.isTyping,
+            timestamp: payload.payload.timestamp
+          }
+          onTyping(typingStatus)
+        } else {
+          throw new Error('Invalid typing status payload')
+        }
       } catch (error) {
         logError('Failed to process typing indicator', error, payload)
       }
@@ -137,8 +158,26 @@ export function subscribeToConversation(
     // Track presence
     .on('presence', { event: 'sync' }, () => {
       try {
-        const state = channel.presenceState()
-        onPresence(state as unknown as PresenceState)
+        const rawState = channel.presenceState()
+        const presenceState: PresenceState = {}
+        
+        for (const [key, presences] of Object.entries(rawState)) {
+          const validPresences = (presences as unknown as Array<{ user_id: string; online_at: string }>)
+            .filter(presence => 
+              presence && 
+              typeof presence.user_id === 'string' && 
+              typeof presence.online_at === 'string'
+            )
+            .map(presence => ({
+              user_id: rawToUserIdSchema.parse(presence.user_id),
+              online_at: presence.online_at
+            }))
+          if (validPresences.length > 0) {
+            presenceState[key] = validPresences
+          }
+        }
+        
+        onPresence(presenceState)
       } catch (error) {
         logError('Failed to process presence sync', error)
       }
@@ -749,8 +788,26 @@ export async function subscribeToPresence(
     .channel(`presence:${conversationId}`)
     .on('presence', { event: 'sync' }, () => {
       try {
-        const state = channel.presenceState()
-        onPresence(state as unknown as PresenceState)
+        const rawState = channel.presenceState()
+        const presenceState: PresenceState = {}
+        
+        for (const [key, presences] of Object.entries(rawState)) {
+          const validPresences = (presences as unknown as Array<{ user_id: string; online_at: string }>)
+            .filter(presence => 
+              presence && 
+              typeof presence.user_id === 'string' && 
+              typeof presence.online_at === 'string'
+            )
+            .map(presence => ({
+              user_id: rawToUserIdSchema.parse(presence.user_id),
+              online_at: presence.online_at
+            }))
+          if (validPresences.length > 0) {
+            presenceState[key] = validPresences
+          }
+        }
+        
+        onPresence(presenceState)
       } catch (error) {
         logError('Failed to process presence sync', error)
       }
@@ -788,8 +845,28 @@ export async function subscribeToTypingIndicators(
     .on('broadcast', { event: 'typing' }, (payload) => {
       try {
         logDebug('Typing indicator', payload)
-        const typingStatus = payload.payload as TypingStatus
-        onTyping(typingStatus)
+        if (
+          payload?.payload &&
+          typeof payload.payload === 'object' &&
+          'conversationId' in payload.payload &&
+          'userId' in payload.payload &&
+          'isTyping' in payload.payload &&
+          'timestamp' in payload.payload &&
+          typeof payload.payload.conversationId === 'string' &&
+          typeof payload.payload.userId === 'string' &&
+          typeof payload.payload.isTyping === 'boolean' &&
+          typeof payload.payload.timestamp === 'string'
+        ) {
+          const typingStatus: TypingStatus = {
+            conversationId: payload.payload.conversationId,
+            userId: rawToUserIdSchema.parse(payload.payload.userId),
+            isTyping: payload.payload.isTyping,
+            timestamp: payload.payload.timestamp
+          }
+          onTyping(typingStatus)
+        } else {
+          throw new Error('Invalid typing status payload')
+        }
       } catch (error) {
         logError('Failed to process typing indicator', error, payload)
       }

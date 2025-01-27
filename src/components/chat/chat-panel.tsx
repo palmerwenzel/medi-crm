@@ -23,7 +23,7 @@ export function ChatPanel({
   className
 }: ChatPanelProps) {
   const { toast } = useToast()
-  const { user, userRole } = useAuth()
+  const { userRole } = useAuth()
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
@@ -52,7 +52,7 @@ export function ChatPanel({
     if (!messages.length || !userRole) return
 
     const lastMessage = messages[messages.length - 1]
-    const isProviderMessage = lastMessage.role === 'provider'
+    const isAssistantMessage = lastMessage.role === 'assistant'
     const isUserMessage = lastMessage.role === 'user'
 
     // Only update status if we're staff or the last message was from the user
@@ -60,7 +60,7 @@ export function ChatPanel({
       try {
         updateChatStatus(
           caseId,
-          isProviderMessage ? 'completed' : 'needs_response'
+          isAssistantMessage ? 'completed' : 'needs_response'
         )
       } catch (err) {
         console.error('Failed to update chat status:', err)
@@ -101,9 +101,11 @@ export function ChatPanel({
 
   // Cleanup typing indicator on unmount
   useEffect(() => {
+    const timeoutRef = typingTimeoutRef.current
+    
     return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
+      if (timeoutRef) {
+        clearTimeout(timeoutRef)
       }
       // Ensure typing indicator is turned off when component unmounts
       if (caseId) {

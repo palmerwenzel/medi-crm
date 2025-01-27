@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import type { CaseResponse } from '@/types/domain/cases'
 
@@ -15,7 +15,7 @@ export function useCase(caseId: string): UseCaseReturn {
   const [error, setError] = useState<Error | null>(null)
   const supabase = createClient()
 
-  const fetchCase = async () => {
+  const fetchCase = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -38,7 +38,7 @@ export function useCase(caseId: string): UseCaseReturn {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [caseId, supabase])
 
   useEffect(() => {
     fetchCase()
@@ -63,7 +63,7 @@ export function useCase(caseId: string): UseCaseReturn {
     return () => {
       channel.unsubscribe()
     }
-  }, [caseId])
+  }, [caseId, fetchCase, supabase])
 
   return {
     case_,

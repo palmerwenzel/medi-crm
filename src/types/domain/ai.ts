@@ -1,4 +1,4 @@
-import type { MessageRole, MessageMetadata, ChatAccess } from './chat'
+import type { MessageRole, MessageMetadata, ChatAccess, CollectedMedicalInfo } from './chat'
 
 /**
  * OpenAI request/response types
@@ -13,6 +13,22 @@ export interface ChatRequest {
 export interface ChatResponse {
   message: string
   metadata?: MessageMetadata
+}
+
+/**
+ * AI-extracted data types
+ */
+export interface ExtractedAIData extends CollectedMedicalInfo {
+  medications?: string[]
+  allergies?: string[]
+  medicalHistory?: string[]
+  vitals?: {
+    temperature?: string
+    bloodPressure?: string
+    heartRate?: string
+    respiratoryRate?: string
+    oxygenSaturation?: string
+  }
 }
 
 /**

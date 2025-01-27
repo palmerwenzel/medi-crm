@@ -1,8 +1,8 @@
 'use server'
 
 import OpenAI from 'openai';
-import { OpenAIRole } from '@/types/domain/roles';
-import { TriageDecision } from '@/types/domain/chat';
+import type { OpenAIRole } from '@/types/domain/roles';
+import type { TriageDecision, CollectedMedicalInfo } from '@/types/domain/chat';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -54,7 +54,7 @@ export async function generateChatResponse(
   }
 }
 
-export async function extractStructuredData(content: string): Promise<any> {
+export async function extractStructuredData(content: string): Promise<CollectedMedicalInfo> {
   const messages: Message[] = [
     {
       role: 'system',

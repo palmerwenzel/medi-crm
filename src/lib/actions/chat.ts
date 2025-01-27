@@ -16,6 +16,7 @@ import {
   messageQuerySchema,
   conversationQuerySchema
 } from '@/lib/validations/chat'
+import type { MessageMetadata } from '@/types/domain/chat'
 
 type ActionResponse<T = void> = {
   success: boolean
@@ -66,7 +67,7 @@ export async function sendMessage(
   content: string,
   conversationId: string,
   role: 'user' | 'assistant' = 'user',
-  metadata: Record<string, any> = {}
+  metadata: MessageMetadata = { type: 'standard' }
 ): Promise<ActionResponse<Message>> {
   try {
     const supabase = await createClient()

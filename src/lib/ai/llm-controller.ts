@@ -1,6 +1,5 @@
 import { MessageMetadata, TriageDecision } from '@/types/domain/chat';
 import { ChatResponse, isAIProcessingMetadata } from '@/types/domain/ai';
-import { UserId } from '@/types/domain/users';
 import { MessageRole, OpenAIRole, toOpenAIRole } from '@/types/domain/roles';
 import { MEDICAL_INTAKE_PROMPT } from './prompts';
 import { generateChatResponse, extractStructuredData, makeTriageDecision } from './openai';
@@ -87,11 +86,12 @@ export async function processMessage({
       } else {
         aiResponse = await generateHandoffMessage(decision, reasoning, openAIMessages);
         metadata = {
-          type: 'handoff',
-          handoffStatus: 'pending',
-          providerId: null as unknown as UserId, // Will be set by ChatController
-          triageDecision: decision
-        };
+          type: 'ai_processing',
+          confidenceScore: confidence,
+          collectedInfo: {
+            urgencyIndicators: [decision, reasoning]
+          }
+        } satisfies MessageMetadata;
       }
     } else {
       // Continue gathering information

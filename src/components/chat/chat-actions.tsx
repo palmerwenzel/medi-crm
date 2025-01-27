@@ -9,6 +9,7 @@ import { ConsentDialog } from './consent-dialog';
 import { generateChatResponse } from '@/lib/ai/openai';
 import { CONSENT_REQUEST_PROMPT } from '@/lib/ai/prompts';
 import { isAIProcessingMetadata } from '@/types/domain/ai';
+import type { CaseSummary } from '@/types/domain/ui'
 
 interface ChatActionsProps {
   conversationId: string;
@@ -29,7 +30,7 @@ export function ChatActions({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showConsentDialog, setShowConsentDialog] = useState(false);
-  const [caseSummary, setCaseSummary] = useState<any>(null);
+  const [caseSummary, setCaseSummary] = useState<CaseSummary | null>(null);
 
   // Request consent with AI explanation
   const handleRequestConsent = async () => {
@@ -65,7 +66,7 @@ export function ChatActions({
   };
 
   // Generate case summary for review
-  const generateCaseSummary = async () => {
+  const generateCaseSummary = async (): Promise<CaseSummary> => {
     // This would use the generateChatSummary function from case-from-chat service
     // For now, we'll use a placeholder
     return {

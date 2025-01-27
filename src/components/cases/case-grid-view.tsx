@@ -18,6 +18,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { getCases } from '@/lib/actions/cases'
 import { useCaseSubscription } from '@/lib/features/cases/use-case-subscription'
 import type { CaseResponse } from '@/types/domain/cases'
+import { isAdminRole, isPatientRole, isStaffRole } from '@/lib/utils/role-guards'
 
 // Loading skeleton for cases
 function CaseCardSkeleton() {
@@ -135,9 +136,9 @@ export function CaseGridView() {
   useCaseSubscription({
     onUpdate: (updatedCase) => {
       // Only update if the case belongs to the current user (based on role)
-      const shouldInclude = userRole === 'admin' as const || 
-        (userRole === 'patient' as const && updatedCase.patient_id === user?.id) ||
-        (userRole === 'staff' as const && updatedCase.assigned_to?.id === user?.id)
+      const shouldInclude = isAdminRole(userRole) || 
+        (isPatientRole(userRole) && updatedCase.patient_id === user?.id) ||
+        (isStaffRole(userRole) && updatedCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => prev.map(c => 
@@ -147,9 +148,9 @@ export function CaseGridView() {
     },
     onNew: (newCase) => {
       // Only add if the case belongs to the current user (based on role)
-      const shouldInclude = userRole === 'admin' as const || 
-        (userRole === 'patient' as const && newCase.patient_id === user?.id) ||
-        (userRole === 'staff' as const && newCase.assigned_to?.id === user?.id)
+      const shouldInclude = isAdminRole(userRole) || 
+        (isPatientRole(userRole) && newCase.patient_id === user?.id) ||
+        (isStaffRole(userRole) && newCase.assigned_to?.id === user?.id)
 
       if (shouldInclude) {
         setCases(prev => [newCase, ...prev])

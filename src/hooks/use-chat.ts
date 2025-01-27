@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import type {
-  ConversationId,
   ChatAccess,
   MessageInsert,
   TriageDecision
@@ -14,7 +13,8 @@ import type {
   MessageStatus,
   TypingStatus,
   PresenceState,
-  UIMedicalConversation
+  UIMedicalConversation,
+  LogData
 } from '@/types/domain/ui'
 import {
   subscribeToConversation,
@@ -32,6 +32,8 @@ import {
 import { useAuth } from '@/providers/auth-provider'
 import { createClient } from '@/utils/supabase/client'
 import type { DbDepartment } from '@/types/domain/db'
+import { medicalConversationsRowSchema } from '@/lib/validations/medical-conversations'
+import { rawToConversationIdSchema, rawToUserIdSchema } from '@/lib/validations/shared-schemas'
 
 interface UseChatOptions {
   conversationId?: string
@@ -39,7 +41,7 @@ interface UseChatOptions {
   onError?: (error: Error) => void
 }
 
-function logError(context: string, error: unknown, data?: any) {
+function logError(context: string, error: unknown, data?: LogData) {
   console.error(`[Chat Hook] ${context}:`, {
     error: error instanceof Error ? error.message : error,
     stack: error instanceof Error ? error.stack : undefined,
@@ -47,13 +49,13 @@ function logError(context: string, error: unknown, data?: any) {
   })
 }
 
-function logDebug(context: string, data?: any) {
+function logDebug(context: string, data?: LogData) {
   console.debug(`[Chat Hook] ${context}:`, 
     typeof data === 'object' ? JSON.stringify(data, null, 2) : data
   )
 }
 
-function logWarning(context: string, data?: any) {
+function logWarning(context: string, data?: LogData) {
   console.warn(`[Chat Hook] ${context}:`, 
     typeof data === 'object' ? JSON.stringify(data, null, 2) : data
   )
@@ -280,7 +282,7 @@ export function useChat({
           return
         }
 
-        const data = await getConversations(targetPatientId as UserId, 1, 20, 'active')
+        const data = await getConversations(rawToUserIdSchema.parse(targetPatientId), 1, 20, 'active')
         if (mounted && Array.isArray(data)) {
           logDebug('Loaded conversations', { 
             count: data.length,
@@ -290,7 +292,8 @@ export function useChat({
               access: c.access
             }))
           })
-          setConversations(data as unknown as UIMedicalConversation[])
+          const validatedConversations = data.map(conv => medicalConversationsRowSchema.parse(conv))
+          setConversations(validatedConversations)
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to load conversations')
@@ -332,7 +335,7 @@ export function useChat({
       setIsLoading(true)
       try {
         logDebug('Loading messages for conversation', { conversationId })
-        const { data: messages, unsubscribe: unsub } = await subscribeToMessages(conversationId as ConversationId)
+        const { data: messages, unsubscribe: unsub } = await subscribeToMessages(rawToConversationIdSchema.parse(conversationId))
         unsubscribe = unsub
 
         if (mounted && Array.isArray(messages)) {
@@ -384,7 +387,7 @@ export function useChat({
       try {
         logDebug('Subscribing to typing indicators', { conversationId })
         const { unsubscribe: unsub } = await subscribeToTypingIndicators(
-          conversationId as ConversationId,
+          rawToConversationIdSchema.parse(conversationId),
           (typingStatus: TypingStatus) => {
             if (mounted) {
               logDebug('Received typing update', typingStatus)
@@ -422,7 +425,7 @@ export function useChat({
       try {
         logDebug('Subscribing to presence updates', { conversationId })
         const { unsubscribe: unsub } = await subscribeToPresence(
-          conversationId as ConversationId,
+          rawToConversationIdSchema.parse(conversationId),
           (presence: PresenceState) => {
             if (mounted) {
               logDebug('Received presence update', presence)
@@ -458,7 +461,7 @@ export function useChat({
     }
 
     const channel = subscribeToConversation(
-      conversationId as ConversationId,
+      rawToConversationIdSchema.parse(conversationId),
       // New message handler
       (message) => {
         setMessages(prev => [...prev, message])
@@ -519,7 +522,7 @@ export function useChat({
 
       const message = await sendMessage(
         content,
-        conversationId as ConversationId,
+        rawToConversationIdSchema.parse(conversationId),
         role,
         requireAI ? {
           type: 'ai_processing',
@@ -627,12 +630,12 @@ export function useChat({
       clearTimeout(typingTimeoutRef.current)
     }
 
-    sendTypingIndicator(conversationId as ConversationId, isTyping)
+    sendTypingIndicator(rawToConversationIdSchema.parse(conversationId), isTyping)
 
     if (isTyping) {
       typingTimeoutRef.current = setTimeout(() => {
         if (conversationId) {
-          sendTypingIndicator(conversationId as ConversationId, false)
+          sendTypingIndicator(rawToConversationIdSchema.parse(conversationId), false)
         }
       }, 3000)
     }
@@ -654,9 +657,10 @@ export function useChat({
     if (!patientId || typeof patientId !== 'string') throw new Error('No patient ID provided')
 
     try {
-      const conversation = await createConversation(patientId as UserId)
+      const conversation = await createConversation(rawToUserIdSchema.parse(patientId))
       if (conversation) {
-        setConversations(prev => [...prev, conversation as unknown as UIMedicalConversation])
+        const validatedConversation = medicalConversationsRowSchema.parse(conversation)
+        setConversations(prev => [...prev, validatedConversation])
       }
       return conversation
     } catch (err) {
@@ -670,7 +674,7 @@ export function useChat({
   // Update conversation status
   const handleUpdateStatus = useCallback(async (id: string, status: 'active' | 'archived') => {
     try {
-      await updateConversationStatus(id as ConversationId, status)
+      await updateConversationStatus(rawToConversationIdSchema.parse(id), status)
       setConversations(prev => prev.map(conv => 
         conv.id === id ? { ...conv, status } : conv
       ))
@@ -685,7 +689,7 @@ export function useChat({
   // Delete conversation
   const handleDeleteConversation = useCallback(async (id: string) => {
     try {
-      await deleteConversation(id as ConversationId)
+      await deleteConversation(rawToConversationIdSchema.parse(id))
       setConversations(prev => prev.filter(conv => conv.id !== id))
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to delete conversation')

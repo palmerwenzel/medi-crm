@@ -202,4 +202,29 @@ export interface ChatMessageListProps extends BaseProps {
 export interface ChatTypingIndicatorProps extends BaseProps {
   typingState: TypingStatus
   presenceState: PresenceState
-} 
+}
+
+/**
+ * Case Summary for consent dialog
+ */
+export interface CaseSummary {
+  title: string
+  description: string
+  key_symptoms: string[]
+  severity: string
+  duration: string
+  urgency_level: 'emergency' | 'routine'
+}
+
+/**
+ * Logging types for chat hook
+ */
+export type LogData = 
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | { [key: string]: unknown }
+  | object
+  | LogData[] 

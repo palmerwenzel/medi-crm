@@ -27,6 +27,7 @@ export function useCaseManagement({
   const [cases, setCases] = useState<CaseResponse[]>([])
   const [filteredCases, setFilteredCases] = useState<CaseResponse[]>([])
   const [selectedCases, setSelectedCases] = useState<string[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasMore, setHasMore] = useState(false)

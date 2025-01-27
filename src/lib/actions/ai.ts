@@ -2,6 +2,7 @@
 
 import OpenAI from 'openai'
 import { type Message } from '@/types/domain/chat'
+import type { ExtractedAIData } from '@/types/domain/ai'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -12,7 +13,7 @@ type AIResponse = {
   metadata?: {
     triageDecision?: 'EMERGENCY' | 'URGENT' | 'ROUTINE'
     confidenceScore?: number
-    extractedData?: Record<string, any>
+    extractedData?: ExtractedAIData
   }
 }
 

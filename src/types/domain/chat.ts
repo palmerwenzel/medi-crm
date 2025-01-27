@@ -5,6 +5,7 @@ import type {
   DbMedicalConversation,
   DbConversationStatus
 } from './db'
+import type { Json } from '../supabase'
 
 // Branded types for type safety
 export type ConversationId = string & { readonly __brand: unique symbol }
@@ -29,8 +30,19 @@ export const TriageDecisions = [
 export type TriageDecision = (typeof TriageDecisions)[number]
 
 // Message types
-export interface Message extends DbMedicalMessage {
+export interface Message extends Omit<DbMedicalMessage, 'metadata'> {
   metadata: MessageMetadata
+}
+
+/**
+ * Shared medical information structure
+ */
+export interface CollectedMedicalInfo extends Record<string, Json | undefined> {
+  chiefComplaint?: string
+  duration?: string
+  severity?: string
+  existingProvider?: string
+  urgencyIndicators: string[]
 }
 
 export type MessageInsert = Partial<DbMedicalMessage> & {
@@ -45,23 +57,17 @@ export type MessageMetadata =
   | { 
       type: 'ai_processing'
       confidenceScore?: number
-      collectedInfo?: {
-        chiefComplaint?: string
-        duration?: string
-        severity?: string
-        existingProvider?: string
-        urgencyIndicators: string[]
-      }
-    }
-  | {
+      collectedInfo?: CollectedMedicalInfo
+  } & Record<string, Json | undefined>
+  | ({
       type: 'handoff'
       handoffStatus: HandoffStatus
       providerId: UserId
       triageDecision: TriageDecision
-    }
-  | {
+  } & Record<string, Json | undefined>)
+  | ({
       type: 'standard'
-    }
+  } & Record<string, Json | undefined>)
 
 export type ChatAccess = 
   | { canAccess: 'ai' }
