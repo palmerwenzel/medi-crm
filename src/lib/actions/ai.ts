@@ -27,7 +27,7 @@ type ActionResponse<T = void> = {
  * Processes a message through OpenAI and returns the response with metadata
  */
 export async function processAIMessage(
-  messages: Message[],
+  messages: Array<Message | { role: 'user' | 'assistant'; content: string }>,
   systemPrompt?: string
 ): Promise<ActionResponse<AIResponse>> {
   try {

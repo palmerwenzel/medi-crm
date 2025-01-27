@@ -525,14 +525,14 @@ export function useChat({
         rawToConversationIdSchema.parse(conversationId),
         role,
         requireAI ? {
-          type: 'ai_processing',
+          type: 'ai_processing' as const,
           status: 'pending',
           confidenceScore: 0,
           collectedInfo: {
             urgencyIndicators: []
           }
         } : {
-          type: 'standard',
+          type: 'standard' as const,
           status: 'pending'
         }
       )

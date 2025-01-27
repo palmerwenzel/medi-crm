@@ -11,15 +11,10 @@ import { Button } from '@/components/ui/button'
 import { CaseStatusBadge } from './case-status-badge'
 import { CaseMetadata } from './case-metadata'
 import { useAuth } from '@/providers/auth-provider'
-import type { Case } from '@/types/domain/cases'
+import type { CaseResponse } from '@/types/domain/cases'
 
 interface CaseCardProps {
-  case: Case & {
-    patient: {
-      first_name: string | null
-      last_name: string | null
-    } | null
-  }
+  case: CaseResponse
 }
 
 export function CaseCard({ case: caseData }: CaseCardProps) {
@@ -49,22 +44,17 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
           showAttachments={true}
           showAssignedTo={showAssignButton}
           showCreatedAt={true}
-          showPatient={true}
-          dateFormat="relative"
-          variant="default"
-          iconSize="sm"
         />
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Link href={caseUrl}>
-          <Button variant="ghost">View Details</Button>
-        </Link>
-        {showAssignButton && (
-          <Button variant="outline">Assign</Button>
-        )}
+      <CardFooter className="flex justify-end gap-2">
         {showUpdateButton && (
-          <Button variant="outline">Update Status</Button>
+          <Button variant="outline" asChild>
+            <Link href={`${caseUrl}/edit`}>Update</Link>
+          </Button>
         )}
+        <Button asChild>
+          <Link href={caseUrl}>View Details</Link>
+        </Button>
       </CardFooter>
     </Card>
   )

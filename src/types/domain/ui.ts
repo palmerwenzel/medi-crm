@@ -21,6 +21,24 @@ import type {
 } from './chat'
 
 /**
+ * Case UI-specific types
+ */
+export interface CaseUIMetadata {
+  sla?: {
+    response_target: string
+    resolution_target: string
+    last_updated: string
+    sla_breached: boolean
+    first_response_at: string | null
+    sla_tier: string
+  }
+  tags?: string[]
+  internal_notes?: string
+  specialties?: string[]
+  chat_status?: 'active' | 'closed'
+}
+
+/**
  * Base Props interface for UI components
  */
 export interface BaseProps {

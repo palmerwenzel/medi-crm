@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { webhookSchema } from '@/lib/validations/webhook'
+import { webhookPayloadSchema } from '@/lib/validations/webhooks'
 import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 import { randomBytes } from 'crypto'
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const json = await request.json()
-    const validatedData = webhookSchema.parse(json)
+    const validatedData = webhookPayloadSchema.parse(json)
     
     // Generate a secure secret for the webhook
     const secret = generateWebhookSecret()

@@ -20,8 +20,27 @@ import {
 } from '@/components/ui/tooltip'
 import { Clock, CheckCircle2, AlertTriangle, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { CaseResponse } from '@/lib/validations/case'
-import { hasSLAMetadata } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
+
+// Type guard for SLA metadata
+function hasSLAMetadata(metadata: unknown): metadata is { 
+  sla: { 
+    last_updated: string; 
+    resolution_target: string; 
+  } 
+} {
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'sla' in metadata &&
+    typeof metadata.sla === 'object' &&
+    metadata.sla !== null &&
+    'last_updated' in metadata.sla &&
+    'resolution_target' in metadata.sla &&
+    typeof metadata.sla.last_updated === 'string' &&
+    typeof metadata.sla.resolution_target === 'string'
+  )
+}
 
 /**
  * Time periods for metric calculations

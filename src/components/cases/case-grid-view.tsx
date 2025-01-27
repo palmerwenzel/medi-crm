@@ -136,9 +136,11 @@ export function CaseGridView() {
   useCaseSubscription({
     onUpdate: (updatedCase) => {
       // Only update if the case belongs to the current user (based on role)
-      const shouldInclude = isAdminRole(userRole) || 
+      const shouldInclude = userRole && (
+        isAdminRole(userRole) || 
         (isPatientRole(userRole) && updatedCase.patient_id === user?.id) ||
         (isStaffRole(userRole) && updatedCase.assigned_to?.id === user?.id)
+      )
 
       if (shouldInclude) {
         setCases(prev => prev.map(c => 
@@ -148,9 +150,11 @@ export function CaseGridView() {
     },
     onNew: (newCase) => {
       // Only add if the case belongs to the current user (based on role)
-      const shouldInclude = isAdminRole(userRole) || 
+      const shouldInclude = userRole && (
+        isAdminRole(userRole) || 
         (isPatientRole(userRole) && newCase.patient_id === user?.id) ||
         (isStaffRole(userRole) && newCase.assigned_to?.id === user?.id)
+      )
 
       if (shouldInclude) {
         setCases(prev => [newCase, ...prev])

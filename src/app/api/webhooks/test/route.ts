@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { webhookTestPayloadSchema } from '@/lib/validations/webhook'
+import { webhookPayloadSchema } from '@/lib/validations/webhooks'
 import { deliverWebhook, isRateLimited } from '@/lib/utils/webhook'
 import { createApiClient, createApiError, handleApiError } from '@/utils/supabase/api'
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate test payload
     const json = await request.json()
-    const validatedData = webhookTestPayloadSchema.parse(json)
+    const validatedData = webhookPayloadSchema.parse(json)
     
     // Prepare test payload
     const testPayload = {

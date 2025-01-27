@@ -4,8 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMessages, sendMessage } from '@/lib/actions/chat'
 import { processAIMessage } from '@/lib/actions/ai'
-import { messageQuerySchema, messageInsertSchema } from '@/lib/validations/chat'
+import { medicalMessagesInsertSchema } from '@/lib/validations/medical-messages'
 import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
+import { rawToUserIdSchema } from '@/lib/validations/shared-schemas'
+import type { Message, MessageMetadata } from '@/types/domain/chat'
 
 export async function GET(
   req: NextRequest,
@@ -16,11 +18,11 @@ export async function GET(
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    const query = messageQuerySchema.parse({
+    const query = {
       conversation_id: params.conversationId,
       page,
       limit
-    })
+    }
 
     const result = await getMessages(
       query.conversation_id,
@@ -56,12 +58,20 @@ export async function POST(
     const body = await req.json()
     const { content, role, metadata } = body
 
+    // Transform any raw IDs to branded types
+    const transformedMetadata = metadata?.type === 'handoff' 
+      ? { 
+          ...metadata,
+          providerId: rawToUserIdSchema.parse(metadata.providerId)
+        }
+      : metadata
+
     // Validate and store user message
-    const message = messageInsertSchema.parse({
+    const message = medicalMessagesInsertSchema.parse({
       conversation_id: params.conversationId,
       content,
       role: role || 'user',
-      metadata: metadata || {}
+      metadata: transformedMetadata || {}
     })
 
     const userResult = await sendMessage(
@@ -92,9 +102,17 @@ export async function POST(
           const history = await getMessages(message.conversation_id, 1, 10)
           if (!history.success || !history.data) throw new Error('Failed to get message history')
 
-          const aiResult = await processAIMessage(history.data, MEDICAL_INTAKE_PROMPT)
+          // Filter messages to only include user and assistant roles and cast types
+          const messages: Message[] = history.data
+            .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+            .map(msg => ({
+              ...msg,
+              role: msg.role as 'user' | 'assistant',
+              metadata: msg.metadata as MessageMetadata
+            }))
+          const aiResult = await processAIMessage(messages, MEDICAL_INTAKE_PROMPT)
           
-          if (!aiResult.success) throw new Error(aiResult.error)
+          if (!aiResult.success || !aiResult.data) throw new Error(aiResult.error || 'AI processing failed')
 
           // Store AI response with metadata
           await sendMessage(
@@ -102,11 +120,14 @@ export async function POST(
             message.conversation_id,
             'assistant',
             {
-              type: 'ai_processing',
+              type: 'ai_processing' as const,
               status: 'delivered',
               confidenceScore: aiResult.data.metadata?.confidenceScore,
-              collectedInfo: aiResult.data.metadata?.collectedInfo
-            }
+              collectedInfo: {
+                urgencyIndicators: [],
+                ...(aiResult.data.metadata?.extractedData || {})
+              }
+            } satisfies MessageMetadata
           )
         } catch (error) {
           console.error('AI response error:', error)

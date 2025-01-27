@@ -3,37 +3,16 @@ import type { Json } from '@/types/supabase'
 import { 
   MessageRoles, 
   HandoffStatuses, 
-  TriageDecisions,
-  type MessageMetadata as DomainMessageMetadata
+  TriageDecisions
 } from '@/types/domain/chat'
 import { MessageStatuses } from '@/types/domain/ui'
 
 // Enum schemas
-const messageRoleEnum = z.enum(MessageRoles)
-const messageStatusEnum = z.enum(MessageStatuses)
-const handoffStatusEnum = z.enum(HandoffStatuses)
-const triageDecisionEnum = z.enum(TriageDecisions)
-const conversationStatusEnum = z.enum(['active', 'archived'])
-
-// Base message schema
-export const messageSchema = z.object({
-  id: z.string(),
-  conversation_id: z.string(),
-  content: z.string(),
-  role: messageRoleEnum,
-  created_at: z.string(),
-  metadata: z.custom<Json>()
-})
-
-/**
- * Message validation schemas
- */
-export const messageInsertSchema = z.object({
-  conversation_id: z.string(),
-  content: z.string(),
-  role: messageRoleEnum.refine(role => role === 'user' || role === 'assistant'),
-  metadata: z.custom<DomainMessageMetadata>()
-})
+export const messageRoleEnum = z.enum(MessageRoles)
+export const messageStatusEnum = z.enum(MessageStatuses)
+export const handoffStatusEnum = z.enum(HandoffStatuses)
+export const triageDecisionEnum = z.enum(TriageDecisions)
+export const conversationStatusEnum = z.enum(['active', 'archived'])
 
 // Message metadata schemas
 export const aiProcessingMetadataSchema = z.object({
@@ -68,6 +47,26 @@ export const metadataSchema = z.discriminatedUnion('type', [
   standardMetadataSchema
 ])
 
+// Base message schema
+export const messageSchema = z.object({
+  id: z.string(),
+  conversation_id: z.string(),
+  content: z.string(),
+  role: messageRoleEnum,
+  created_at: z.string(),
+  metadata: metadataSchema
+})
+
+/**
+ * Message validation schemas
+ */
+export const messageInsertSchema = z.object({
+  conversation_id: z.string(),
+  content: z.string(),
+  role: messageRoleEnum.refine(role => role === 'user' || role === 'assistant'),
+  metadata: metadataSchema
+})
+
 // Conversation schemas
 export const conversationSchema = z.object({
   id: z.string(),
@@ -85,6 +84,24 @@ export const conversationSchema = z.object({
     providerId: z.string().optional(),
     handoffTimestamp: z.string().optional()
   }).optional()
+})
+
+export const conversationInsertSchema = conversationSchema.pick({
+  patient_id: true,
+  assigned_staff_id: true,
+  status: true,
+  topic: true,
+  metadata: true,
+  case_id: true,
+  can_create_case: true,
+  access: true
+}).partial({
+  assigned_staff_id: true,
+  topic: true,
+  metadata: true,
+  case_id: true,
+  can_create_case: true,
+  access: true
 })
 
 // Message state schema

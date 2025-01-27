@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/providers/auth-provider'
 import { Button } from '@/components/ui/button'
-import { CaseManagementView } from '@/components/cases/case-management-view'
+import { CaseManagementView } from '@/components/cases/shared/case-management-view'
 import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 import Link from 'next/link'
 
@@ -34,12 +34,11 @@ export function AdminDashboard() {
           </Button>
         </div>
 
-        <CaseManagementView 
+        <CaseManagementView
           isDashboard={true}
-          viewType={'admin' as const}
-          limit={5}
-          showBulkActions={true}
-          showStaffTools={true}
+          showActions={true}
+          showNotes={false}
+          basePath="/cases"
         />
       </div>
     </div>

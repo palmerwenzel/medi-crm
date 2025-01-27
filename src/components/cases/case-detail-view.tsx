@@ -64,7 +64,7 @@ export function CaseDetailView({ caseId, initialPanel }: CaseDetailViewProps) {
                 <h1 className="text-2xl font-bold">{case_.title}</h1>
                 <div className="flex items-center gap-2">
                   <CaseStatusBadge status={case_.status} />
-                  {!showChat && case_.metadata?.chat_status && (
+                  {!showChat && case_.metadata && typeof case_.metadata === 'object' && 'chat_status' in case_.metadata && (
                     <Button
                       variant="outline"
                       size="sm"

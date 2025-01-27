@@ -36,7 +36,8 @@ export async function createConversation(
     const newConversation: ConversationInsert = {
       patient_id: patientId,
       status: 'active',
-      metadata: {}
+      metadata: {},
+      access: { canAccess: 'ai' }
     }
 
     const { data, error } = await supabase
@@ -76,7 +77,10 @@ export async function sendMessage(
       conversation_id: conversationId,
       content,
       role,
-      metadata
+      metadata: {
+        ...metadata,
+        status: metadata.type === 'ai_processing' ? 'pending' : 'delivered'
+      }
     }
 
     const { data, error } = await supabase

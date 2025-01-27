@@ -23,7 +23,7 @@ import { Card } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCaseManagement } from '@/hooks/cases/use-case-management'
+import { useCaseManagement } from '../shared/hooks/use-case-management'
 import { cn } from '@/lib/utils'
 
 interface CaseQueueViewProps {

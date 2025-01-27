@@ -14,22 +14,11 @@ import { cn } from '@/lib/utils'
 import { priorityColors } from '@/lib/utils/case-formatting'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/utils/supabase/client'
-import type { CaseResponse, CasePriority, ConversationStatus } from '@/types/domain/cases'
+import type { CaseResponse, CasePriority } from '@/types/domain/cases'
+import type { CaseUIMetadata } from '@/types/domain/ui'
 
 interface CaseListItemProps {
-  case_: CaseResponse & {
-    metadata?: {
-      sla?: {
-        response_target: string
-        resolution_target: string
-        last_updated: string
-      }
-      tags?: string[]
-      internal_notes?: string
-      specialties?: string[]
-      chat_status?: ConversationStatus
-    }
-  }
+  case_: CaseResponse
   isSelected?: boolean
   onSelect?: (id: string) => void
   showNotes?: boolean
@@ -44,6 +33,26 @@ const chatStatusColors = {
 } as const
 
 const supabase = createClient()
+
+// Helper function to transform database metadata to UI metadata
+function transformMetadata(dbMetadata: any): CaseUIMetadata {
+  if (!dbMetadata) return {}
+  
+  return {
+    sla: dbMetadata.sla ? {
+      response_target: dbMetadata.sla.response_target || '',
+      resolution_target: dbMetadata.sla.resolution_target || '',
+      last_updated: dbMetadata.sla.last_updated || '',
+      sla_breached: dbMetadata.sla.sla_breached || false,
+      first_response_at: dbMetadata.sla.first_response_at || null,
+      sla_tier: dbMetadata.sla.sla_tier || ''
+    } : undefined,
+    tags: dbMetadata.tags || [],
+    internal_notes: dbMetadata.internal_notes || '',
+    specialties: dbMetadata.specialties || [],
+    chat_status: dbMetadata.chat_status || undefined
+  }
+}
 
 /**
  * Claims a case and assigns it to the current staff member
@@ -76,6 +85,8 @@ export function CaseListItem({
   className
 }: CaseListItemProps) {
   const { toast } = useToast()
+  const uiMetadata = transformMetadata(case_.metadata)
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -132,26 +143,26 @@ export function CaseListItem({
                       {case_.priority}
                     </Badge>
                   )}
-                  {case_.metadata?.chat_status && (
-                    <Badge variant="outline" className={cn(chatStatusColors[case_.metadata.chat_status as keyof typeof chatStatusColors])}>
-                      {case_.metadata.chat_status.replace('_', ' ')}
+                  {uiMetadata.chat_status && (
+                    <Badge variant="outline" className={cn(chatStatusColors[uiMetadata.chat_status as keyof typeof chatStatusColors])}>
+                      {uiMetadata.chat_status.replace('_', ' ')}
                     </Badge>
                   )}
-                  {case_.metadata?.sla && (
-                    <SLAIndicator sla={case_.metadata.sla} />
+                  {uiMetadata.sla && (
+                    <SLAIndicator sla={uiMetadata.sla} />
                   )}
-                  {case_.metadata?.specialties && case_.metadata.specialties.length > 0 && (
+                  {uiMetadata.specialties && uiMetadata.specialties.length > 0 && (
                     <div className="flex gap-1">
-                      {case_.metadata.specialties.map((specialty: string) => (
+                      {uiMetadata.specialties.map((specialty: string) => (
                         <Badge key={specialty} variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                           {specialty.replace('_', ' ')}
                         </Badge>
                       ))}
                     </div>
                   )}
-                  {case_.metadata?.tags && case_.metadata.tags.length > 0 && (
+                  {uiMetadata.tags && uiMetadata.tags.length > 0 && (
                     <div className="flex gap-1">
-                      {case_.metadata.tags.map((tag: string) => (
+                      {uiMetadata.tags.map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
                           #{tag}
                         </Badge>
@@ -180,11 +191,11 @@ export function CaseListItem({
                           size="sm"
                           className={cn(
                             "gap-2",
-                            case_.metadata?.chat_status === 'active' && "border-green-500 text-green-500 hover:bg-green-500/10"
+                            uiMetadata.chat_status === 'active' && "border-green-500 text-green-500 hover:bg-green-500/10"
                           )}
                         >
                           <MessageSquare className="h-4 w-4" />
-                          {case_.metadata?.chat_status === 'active' ? 'Active Chat' : 'View Chat'}
+                          {uiMetadata.chat_status === 'active' ? 'Active Chat' : 'View Chat'}
                         </Button>
                       </Link>
                     )}
@@ -203,9 +214,9 @@ export function CaseListItem({
                   variant="compact"
                   iconSize="sm"
                 />
-                {showNotes && case_.metadata?.internal_notes && (
+                {showNotes && uiMetadata.internal_notes && (
                   <div className="mt-2 text-sm font-medium text-foreground">
-                    Notes: {case_.metadata.internal_notes}
+                    Notes: {uiMetadata.internal_notes}
                   </div>
                 )}
               </div>

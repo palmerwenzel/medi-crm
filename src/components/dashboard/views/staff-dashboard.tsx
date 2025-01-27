@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Icons } from '@/components/ui/icons'
-import { CaseManagementView } from '@/components/cases/case-management-view'
+import { CaseManagementView } from '@/components/cases/shared/case-management-view'
 import { QuickActionsBar } from '@/components/dashboard/shared/quick-actions-bar'
 
 interface DashboardStats {
@@ -122,11 +122,11 @@ export function StaffDashboard() {
           </Button>
         </div>
 
-        <CaseManagementView 
+        <CaseManagementView
           isDashboard={true}
-          viewType={'staff' as const}
-          limit={5}
-          showStaffTools={true}
+          showActions={true}
+          showNotes={false}
+          basePath="/cases"
         />
       </div>
     </div>

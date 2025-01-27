@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import type { CaseFilters } from '@/types/filters'
+import type { CaseFilters } from '@/types/domain/cases'
 
 const STORAGE_KEY = 'caseFilters'
 

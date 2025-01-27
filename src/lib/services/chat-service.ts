@@ -318,7 +318,21 @@ export async function sendMessage(
     const response = await fetch(`/api/chat/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, role, metadata })
+      body: JSON.stringify({ 
+        content, 
+        role, 
+        metadata: {
+          type: metadata.type,
+          ...(metadata.type === 'ai_processing' ? {
+            confidenceScore: metadata.confidenceScore,
+            collectedInfo: metadata.collectedInfo
+          } : metadata.type === 'handoff' ? {
+            handoffStatus: metadata.handoffStatus,
+            providerId: metadata.providerId,
+            triageDecision: metadata.triageDecision
+          } : {})
+        }
+      })
     })
 
     if (!response.ok) {
@@ -482,6 +496,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
         status,
         topic,
         metadata,
+        access,
         messages:medical_messages(*)
       `)
       .eq('id', newConversation.id)
@@ -631,6 +646,7 @@ export async function getConversations(
         status,
         topic,
         metadata,
+        access,
         messages:medical_messages(*)
       `)
       .order('updated_at', { ascending: false })
@@ -644,24 +660,14 @@ export async function getConversations(
       })
       // Patients can only see their own conversations
       query = query.eq('patient_id', user.id)
-    } else if (userRole?.role === 'staff') {
-      logDebug('Applying staff role filter', {
+    } else if (userRole?.role === 'staff' || userRole?.role === 'admin') {
+      logDebug('Applying staff/admin role filter', {
         userId: user.id,
+        patientId,
         timestamp: new Date().toISOString()
       })
-      // Staff can see conversations they're assigned to or from their cases
-      query = query.or(`assigned_staff_id.eq.${user.id},case_id.in.(${
-        supabase
-          .from('cases')
-          .select('id')
-          .eq('assigned_to', user.id)
-          .then(({ data }) => data?.map(c => c.id).join(','))
-      })`)
-    } else if (userRole?.role === 'admin') {
-      logDebug('Admin access - no filters applied', {
-        userId: user.id,
-        timestamp: new Date().toISOString()
-      })
+      // Staff/admin can see conversations for the specified patient
+      query = query.eq('patient_id', patientId)
     } else {
       logWarning('Unknown user role - no access granted', {
         userId: user.id,
