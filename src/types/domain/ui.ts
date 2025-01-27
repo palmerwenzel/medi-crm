@@ -13,16 +13,16 @@ import type {
 } from './users'
 import type {
   Notification,
-  NotificationPreferences
+  NotificationPreference
 } from './notifications'
 import type {
   ConversationId,
   MessageRole,
   MessageMetadata,
+  Message,
   MedicalConversation,
   ChatSessionStatus
 } from './chat'
-import type { MedicalMessagesRow } from '@/lib/validations/medical-messages'
 
 /**
  * Base Props interface for UI components
@@ -30,6 +30,13 @@ import type { MedicalMessagesRow } from '@/lib/validations/medical-messages'
 export interface BaseProps {
   /** Optional className for styling */
   className?: string
+}
+
+// UI-specific conversation type
+export interface UIMedicalConversation extends MedicalConversation {
+  topic: string | null
+  updated_at: string | null
+  created_at: string
 }
 
 // Real-time presence types
@@ -48,7 +55,7 @@ export interface PresenceState {
 }
 
 // UI-specific message types
-export const MessageStatuses = ['sending', 'delivered', 'read', 'error'] as const
+export const MessageStatuses = ['pending', 'sent', 'delivered', 'read'] as const
 export type MessageStatus = (typeof MessageStatuses)[number]
 
 export type MessageState = 
@@ -56,7 +63,7 @@ export type MessageState =
   | { status: 'sent'; id: string }
   | { status: 'error'; error: string }
 
-export interface UIMessage extends Omit<MedicalMessagesRow, 'metadata'> {
+export interface UIMessage extends Omit<Message, 'metadata'> {
   conversation_id: ConversationId
   state: MessageState
   metadata: MessageMetadata & {
@@ -67,7 +74,7 @@ export interface UIMessage extends Omit<MedicalMessagesRow, 'metadata'> {
 // UI-specific chat session type
 export interface UIChatSession {
   id: ConversationId
-  messages: MedicalMessagesRow[]
+  messages: Message[]
   access: MedicalConversation['access']
   unread_count: number
   status: ChatSessionStatus
@@ -161,8 +168,8 @@ export interface NotificationListProps extends BaseProps {
 }
 
 export interface NotificationPreferencesFormProps extends BaseProps {
-  preferences: NotificationPreferences[]
-  onPreferenceChange: (preference: NotificationPreferences) => Promise<void>
+  preferences: NotificationPreference[]
+  onPreferenceChange: (preference: NotificationPreference) => Promise<void>
 }
 
 export interface NotificationBadgeProps extends BaseProps {

@@ -4,27 +4,40 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
+import type { 
+  Message, 
+  MessageRole, 
+  MessageMetadata,
+  MedicalConversation,
+  ConversationId
+} from '@/types/domain/chat'
+import type { UserId } from '@/types/domain/users'
+import type { 
+  UIMessage, 
+  MessageStatus,
+  TypingStatus,
+  PresenceState 
+} from '@/types/domain/ui'
 import { 
-  type MedicalMessage,
-  type MedicalConversation,
-  type MedicalConversationWithMessages,
-  type UIMessage,
-  type TypingStatus,
-  type MessageStatus,
-  type PresenceState,
-  type ConversationId,
-  type UserId,
-  type MessageMetadata,
   isAIProcessingMetadata,
-  isHandoffMetadata
-} from '@/types/chat'
+  isHandoffMetadata 
+} from '@/types/domain/ai'
 import { 
-  messageSchema, 
-  messageInsertSchema,
-  conversationSchema,
-  metadataSchema,
-  uiMessageSchema
-} from '@/lib/validations/chat'
+  medicalMessagesRowSchema,
+  medicalMessagesInsertSchema,
+  type MedicalMessagesRow
+} from '@/lib/validations/medical-messages'
+import { 
+  medicalConversationsRowSchema,
+  type MedicalConversationsRow
+} from '@/lib/validations/medical-conversations'
+import { 
+  uiMessageSchema,
+  uiMessageMetadataSchema,
+  messageStatusEnum
+} from '@/lib/validations/ui'
+import { messageMetadataSchema } from '@/lib/validations/message-metadata'
+import { rawToConversationIdSchema, rawToUserIdSchema } from '@/lib/validations/shared-schemas'
 
 const supabase = createClient()
 
@@ -46,14 +59,6 @@ function logWarning(context: string, data?: any) {
   console.warn(`[Chat Service] ${context}:`, 
     typeof data === 'object' ? JSON.stringify(data, null, 2) : data
   )
-}
-
-function castToConversationId(id: string): ConversationId {
-  return id as ConversationId
-}
-
-function castToUserId(id: string): UserId {
-  return id as UserId
 }
 
 /**
@@ -83,15 +88,17 @@ export function subscribeToConversation(
         try {
           logDebug('New message received', payload.new)
           // First validate as database type
-          const dbMessage = messageSchema.parse(payload.new)
+          const dbMessage = medicalMessagesRowSchema.parse(payload.new)
           // Then transform to UI message
           const message = uiMessageSchema.parse({
             ...dbMessage,
-            conversation_id: castToConversationId(dbMessage.conversation_id),
             state: { status: 'sent', id: dbMessage.id },
-            metadata: metadataSchema.parse(dbMessage.metadata)
+            metadata: {
+              ...dbMessage.metadata,
+              status: 'delivered'
+            }
           })
-          onMessage(message as UIMessage)
+          onMessage(message)
         } catch (error) {
           logError('Failed to process new message', error, payload)
         }
@@ -109,11 +116,15 @@ export function subscribeToConversation(
       (payload) => {
         try {
           logDebug('Message status update', payload.new)
-          const dbMessage = messageSchema.parse(payload.new)
-          const metadata = metadataSchema.parse(dbMessage.metadata)
+          const dbMessage = medicalMessagesRowSchema.parse(payload.new)
+          const metadata = messageMetadataSchema.parse(dbMessage.metadata || {})
+          const uiMetadata = uiMessageMetadataSchema.parse({
+            ...metadata,
+            status: 'delivered'
+          })
           onMessageStatus({ 
             messageId: dbMessage.id, 
-            status: metadata.status 
+            status: uiMetadata.status 
           })
         } catch (error) {
           logError('Failed to process message status update', error, payload)
@@ -146,7 +157,7 @@ export function subscribeToConversation(
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await channel.track({
-          user_id: castToUserId(user.id),
+          user_id: rawToUserIdSchema.parse(user.id),
           online_at: new Date().toISOString()
         })
       }
@@ -172,7 +183,7 @@ export async function sendTypingIndicator(
       payload: {
         conversationId,
         isTyping,
-        userId: user.id as UserId,
+        userId: rawToUserIdSchema.parse(user.id),
         timestamp: new Date().toISOString()
       }
     })
@@ -205,11 +216,14 @@ export async function updateMessageStatus(
 export async function sendMessage(
   content: string,
   conversationId: ConversationId,
-  role: 'system' | 'user' | 'assistant' = 'user',
-  metadata: MessageMetadata = { type: 'standard', status: 'sending' }
+  role: MessageRole = 'user',
+  metadata: MessageMetadata & { status: MessageStatus } = { 
+    type: 'standard', 
+    status: 'pending' 
+  }
 ): Promise<UIMessage> {
   // Create temporary message for optimistic update
-  const tempMessage: UIMessage = {
+  const tempMessage = uiMessageSchema.parse({
     id: crypto.randomUUID(),
     conversation_id: conversationId,
     content,
@@ -217,7 +231,7 @@ export async function sendMessage(
     created_at: new Date().toISOString(),
     metadata,
     state: { status: 'sending', tempId: crypto.randomUUID() }
-  }
+  })
 
   try {
     // Get user role and verify access
@@ -246,13 +260,13 @@ export async function sendMessage(
       (userRole?.role === 'staff' && (
         conversation.assigned_staff_id === user.id ||
         // Check case assignment
-        await supabase
+        (conversation.case_id && await supabase
           .from('cases')
           .select('id')
           .eq('id', conversation.case_id)
           .eq('assigned_to', user.id)
           .maybeSingle()
-          .then(({ data }) => !!data)
+          .then(({ data }) => !!data))
       ))
 
     if (!hasAccess) {
@@ -286,22 +300,22 @@ export async function sendMessage(
     }
 
     // Return the user message with updated state
-    return {
+    return uiMessageSchema.parse({
       ...tempMessage,
       id: data.id,
       metadata: { ...metadata, status: 'delivered' },
       state: { status: 'sent', id: data.id }
-    }
+    })
   } catch (error) {
     console.error('Failed to send message:', error)
-    return {
+    return uiMessageSchema.parse({
       ...tempMessage,
-      metadata: { ...metadata, status: 'error' },
+      metadata: { ...metadata, status: 'pending' },
       state: { 
         status: 'error', 
         error: error instanceof Error ? error.message : 'Failed to send message'
       }
-    }
+    })
   }
 }
 
@@ -327,9 +341,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
     }
 
     if (!user) {
-      logError('No authenticated user found', {
-        timestamp: new Date().toISOString()
-      })
+      logError('No authenticated user found', null)
       throw new Error('No authenticated user')
     }
 
@@ -373,7 +385,8 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
       .insert({
         patient_id: patientId,
         status: 'active',
-        metadata: {}
+        metadata: {},
+        access: { canAccess: 'ai' }
       })
       .select('*')
       .single()
@@ -395,7 +408,8 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
             data: {
               patient_id: patientId,
               status: 'active',
-              metadata: {}
+              metadata: {},
+              access: { canAccess: 'ai' }
             }
           },
           userContext: {
@@ -435,9 +449,10 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
         updated_at,
         status,
         topic,
-        metadata
+        metadata,
+        messages:medical_messages(*)
       `)
-      .eq('id', castToConversationId(newConversation.id))
+      .eq('id', newConversation.id)
       .single()
 
     if (fetchError) {
@@ -466,11 +481,9 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
       timestamp: new Date().toISOString()
     })
 
-    const parsedConversation = conversationSchema.parse({
+    const parsedConversation = medicalConversationsRowSchema.parse({
       ...fullConversation,
-      id: castToConversationId(fullConversation.id),
-      patient_id: castToUserId(fullConversation.patient_id),
-      assigned_staff_id: fullConversation.assigned_staff_id ? castToUserId(fullConversation.assigned_staff_id) : null
+      messages: fullConversation.messages || []
     })
 
     logDebug('Conversation created successfully', {
@@ -480,7 +493,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
       timestamp: new Date().toISOString()
     })
 
-    return parsedConversation as MedicalConversation
+    return parsedConversation
   } catch (error) {
     logError('Failed to create conversation', error, {
       patientId,
@@ -498,7 +511,7 @@ export async function getMessages(
   conversationId: ConversationId,
   page = 1,
   limit = 20
-): Promise<MedicalMessage[]> {
+): Promise<MedicalMessagesRow[]> {
   const response = await fetch(
     `/api/chat/${conversationId}/messages?page=${page}&limit=${limit}`,
     { method: 'GET' }
@@ -513,7 +526,7 @@ export async function getMessages(
     throw new Error(error || 'Failed to fetch messages')
   }
 
-  return data
+  return data.map((msg: unknown) => medicalMessagesRowSchema.parse(msg))
 }
 
 /**
@@ -542,7 +555,7 @@ export async function getConversations(
   page = 1,
   limit = 20,
   status?: 'active' | 'archived'
-): Promise<MedicalConversationWithMessages[]> {
+): Promise<MedicalConversationsRow[]> {
   logDebug('Fetching conversations', { 
     patientId, 
     page, 
@@ -554,16 +567,21 @@ export async function getConversations(
   try {
     // Get user role for access control logging
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
+      logWarning('No authenticated user found', null)
+      return []
+    }
+
     const { data: userRole } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user?.id)
+      .eq('id', user.id)
       .single()
 
     logDebug('User context for fetching conversations', { 
-      userId: user?.id,
+      userId: user.id,
       userRole: userRole?.role,
-      isRequestingOwnData: user?.id === patientId,
+      isRequestingOwnData: user.id === patientId,
       timestamp: new Date().toISOString()
     })
 
@@ -580,7 +598,8 @@ export async function getConversations(
         updated_at,
         status,
         topic,
-        metadata
+        metadata,
+        messages:medical_messages(*)
       `)
       .order('updated_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1)
@@ -588,32 +607,32 @@ export async function getConversations(
     // Apply filters based on role and ownership
     if (userRole?.role === 'patient') {
       logDebug('Applying patient role filter', {
-        userId: user?.id,
+        userId: user.id,
         timestamp: new Date().toISOString()
       })
       // Patients can only see their own conversations
-      query = query.eq('patient_id', user?.id)
+      query = query.eq('patient_id', user.id)
     } else if (userRole?.role === 'staff') {
       logDebug('Applying staff role filter', {
-        userId: user?.id,
+        userId: user.id,
         timestamp: new Date().toISOString()
       })
       // Staff can see conversations they're assigned to or from their cases
-      query = query.or(`assigned_staff_id.eq.${user?.id},case_id.in.(${
+      query = query.or(`assigned_staff_id.eq.${user.id},case_id.in.(${
         supabase
           .from('cases')
           .select('id')
-          .eq('assigned_to', user?.id)
+          .eq('assigned_to', user.id)
           .then(({ data }) => data?.map(c => c.id).join(','))
       })`)
     } else if (userRole?.role === 'admin') {
       logDebug('Admin access - no filters applied', {
-        userId: user?.id,
+        userId: user.id,
         timestamp: new Date().toISOString()
       })
     } else {
       logWarning('Unknown user role - no access granted', {
-        userId: user?.id,
+        userId: user.id,
         userRole: userRole?.role,
         timestamp: new Date().toISOString()
       })
@@ -660,43 +679,14 @@ export async function getConversations(
       return []
     }
 
-    // Then get messages for each conversation
-    const conversationsWithMessages = await Promise.all(
-      conversations.map(async (conv) => {
-        const { data: messages, error: messagesError } = await supabase
-          .from('medical_messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: true })
-
-        if (messagesError) {
-          logError('Error fetching messages for conversation', messagesError, { conversationId: conv.id })
-          return null
-        }
-
-        return {
-          ...conv,
-          id: castToConversationId(conv.id),
-          patient_id: castToUserId(conv.patient_id),
-          assigned_staff_id: conv.assigned_staff_id ? castToUserId(conv.assigned_staff_id) : null,
-          messages: messages || [],
-          unread_count: messages?.filter(m => m.metadata?.status !== 'read').length || 0
-        }
-      })
-    )
-
-    // Filter out any failed fetches and validate
-    const validConversations = conversationsWithMessages
-      .filter((conv): conv is NonNullable<typeof conv> => conv !== null)
+    // Parse and validate conversations
+    const validConversations = conversations
       .map(conv => {
         try {
-          const parsed = conversationSchema.parse({
+          return medicalConversationsRowSchema.parse({
             ...conv,
-            id: castToConversationId(conv.id),
-            patient_id: castToUserId(conv.patient_id),
-            assigned_staff_id: conv.assigned_staff_id ? castToUserId(conv.assigned_staff_id) : null
+            messages: conv.messages || []
           })
-          return parsed as MedicalConversationWithMessages
         } catch (error) {
           logError('Failed to validate conversation', error, {
             conversationId: conv.id,
@@ -711,8 +701,7 @@ export async function getConversations(
       totalCount: validConversations.length,
       conversations: validConversations.map(c => ({
         id: c.id,
-        messageCount: c.messages.length,
-        unreadCount: c.unread_count
+        messageCount: c.messages.length
       }))
     })
 
@@ -780,7 +769,7 @@ export async function subscribeToPresence(
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await channel.track({
-          user_id: castToUserId(user.id),
+          user_id: rawToUserIdSchema.parse(user.id),
           online_at: new Date().toISOString()
         })
       }
@@ -837,13 +826,19 @@ export async function subscribeToMessages(
 
   if (error) throw error
 
-  // Transform messages to UI format
-  const uiMessages = messages.map(msg => ({
-    ...msg,
-    conversation_id: castToConversationId(msg.conversation_id),
-    state: { status: 'sent', id: msg.id },
-    metadata: metadataSchema.parse(msg.metadata)
-  })) as UIMessage[]
+  // Transform messages to UI format with proper type handling
+  const uiMessages = messages.map(msg => {
+    const dbMessage = medicalMessagesRowSchema.parse(msg)
+    const metadata = messageMetadataSchema.parse(dbMessage.metadata || {})
+    return uiMessageSchema.parse({
+      ...dbMessage,
+      state: { status: 'sent', id: dbMessage.id },
+      metadata: {
+        ...metadata,
+        status: 'delivered'
+      }
+    })
+  })
 
   // Then set up real-time subscription
   const channel = supabase
@@ -859,12 +854,14 @@ export async function subscribeToMessages(
       (payload) => {
         try {
           logDebug('New message received', payload.new)
-          const dbMessage = messageSchema.parse(payload.new)
+          const dbMessage = medicalMessagesRowSchema.parse(payload.new)
           const message = uiMessageSchema.parse({
             ...dbMessage,
-            conversation_id: castToConversationId(dbMessage.conversation_id),
             state: { status: 'sent', id: dbMessage.id },
-            metadata: metadataSchema.parse(dbMessage.metadata)
+            metadata: {
+              ...dbMessage.metadata,
+              status: 'delivered'
+            }
           })
           uiMessages.push(message)
         } catch (error) {

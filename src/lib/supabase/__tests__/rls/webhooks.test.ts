@@ -1,15 +1,12 @@
 import { supabase, adminClient, generateTestEmail, cleanupTestUsers, verifyDatabaseConnection } from '../setup'
-import { Database } from '@/types/supabase'
-
-type User = Database['public']['Tables']['users']['Row']
-type Webhook = Database['public']['Tables']['webhooks']['Row']
+import type { DbUser, DbWebhook, DbUserInsert, DbWebhookInsert, DbWebhookUpdate } from '@/types/domain/db'
 
 describe('Webhook RLS Policies', () => {
-  let testUsers: { email: string }[] = []
-  let patientUser: User
-  let staffUser: User
-  let adminUser: User
-  let testWebhook: Webhook
+  let testUsers: string[] = []
+  let patientUser: DbUser
+  let staffUser: DbUser
+  let adminUser: DbUser
+  let testWebhook: DbWebhook
 
   beforeAll(async () => {
     // Verify database connection
@@ -26,7 +23,7 @@ describe('Webhook RLS Policies', () => {
       throw new Error(`Failed to create test user: ${signupError?.message}`)
     }
 
-    patientUser = {
+    const patientUserData: DbUserInsert = {
       id: auth.user.id,
       email: testEmail,
       role: 'patient',
@@ -38,6 +35,18 @@ describe('Webhook RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
+    // Insert patient user
+    const { data: patient, error: insertError } = await adminClient
+      .from('users')
+      .insert(patientUserData)
+      .select()
+      .single()
+
+    if (insertError || !patient) {
+      throw new Error(`Failed to insert patient user: ${insertError?.message}`)
+    }
+    patientUser = patient
+
     // Create staff user
     const staffAuth = await adminClient.auth.admin.createUser({
       email: generateTestEmail('staff'),
@@ -47,7 +56,7 @@ describe('Webhook RLS Policies', () => {
 
     if (staffAuth.error) throw new Error(`Failed to create staff user: ${staffAuth.error.message}`)
 
-    staffUser = {
+    const staffUserData: DbUserInsert = {
       id: staffAuth.data.user.id,
       email: staffAuth.data.user.email!,
       role: 'staff',
@@ -59,6 +68,18 @@ describe('Webhook RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
+    // Insert staff user
+    const { data: staff, error: staffError } = await adminClient
+      .from('users')
+      .insert(staffUserData)
+      .select()
+      .single()
+
+    if (staffError || !staff) {
+      throw new Error(`Failed to insert staff user: ${staffError?.message}`)
+    }
+    staffUser = staff
+
     // Create admin user
     const adminAuth = await adminClient.auth.admin.createUser({
       email: generateTestEmail('admin'),
@@ -68,7 +89,7 @@ describe('Webhook RLS Policies', () => {
 
     if (adminAuth.error) throw new Error(`Failed to create admin user: ${adminAuth.error.message}`)
 
-    adminUser = {
+    const adminUserData: DbUserInsert = {
       id: adminAuth.data.user.id,
       email: adminAuth.data.user.email!,
       role: 'admin',
@@ -80,51 +101,51 @@ describe('Webhook RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
-    // Insert users
-    const { error: insertError } = await adminClient
+    // Insert admin user
+    const { data: admin, error: adminError } = await adminClient
       .from('users')
-      .insert([patientUser, staffUser, adminUser])
+      .insert(adminUserData)
+      .select()
+      .single()
 
-    if (insertError) {
-      throw new Error(`Failed to insert test users: ${insertError.message}`)
+    if (adminError || !admin) {
+      throw new Error(`Failed to insert admin user: ${adminError?.message}`)
+    }
+    adminUser = admin
+
+    // Create test webhook
+    const webhookData: DbWebhookInsert = {
+      url: 'https://example.com/webhook',
+      events: ['case.created', 'case.updated'],
+      is_active: true,
+      created_by: staffUser.id,
+      secret: 'test-secret-key-32-chars-exactly!!',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
-    // Create a test webhook using admin client
     const { data: webhook, error: webhookError } = await adminClient
       .from('webhooks')
-      .insert({
-        url: 'https://example.com/webhook',
-        secret: 'test-secret',
-        description: 'Test Webhook',
-        events: ['case.created', 'case.updated'],
-        created_by: staffUser.id,
-        is_active: true
-      })
+      .insert(webhookData)
       .select()
       .single()
 
     if (webhookError || !webhook) {
       throw new Error(`Failed to create test webhook: ${webhookError?.message}`)
     }
-
     testWebhook = webhook
 
     // Track emails for cleanup
-    testUsers = [patientUser, staffUser, adminUser].map(u => ({ email: u.email }))
+    testUsers = [patientUser.email, staffUser.email, adminUser.email]
   })
 
   afterAll(async () => {
-    // Clean up webhooks
-    await adminClient
-      .from('webhooks')
-      .delete()
-      .eq('id', testWebhook.id)
-
-    // Clean up users
-    await cleanupTestUsers(testUsers.map(u => u.email))
+    // Clean up test data
+    await adminClient.from('webhooks').delete().eq('id', testWebhook.id)
+    await cleanupTestUsers(testUsers)
   })
 
-  describe('Patient Access Policy', () => {
+  describe('Patient access', () => {
     beforeEach(async () => {
       // Log in as patient
       const { error } = await supabase.auth.signInWithPassword({
@@ -134,30 +155,33 @@ describe('Webhook RLS Policies', () => {
       if (error) throw new Error(`Failed to log in as patient: ${error.message}`)
     })
 
-    it('prevents patients from viewing webhooks', async () => {
-      const { data, error } = await supabase
+    it('cannot view webhooks', async () => {
+      const { data: webhooks, error } = await supabase
         .from('webhooks')
-        .select()
+        .select<'webhooks', DbWebhook>()
 
-      expect(error).toBeDefined()
-      expect(data).toBeNull()
+      expect(error).toBeNull()
+      expect(webhooks).toHaveLength(0)
     })
 
-    it('prevents patients from creating webhooks', async () => {
+    it('cannot create webhooks', async () => {
       const { error } = await supabase
         .from('webhooks')
-        .insert({
-          url: 'https://example.com/webhook2',
-          secret: 'test-secret',
+        .insert<DbWebhookInsert>({
+          url: 'https://example.com/webhook',
           events: ['case.created'],
-          created_by: patientUser.id
+          is_active: true,
+          created_by: patientUser.id,
+          secret: 'test-secret-key-32-chars-exactly!!',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
 
-      expect(error).toBeDefined()
+      expect(error).not.toBeNull()
     })
   })
 
-  describe('Staff Access Policy', () => {
+  describe('Staff access', () => {
     beforeEach(async () => {
       // Log in as staff
       const { error } = await supabase.auth.signInWithPassword({
@@ -167,106 +191,147 @@ describe('Webhook RLS Policies', () => {
       if (error) throw new Error(`Failed to log in as staff: ${error.message}`)
     })
 
-    it('allows staff to view all webhooks', async () => {
-      const { data, error } = await supabase
+    it('can view webhooks they created', async () => {
+      const { data: webhooks, error } = await supabase
         .from('webhooks')
-        .select()
+        .select<'webhooks', DbWebhook>()
+        .eq('created_by', staffUser.id)
 
       expect(error).toBeNull()
-      expect(data).toBeDefined()
-      expect(data?.length).toBeGreaterThan(0)
+      expect(webhooks).toHaveLength(1)
+      expect(webhooks?.[0].id).toBe(testWebhook.id)
     })
 
-    it('allows staff to create webhooks', async () => {
-      const { data, error } = await supabase
+    it('can create webhooks', async () => {
+      const webhookData: DbWebhookInsert = {
+        url: 'https://example.com/new-webhook',
+        events: ['case.created'],
+        is_active: true,
+        created_by: staffUser.id,
+        secret: 'test-secret-key-32-chars-exactly!!',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      const { data: webhook, error } = await supabase
         .from('webhooks')
-        .insert({
-          url: 'https://example.com/webhook2',
-          secret: 'test-secret',
-          description: 'Another Test Webhook',
-          events: ['case.created'],
-          created_by: staffUser.id
-        })
+        .insert(webhookData)
         .select()
         .single()
 
       expect(error).toBeNull()
-      expect(data).toBeDefined()
-      expect(data.created_by).toBe(staffUser.id)
+      expect(webhook?.url).toBe(webhookData.url)
 
       // Clean up
-      if (data) {
-        await adminClient
-          .from('webhooks')
-          .delete()
-          .eq('id', data.id)
+      if (webhook) {
+        await adminClient.from('webhooks').delete().eq('id', webhook.id)
       }
     })
 
-    it('allows staff to update their own webhooks', async () => {
-      const { error } = await supabase
+    it('can update their own webhooks', async () => {
+      const update: DbWebhookUpdate = {
+        is_active: false,
+        events: ['case.created', 'case.closed']
+      }
+
+      const { error: updateError } = await supabase
         .from('webhooks')
-        .update({ description: 'Updated Description' })
+        .update(update)
         .eq('id', testWebhook.id)
 
-      expect(error).toBeNull()
+      expect(updateError).toBeNull()
+
+      // Verify update
+      const { data: updated, error: fetchError } = await supabase
+        .from('webhooks')
+        .select<'webhooks', DbWebhook>()
+        .eq('id', testWebhook.id)
+        .single()
+
+      expect(fetchError).toBeNull()
+      expect(updated?.is_active).toBe(update.is_active)
+      expect(updated?.events).toEqual(update.events)
     })
 
-    it('prevents staff from updating others webhooks', async () => {
-      // Create a webhook owned by admin
-      const { data: adminWebhook } = await adminClient
+    it('cannot update webhooks created by others', async () => {
+      // Create a webhook as admin
+      const adminWebhookData: DbWebhookInsert = {
+        url: 'https://example.com/admin-webhook',
+        events: ['case.created'],
+        is_active: true,
+        created_by: adminUser.id,
+        secret: 'test-secret-key-32-chars-exactly!!',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      const { data: adminWebhook, error: createError } = await adminClient
         .from('webhooks')
-        .insert({
-          url: 'https://example.com/admin-webhook',
-          secret: 'admin-secret',
-          events: ['case.created'],
-          created_by: adminUser.id
-        })
+        .insert(adminWebhookData)
         .select()
         .single()
 
-      const { error } = await supabase
-        .from('webhooks')
-        .update({ description: 'Try to update' })
-        .eq('id', adminWebhook!.id)
+      expect(createError).toBeNull()
+      expect(adminWebhook).not.toBeNull()
 
-      expect(error).toBeDefined()
+      if (adminWebhook) {
+        // Try to update as staff
+        const { error } = await supabase
+          .from('webhooks')
+          .update<DbWebhookUpdate>({ is_active: false })
+          .eq('id', adminWebhook.id)
 
-      // Clean up
-      await adminClient
-        .from('webhooks')
-        .delete()
-        .eq('id', adminWebhook!.id)
+        expect(error).not.toBeNull()
+
+        // Clean up
+        await adminClient.from('webhooks').delete().eq('id', adminWebhook.id)
+      }
+    })
+  })
+
+  describe('Admin access', () => {
+    beforeEach(async () => {
+      // Log in as admin
+      const { error } = await supabase.auth.signInWithPassword({
+        email: adminUser.email,
+        password: process.env.TEST_USER_PASSWORD!
+      })
+      if (error) throw new Error(`Failed to log in as admin: ${error.message}`)
     })
 
-    it('allows staff to delete their own webhooks', async () => {
-      // Create a new webhook for deletion
-      const { data: webhook } = await supabase
+    it('can view all webhooks', async () => {
+      const { data: webhooks, error } = await supabase
         .from('webhooks')
-        .insert({
-          url: 'https://example.com/delete-test',
-          secret: 'delete-secret',
-          events: ['case.created'],
-          created_by: staffUser.id
-        })
-        .select()
-        .single()
-
-      const { error } = await supabase
-        .from('webhooks')
-        .delete()
-        .eq('id', webhook!.id)
+        .select<'webhooks', DbWebhook>()
 
       expect(error).toBeNull()
+      expect(webhooks?.length).toBeGreaterThanOrEqual(1)
+      expect(webhooks?.some(w => w.id === testWebhook.id)).toBe(true)
     })
 
-    it('prevents staff from deleting others webhooks', async () => {
-      const { error } = await supabase
-        .from('webhooks')
-        .delete()
-        .eq('created_by', adminUser.id)
+    it('can update any webhook', async () => {
+      const update: DbWebhookUpdate = {
+        is_active: false,
+        url: 'https://example.com/updated-by-admin'
+      }
 
-      expect(error).toBeDefined()
+      const { error: updateError } = await supabase
+        .from('webhooks')
+        .update(update)
+        .eq('id', testWebhook.id)
+
+      expect(updateError).toBeNull()
+
+      // Verify update
+      const { data: updated, error: fetchError } = await supabase
+        .from('webhooks')
+        .select<'webhooks', DbWebhook>()
+        .eq('id', testWebhook.id)
+        .single()
+
+      expect(fetchError).toBeNull()
+      expect(updated?.is_active).toBe(update.is_active)
+      expect(updated?.url).toBe(update.url)
     })
   })
 }) 

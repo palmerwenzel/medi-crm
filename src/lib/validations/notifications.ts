@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { DbNotification, DbNotificationInsert, DbNotificationUpdate } from '@/types/domain/db'
 import {
   notificationPriorityEnum,
   notificationTypeEnum
@@ -20,37 +21,39 @@ export const notificationMetadataSchema = z.object({
     reason: z.string(),
     urgency: z.string()
   }).optional()
-})
+}).nullable()
 
 export type NotificationMetadata = z.infer<typeof notificationMetadataSchema>
 
 export const notificationsRowSchema = z.object({
   content: z.string(),
-  created_at: z.string().nullable(),
+  created_at: z.string(),
   id: z.string(),
-  metadata: notificationMetadataSchema.nullable(),
+  metadata: notificationMetadataSchema,
   priority: notificationPriorityEnum,
   read_at: z.string().nullable(),
   title: z.string(),
   type: notificationTypeEnum,
+  updated_at: z.string(),
   user_id: z.string(),
-})
+}) satisfies z.ZodType<DbNotification>
 
 export type NotificationsRow = z.infer<typeof notificationsRowSchema>
 
 export const notificationsInsertSchema = z.object({
   content: z.string(),
-  created_at: z.string().nullable().optional(),
+  created_at: z.string().optional(),
   id: z.string().optional(),
-  metadata: notificationMetadataSchema.nullable().optional(),
-  priority: notificationPriorityEnum.optional(),
+  metadata: notificationMetadataSchema.optional(),
+  priority: notificationPriorityEnum,
   read_at: z.string().nullable().optional(),
   title: z.string(),
   type: notificationTypeEnum,
+  updated_at: z.string().optional(),
   user_id: z.string(),
-})
+}) satisfies z.ZodType<DbNotificationInsert>
 
 export type NotificationsInsert = z.infer<typeof notificationsInsertSchema>
 
-export const notificationsUpdateSchema = notificationsInsertSchema.partial()
+export const notificationsUpdateSchema = notificationsInsertSchema.partial() satisfies z.ZodType<DbNotificationUpdate>
 export type NotificationsUpdate = z.infer<typeof notificationsUpdateSchema>

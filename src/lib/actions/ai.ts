@@ -1,7 +1,7 @@
 'use server'
 
 import OpenAI from 'openai'
-import { type Message } from '@/types/chat'
+import { type Message } from '@/types/domain/chat'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY

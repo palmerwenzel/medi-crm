@@ -2,36 +2,36 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
-import {
-  type MedicalMessage,
-  type UIMessage,
-  type TypingStatus,
-  type MessageStatus,
-  type PresenceState,
-  type MedicalConversation,
-  type MedicalConversationWithMessages,
-  type ChatAccess,
-  type MessageInsert,
-  type TriageDecision,
+import type {
   ConversationId,
-  UserId
-} from '@/types/chat'
+  ChatAccess,
+  MessageInsert,
+  TriageDecision
+} from '@/types/domain/chat'
+import type { UserId } from '@/types/domain/users'
+import type {
+  UIMessage,
+  MessageStatus,
+  TypingStatus,
+  PresenceState,
+  UIMedicalConversation
+} from '@/types/domain/ui'
 import {
   subscribeToConversation,
   sendMessage,
   sendTypingIndicator,
   updateMessageStatus,
-  getMessages,
   getConversations,
   createConversation,
   updateConversationStatus,
-  deleteConversation
+  deleteConversation,
+  subscribeToMessages,
+  subscribeToTypingIndicators,
+  subscribeToPresence
 } from '@/lib/services/chat-service'
 import { useAuth } from '@/providers/auth-provider'
-import { LLMController } from '@/lib/ai/llm-controller'
 import { createClient } from '@/utils/supabase/client'
-import { processAIMessage, makeTriageDecision } from '@/lib/actions/ai'
+import type { DbDepartment } from '@/types/domain/db'
 
 interface UseChatOptions {
   conversationId?: string
@@ -59,6 +59,38 @@ function logWarning(context: string, data?: any) {
   )
 }
 
+// Update the handoff message content based on triage decision
+function getHandoffMessage(triageDecision: TriageDecision): string {
+  switch (triageDecision) {
+    case 'EMERGENCY':
+      return 'Based on our conversation, this appears to be an emergency situation. I recommend seeking immediate medical attention.';
+    case 'URGENT':
+      return 'Based on our conversation, this requires urgent medical attention. While not an immediate emergency, you should be seen by a healthcare provider soon.';
+    case 'NON_URGENT':
+      return 'Based on our conversation, I recommend speaking with a medical provider. They will review your information and assist you further.';
+    case 'SELF_CARE':
+      return 'Based on our conversation, this can likely be managed with self-care measures. However, I will connect you with a provider for guidance.';
+    default:
+      return 'Based on our conversation, I recommend speaking with a medical provider. They will review your information and assist you further.';
+  }
+}
+
+// Update the department mapping based on triage decision
+function getDepartment(triageDecision: TriageDecision): DbDepartment {
+  switch (triageDecision) {
+    case 'EMERGENCY':
+      return 'emergency';
+    case 'URGENT':
+      return 'primary_care';
+    case 'NON_URGENT':
+      return 'primary_care';
+    case 'SELF_CARE':
+      return 'primary_care';
+    default:
+      return 'primary_care';
+  }
+}
+
 export function useChat({ 
   conversationId, 
   patientId,
@@ -68,7 +100,7 @@ export function useChat({
   const [messages, setMessages] = useState<UIMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [conversations, setConversations] = useState<MedicalConversationWithMessages[]>([])
+  const [conversations, setConversations] = useState<UIMedicalConversation[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingStatus>>(new Map())
   const [presenceState, setPresenceState] = useState<PresenceState>({})
@@ -77,15 +109,7 @@ export function useChat({
   })
   const channelRef = useRef<RealtimeChannel | null>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const llmController = useRef<LLMController | null>(null)
   const supabase = createClient()
-
-  // Initialize LLM controller if needed
-  useEffect(() => {
-    if (!llmController.current) {
-      llmController.current = new LLMController()
-    }
-  }, [])
 
   // Log initial state
   useEffect(() => {
@@ -111,10 +135,10 @@ export function useChat({
           let access: ChatAccess
           if (userRole === 'admin') {
             access = { canAccess: 'both' }
-          } else if (userRole === 'staff') {
+          } else if (userRole === 'staff' && user?.id) {
             access = { 
               canAccess: 'provider',
-              providerId: user?.id as UserId
+              providerId: user.id as UserId
             }
           } else if (userRole === 'patient') {
             access = { canAccess: 'both' }
@@ -163,7 +187,7 @@ export function useChat({
 
         // Check if staff has access through case assignment
         let hasStaffAccess = false
-        if (conversation.case_id && userRole === 'staff') {
+        if (conversation.case_id && userRole === 'staff' && user?.id) {
           const { data: case_, error: caseError } = await supabase
             .from('cases')
             .select('assigned_to')
@@ -175,7 +199,7 @@ export function useChat({
               caseId: conversation.case_id 
             })
           } else {
-            hasStaffAccess = case_?.assigned_to === user?.id
+            hasStaffAccess = case_?.assigned_to === user.id
             logDebug('Checked staff case access', { 
               hasAccess: hasStaffAccess,
               caseId: conversation.case_id,
@@ -191,10 +215,10 @@ export function useChat({
           access = { canAccess: 'both' }
         } else if (userRole === 'admin') {
           access = { canAccess: 'both' }
-        } else if (userRole === 'staff' && (conversation.assigned_staff_id === user?.id || hasStaffAccess)) {
+        } else if (userRole === 'staff' && user?.id && (conversation.assigned_staff_id === user.id || hasStaffAccess)) {
           access = { 
             canAccess: 'provider',
-            providerId: user?.id as UserId
+            providerId: user.id as UserId
           }
         } else if (conversation.can_create_case) {
           // If no specific access and case can be created, default to AI
@@ -266,7 +290,7 @@ export function useChat({
               access: c.access
             }))
           })
-          setConversations(data)
+          setConversations(data as unknown as UIMedicalConversation[])
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to load conversations')
@@ -308,7 +332,7 @@ export function useChat({
       setIsLoading(true)
       try {
         logDebug('Loading messages for conversation', { conversationId })
-        const { data: messages, unsubscribe: unsub } = await subscribeToMessages(conversationId)
+        const { data: messages, unsubscribe: unsub } = await subscribeToMessages(conversationId as ConversationId)
         unsubscribe = unsub
 
         if (mounted && Array.isArray(messages)) {
@@ -360,7 +384,7 @@ export function useChat({
       try {
         logDebug('Subscribing to typing indicators', { conversationId })
         const { unsubscribe: unsub } = await subscribeToTypingIndicators(
-          conversationId,
+          conversationId as ConversationId,
           (typingStatus: TypingStatus) => {
             if (mounted) {
               logDebug('Received typing update', typingStatus)
@@ -398,7 +422,7 @@ export function useChat({
       try {
         logDebug('Subscribing to presence updates', { conversationId })
         const { unsubscribe: unsub } = await subscribeToPresence(
-          conversationId,
+          conversationId as ConversationId,
           (presence: PresenceState) => {
             if (mounted) {
               logDebug('Received presence update', presence)
@@ -437,11 +461,7 @@ export function useChat({
       conversationId as ConversationId,
       // New message handler
       (message) => {
-        setMessages(prev => [...prev, {
-          ...message,
-          state: { status: 'sent', id: message.id },
-          metadata: { status: 'delivered', type: 'standard' }
-        }])
+        setMessages(prev => [...prev, message])
       },
       // Typing indicator handler
       (status) => {
@@ -503,14 +523,14 @@ export function useChat({
         role,
         requireAI ? {
           type: 'ai_processing',
-          status: 'sending',
+          status: 'pending',
           confidenceScore: 0,
           collectedInfo: {
             urgencyIndicators: []
           }
         } : {
           type: 'standard',
-          status: 'sending'
+          status: 'pending'
         }
       )
 
@@ -544,13 +564,11 @@ export function useChat({
       // Send handoff message
       const handoffMessage: MessageInsert = {
         conversation_id: conversationId,
-        content: `Based on our conversation, I recommend speaking with a medical provider. ${
-          triageDecision === 'EMERGENCY' ? 'This appears to be urgent.' : 
-          'They will review your information and assist you further.'
-        }`,
+        content: getHandoffMessage(triageDecision),
         role: 'assistant',
         metadata: {
-          handoffStatus: 'initiated',
+          type: 'handoff',
+          handoffStatus: 'pending',
           triageDecision
         }
       }
@@ -566,7 +584,7 @@ export function useChat({
         .from('users')
         .select('id, department')
         .eq('role', 'staff')
-        .eq('department', triageDecision === 'EMERGENCY' ? 'emergency' : 'triage')
+        .eq('department', getDepartment(triageDecision))
 
       // Send notifications to available staff
       if (staffMembers?.length) {
@@ -574,19 +592,19 @@ export function useChat({
           await supabase.rpc('send_notification', {
             p_user_id: staff.id,
             p_type: 'handoff_request',
-            p_title: triageDecision === 'EMERGENCY' ? 'Urgent: New patient requires immediate attention' : 'New patient requires review',
+            p_title: 'New patient requires provider review',
             p_content: 'AI has completed initial assessment and recommends provider review.',
             p_metadata: {
               handoff: {
                 from_ai: true,
                 reason: triageDecision,
-                urgency: triageDecision === 'EMERGENCY' ? 'high' : 'medium'
+                urgency: 'medium'
               },
               conversation: {
                 id: conversationId
               }
             },
-            p_priority: triageDecision === 'EMERGENCY' ? 'urgent' : 'high'
+            p_priority: 'high'
           })
         }
       }
@@ -595,7 +613,7 @@ export function useChat({
       setChatAccess(prev => ({
         ...prev,
         canAccess: 'both'
-      }))
+      } as ChatAccess))
     } catch (err) {
       console.error('Error handling handoff:', err)
     }
@@ -638,7 +656,7 @@ export function useChat({
     try {
       const conversation = await createConversation(patientId as UserId)
       if (conversation) {
-        setConversations(prev => [...prev, { ...conversation, messages: [], status: 'active' } as MedicalConversationWithMessages])
+        setConversations(prev => [...prev, conversation as unknown as UIMedicalConversation])
       }
       return conversation
     } catch (err) {

@@ -11,10 +11,11 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals'
 import { GET, POST } from '../route'
 import { GET as GET_SINGLE, PATCH } from '../[id]/route'
 import { createClient } from '@/utils/supabase/client'
-import { Database } from '@/lib/database.types'
+import type { Database } from '@/types/supabase'
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { mockJson } from './test-utils'
+import type { DbCase, DbCaseInsert } from '@/types/domain/db'
 
 // Mock dependencies
 jest.mock('@/lib/api-client')
@@ -41,10 +42,10 @@ jest.mock('next/server', () => ({
 type MockUser = {
   id: string
   email: string
-  app_metadata: { role: 'patient' | 'staff' | 'admin' }
+  app_metadata: { role: DbUserRole }
 }
 
-type MockCase = Database['public']['Tables']['cases']['Row'] & {
+type MockCase = DbCase & {
   patient?: { first_name: string | null; last_name: string | null }
   assigned_to?: { first_name: string | null; last_name: string | null } | null
 }
@@ -86,6 +87,7 @@ type MockSupabaseQueryBuilder = {
   update: jest.Mock
 }
 
+// Still need Database type for SupabaseClient generic
 type MockSupabaseClient = DeepMockProxy<SupabaseClient<Database>>
 
 describe('Cases API Routes', () => {

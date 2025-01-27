@@ -8,9 +8,6 @@
 // Re-export all domain types (use this for comprehensive imports)
 export * from './domain'
 
-// Re-export database types
-export type { Database } from './supabase'
-
 /**
  * Selective exports by domain
  * These are commonly used types that are exported directly for convenience
@@ -120,7 +117,7 @@ export type {
   NotificationType,
   NotificationPriority,
   NotificationChannel,
-  NotificationPreferences
+  NotificationPreference
 } from './domain/notifications'
 
 /**

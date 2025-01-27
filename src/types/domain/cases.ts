@@ -1,13 +1,77 @@
-import type { CasesRow, CasesInsert, CasesUpdate } from '@/lib/validations/cases'
-import type { StaffSpecialty } from './users'
 import type { 
   DbCase,
   DbCaseStatus,
   DbCasePriority,
   DbCaseCategory,
   DbDepartment,
-  DbConversationStatus
+  DbConversationStatus,
+  DbCaseNote,
+  DbCaseNoteInsert,
+  DbCaseNoteUpdate,
+  DbCaseHistory,
+  DbCaseHistoryInsert,
+  DbCaseHistoryUpdate,
+  DbCaseActivityType
 } from './db'
+import type { StaffSpecialty } from './users'
+import type { Json } from '../supabase'
+
+// Base case types (source of truth)
+export interface Case extends DbCase {
+  attachments: Json | null
+  metadata: Json | null
+}
+
+// Case response type (with joined fields)
+export interface CaseResponse {
+  id: string
+  assigned_to: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    role: string
+    specialty: string | null
+  } | null
+  attachments: Json | null
+  category: CaseCategory
+  created_at: string
+  department: CaseDepartment | null
+  description: string
+  internal_notes: string | null
+  metadata: Json | null
+  patient: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+  } | null
+  patient_id: string
+  priority: CasePriority
+  status: CaseStatus
+  title: string
+  updated_at: string
+}
+
+// Case notes types
+export interface CaseNote extends DbCaseNote {}
+export type CaseNoteInsert = DbCaseNoteInsert
+export type CaseNoteUpdate = DbCaseNoteUpdate
+
+// Case history types
+export interface CaseHistory extends DbCaseHistory {}
+export type CaseHistoryInsert = DbCaseHistoryInsert
+export type CaseHistoryUpdate = DbCaseHistoryUpdate
+export type CaseActivityType = DbCaseActivityType
+
+export type CaseInsert = Partial<Case> & {
+  category: CaseCategory
+  description: string
+  patient_id: string
+  priority: CasePriority
+  status: CaseStatus
+  title: string
+}
+
+export type CaseUpdate = Partial<CaseInsert>
 
 // Shared enum types
 export type CaseStatus = DbCaseStatus
@@ -48,8 +112,8 @@ export interface CaseManagementOptions {
 }
 
 export interface CaseManagementReturn {
-  cases: CasesRow[]
-  filteredCases: CasesRow[]
+  cases: CaseResponse[]
+  filteredCases: CaseResponse[]
   selectedCases: string[]
   isLoading: boolean
   hasMore: boolean
@@ -81,4 +145,26 @@ export interface CaseFilters {
     from?: Date
     to?: Date
   }
-} 
+}
+
+export interface CaseQueryParams {
+  limit?: number
+  offset?: number
+  sort_by?: CaseSortField
+  sort_order?: 'asc' | 'desc'
+  status?: CaseStatus
+  priority?: CasePriority
+  category?: CaseCategory
+  department?: CaseDepartment
+  assigned_to?: string
+  search?: string
+}
+
+export interface PaginatedCaseResponse {
+  cases: CaseResponse[]
+  total: number
+  hasMore: boolean
+  nextOffset?: number
+}
+
+export type CreateCaseInput = CaseInsert 

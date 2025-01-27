@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { UIMessage } from '@/types/chat'
+import { UIMessage } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { Check, CheckCheck } from 'lucide-react'

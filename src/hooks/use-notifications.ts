@@ -3,8 +3,9 @@ import { useAuth } from '@/providers/auth-provider'
 import {
   type Notification,
   type NotificationType,
-  type NotificationChannel
-} from '@/types/notifications'
+  type NotificationChannel,
+  type NotificationMetadata
+} from '@/types/domain/notifications'
 import {
   getNotifications,
   getNotificationPreferences,
@@ -45,10 +46,16 @@ export function useNotifications({
     async function loadNotifications() {
       try {
         setIsLoading(true)
-        const data = await getNotifications({ unreadOnly, limit, offset, type })
+        const rawData = await getNotifications({ unreadOnly, limit, offset, type })
         if (mounted) {
-          setNotifications(prev => [...prev, ...data])
-          setHasMore(data.length === limit)
+          // Transform raw data to ensure metadata is properly typed
+          const typedData = rawData.map(item => ({
+            ...item,
+            metadata: item.metadata as NotificationMetadata
+          })) satisfies Notification[]
+          
+          setNotifications(prev => [...prev, ...typedData])
+          setHasMore(rawData.length === limit)
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to load notifications')

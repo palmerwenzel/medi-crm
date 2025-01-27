@@ -1,57 +1,174 @@
-import { ChatSession, MessageMetadata, TriageDecision, UIMessage } from '@/types/chat';
-import { LLMController } from './llm-controller';
+import { ChatSession, MessageMetadata, TriageDecision, ChatAccess } from '@/types/domain/chat';
+import { UIMessage, MessageStatus } from '@/types/domain/ui';
+import { StaffMember, UserId } from '@/types/domain/users';
+import { processMessage } from './llm-controller';
+import { createClient } from '@/utils/supabase/client';
 
 export class ChatController {
   private session: ChatSession;
-  private llm: LLMController;
+  private supabase = createClient();
 
   constructor(session: ChatSession) {
     this.session = session;
-    this.llm = new LLMController();
   }
 
   async processMessage(message: UIMessage): Promise<UIMessage> {
-    // Process message through LLM
-    const llmResponse = await this.llm.processMessage(
-      message.content,
-      this.session.messageCount
-    );
+    try {
+      // Process message through LLM
+      const llmResponse = await processMessage({
+        content: message.content,
+        messageCount: this.session.messageCount,
+        messageHistory: this.session.messages.map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      });
 
-    // Update metadata with LLM response
-    const metadata: MessageMetadata = {
-      status: 'delivered',
-      ...llmResponse.metadata
-    };
+      if (!llmResponse?.metadata) {
+        throw new Error('LLM response missing metadata');
+      }
 
-    // Handle handoff if decision was made
-    if (metadata.triageDecision && metadata.triageDecision !== 'CONTINUE_GATHERING') {
-      await this.initiateHandoff(metadata.triageDecision);
+      // Create base metadata
+      const baseMetadata: MessageMetadata = llmResponse.metadata;
+
+      // Create UI message metadata by adding status
+      const metadata: MessageMetadata & { status: MessageStatus } = {
+        ...baseMetadata,
+        status: 'delivered'
+      };
+
+      // Handle handoff if decision was made
+      if (
+        baseMetadata.type === 'handoff' && 
+        baseMetadata.triageDecision
+      ) {
+        await this.initiateHandoff(baseMetadata.triageDecision);
+      }
+
+      // Generate response message
+      return {
+        id: crypto.randomUUID(),
+        conversation_id: this.session.id,
+        content: llmResponse.message,
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        state: { status: 'sent', id: crypto.randomUUID() },
+        metadata
+      };
+    } catch (error) {
+      console.error('Failed to process message:', error);
+      
+      // Return error message with appropriate metadata
+      return {
+        id: crypto.randomUUID(),
+        conversation_id: this.session.id,
+        content: 'I apologize, but I encountered an error processing your message. Please try again.',
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        state: { status: 'error', error: error instanceof Error ? error.message : 'Unknown error' },
+        metadata: {
+          type: 'standard',
+          status: 'delivered'
+        }
+      };
     }
-
-    // Generate response message
-    return {
-      id: crypto.randomUUID(),
-      conversation_id: this.session.id,
-      content: llmResponse.message,
-      role: 'assistant',
-      created_at: new Date().toISOString(),
-      state: { status: 'sent', id: crypto.randomUUID() },
-      metadata
-    };
   }
 
   private async initiateHandoff(decision: TriageDecision) {
-    // Update session access and status
-    this.session.access = {
-      canAccess: 'provider',
-      handoffTimestamp: new Date()
-    };
-    
-    this.session.status = 'waiting_provider';
-    
-    // TODO: Implement provider notification system
-    // - Update database with handoff status
-    // - Notify relevant providers based on decision
-    // - Generate and store handoff summary
+    try {
+      // Find available staff based on triage decision
+      const { data: staff, error: staffError } = await this.supabase
+        .from('users')
+        .select('id, specialty, department')
+        .eq('role', 'staff')
+        .eq('status', 'active')
+        .order('last_active', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (staffError || !staff?.id) {
+        throw new Error(staffError?.message || 'No available staff found');
+      }
+
+      // Update session access with selected provider
+      const newAccess: ChatAccess = {
+        canAccess: 'provider',
+        providerId: staff.id as UserId
+      };
+      
+      this.session.access = newAccess;
+      this.session.status = 'waiting_provider';
+
+      // Send notification to selected provider
+      const { error: notifyError } = await this.supabase.rpc('send_notification', {
+        p_user_id: staff.id,
+        p_type: 'handoff_request',
+        p_title: this.getHandoffTitle(decision),
+        p_content: 'AI has completed initial assessment and recommends provider review.',
+        p_metadata: {
+          handoff: {
+            from_ai: true,
+            reason: decision,
+            urgency: this.getHandoffUrgency(decision)
+          },
+          conversation: {
+            id: this.session.id
+          }
+        },
+        p_priority: this.getHandoffPriority(decision)
+      });
+
+      if (notifyError) {
+        throw new Error(`Failed to notify provider: ${notifyError.message}`);
+      }
+    } catch (error) {
+      console.error('Failed to initiate handoff:', error);
+      throw error;
+    }
+  }
+
+  private getHandoffTitle(decision: TriageDecision): string {
+    switch (decision) {
+      case 'EMERGENCY':
+        return 'Urgent: New patient requires immediate attention';
+      case 'URGENT':
+        return 'High Priority: New patient requires prompt attention';
+      case 'NON_URGENT':
+        return 'New patient requires review';
+      case 'SELF_CARE':
+        return 'New patient seeking guidance';
+      default:
+        return 'New patient requires review';
+    }
+  }
+
+  private getHandoffUrgency(decision: TriageDecision): 'high' | 'medium' | 'low' {
+    switch (decision) {
+      case 'EMERGENCY':
+        return 'high';
+      case 'URGENT':
+        return 'high';
+      case 'NON_URGENT':
+        return 'medium';
+      case 'SELF_CARE':
+        return 'low';
+      default:
+        return 'medium';
+    }
+  }
+
+  private getHandoffPriority(decision: TriageDecision): 'urgent' | 'high' | 'medium' | 'low' {
+    switch (decision) {
+      case 'EMERGENCY':
+        return 'urgent';
+      case 'URGENT':
+        return 'high';
+      case 'NON_URGENT':
+        return 'medium';
+      case 'SELF_CARE':
+        return 'low';
+      default:
+        return 'medium';
+    }
   }
 } 

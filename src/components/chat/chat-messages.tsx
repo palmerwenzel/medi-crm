@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { UIMessage, TypingStatus } from '@/types/chat'
+import { UIMessage, TypingStatus } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessage } from '@/components/chat/chat-message'

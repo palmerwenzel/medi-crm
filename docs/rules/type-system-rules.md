@@ -1,193 +1,180 @@
 # Type System Rules
 
-## Type Foundation
+## Type Hierarchy and Dependencies
 
-The type system is built on top of Supabase's generated types:
+1. Database Types (`@/types/supabase` and `@/types/domain/db.ts`)
+   - Generated types from Supabase live in `@/types/supabase`
+   - Database table and enum types are re-exported from `db.ts`
+   - `db.ts` is the single source of truth for database types
+   - Never import Database types directly from `@/types/supabase` except in `db.ts`
 
-### Supabase Schema (`supabase.ts`)
-- **Purpose**: Foundation of all database types
-- **Generation**: Run whenever database schema changes:
-  ```bash
-  npx supabase gen types --local > src/types/supabase.ts
-  ```
-- **Contains**:
-  - Complete database schema
-  - All table definitions
-  - All enum types
-  - Function signatures
-- **Rules**:
-  - Never edit this file manually
-  - Always generate from Supabase schema
-  - Commit changes with related migrations
+2. Domain Types (`@/types/domain/*.ts`)
+   - Domain types extend or reference database types from `db.ts`
+   - Define business logic constraints and domain-specific fields
+   - Act as the source of truth for the application's type system
+   - Should not import from validation layer
+   - Example: `Case extends DbCase` with additional domain-specific fields
 
-### Validation Layer (`/lib/validations/*.ts`)
-- **Purpose**: Runtime type validation and schema definitions
-- **Location**: `lib/validations/*.ts` files
-- **Contains**:
-  - Zod schemas for each domain entity
-  - Shared enum validations
-  - Input/Output type definitions
-- **Rules**:
-  - One schema per file, matching domain structure
-  - Export both schema and inferred types
-  - Keep in sync with database types
-  - Use shared enums from `shared-enums.ts`
+3. Validation Schemas (`@/lib/validations/*.ts`)
+   - Import and validate against domain types
+   - Use Zod for runtime validation
+   - Export inferred types from schemas
+   - Example: `casesRowSchema satisfies z.ZodType<Case>`
 
-#### Validation Files:
-- `shared-enums.ts`: Common enum validations
-- `users.ts`: User schema and types
-- `cases.ts`: Case schema and types
-- `medical-messages.ts`: Message schema and types
-- `medical-conversations.ts`: Conversation schema and types
-- `notifications.ts`: Notification schema and types
-- `notification-preferences.ts`: Preferences schema and types
-- `webhooks.ts`: Webhook event schemas
+4. UI Types (`@/types/domain/ui.ts`)
+   - Import only from domain types
+   - Define component props and UI-specific state
+   - Can transform domain types for UI needs
+   - Example: `UIMessage extends Omit<Message, 'metadata'>`
 
-## Type Hierarchy
+## Dependency Flow
 
-Our type system is organized in layers, building up from the Supabase foundation:
+```
+Database Types (Supabase)
+       ↓
+    db.ts
+       ↓
+Domain Types (domain/*.ts)
+    ↙         ↘
+Validation    UI Types
+Schemas
+```
 
-### 1. Database Layer (`db.ts`)
-- **Purpose**: Single source of truth for database types
-- **Naming**: All types prefixed with `Db` (e.g., `DbUser`, `DbCaseStatus`)
-- **Contains**:
-  - Raw table types (`DbCase`, `DbUser`, etc.)
-  - Enum types (`DbUserRole`, `DbCaseStatus`, etc.)
-  - Insert/Update types (`DbCaseInsert`, `DbUserUpdate`, etc.)
-- **Rules**:
-  - Never use `Database['public']` directly; always go through `db.ts`
-  - Keep database type definitions close to Supabase schema
-  - No business logic or transformations at this layer
-  - Update when `supabase.ts` changes
+❌ INCORRECT patterns to avoid:
+```typescript
+// DON'T: Import Database types directly from Supabase
+import type { Database } from '@/types/supabase'  // Only allowed in db.ts
 
-### 2. Core Domain Layer
-- **Purpose**: Business logic and domain models
-- **Location**: `domain/*.ts` files
-- **Contains**:
-  - Domain entities (`User`, `Case`, etc.)
-  - Type guards and validations
-  - Business rules and constraints
-- **Rules**:
-  - One domain concept per file
-  - Use branded types for IDs (`UserId`, `ConversationId`)
-  - Transform dates from strings to `Date` objects
-  - Define clear boundaries between domains
+// DON'T: Import validation types in domain
+import type { CasesRow } from '@/lib/validations/cases'
 
-#### Domain Files:
-- `users.ts`: User, auth, and staff types
-- `cases.ts`: Case management and filtering
-- `chat.ts`: Chat sessions and messages
-- `notifications.ts`: Notifications and preferences
-- `ai.ts`: AI-specific types and guards
-- `webhooks.ts`: Webhook event types
+// DON'T: Define database types outside db.ts
+export type DbCase = Database['public']['Tables']['cases']['Row']
+```
 
-### 3. UI Layer (`ui.ts`)
-- **Purpose**: Component props and UI-specific types
-- **Contains**:
-  - Base prop types
-  - Component props
-  - UI state types
-  - Real-time types
-- **Rules**:
-  - All component props extend `BaseProps`
-  - Group related props together
-  - Keep UI state separate from domain state
-  - Document prop types with JSDoc
+✅ CORRECT patterns:
+```typescript
+// DO: Import database types from db.ts
+import type { DbCase } from '@/types/domain/db'
 
-## Type Export Rules
+// DO: Extend database types in domain
+export interface Case extends DbCase {
+  metadata: CaseMetadata
+}
 
-### 1. Root Index (`/types/index.ts`)
-- **Purpose**: Main entry point for type imports
-- **Rules**:
-  - Export everything from domain via `export * from './domain'`
-  - Provide selective exports for commonly used types
-  - Group exports by domain and layer
-  - Document usage patterns
+// DO: Import domain types in validation
+import type { Case } from '@/types/domain/cases'
+export const schema = z.object({...}) satisfies z.ZodType<Case>
+```
 
-### 2. Domain Index (`/types/domain/index.ts`)
-- **Purpose**: Organize domain type exports
-- **Rules**:
-  - Export types in dependency order
-  - Group related domains together
-  - Document layer boundaries
-  - Maintain clean separation of concerns
+## Type Transformations
+
+1. Database to Domain
+```typescript
+// In db.ts
+export type DbUser = Database['public']['Tables']['users']['Row']
+
+// In domain/users.ts
+export interface User extends Omit<DbUser, 'created_at'> {
+  createdAt: Date  // Transform string to Date
+}
+```
+
+2. Domain to Validation
+```typescript
+// In domain/cases.ts
+export interface Case extends DbCase {
+  metadata: CaseMetadata
+}
+
+// In validations/cases.ts
+export const schema = z.object({...}) satisfies z.ZodType<Case>
+```
+
+3. Domain to UI
+```typescript
+// In domain/chat.ts
+export interface Message extends DbMessage {
+  metadata: MessageMetadata
+}
+
+// In domain/ui.ts
+export interface UIMessage extends Omit<Message, 'metadata'> {
+  state: MessageState
+  metadata: MessageMetadata & { status: MessageStatus }
+}
+```
 
 ## Naming Conventions
 
-1. **Type Names**:
-   - PascalCase for types and interfaces
-   - Prefix database types with `Db`
-   - Suffix props with `Props`
-   - Suffix UI components with descriptive names
+1. Database Types
+   - Prefix with `Db`: `DbCase`, `DbUser`
+   - Use for raw database types
+   - Only defined in `db.ts`
 
-2. **File Names**:
-   - Kebab-case for files
-   - Domain-specific names
-   - Clear and descriptive
+2. Domain Types
+   - No prefix: `Case`, `User`
+   - Use for business logic types
+   - Define in appropriate domain file
+
+3. Validation Types
+   - Suffix with purpose: `CasesRow`, `CasesInsert`
+   - Infer from Zod schemas
+   - Must validate against domain types
+
+4. UI Types
+   - Prefix with `UI`: `UIMessage`, `UIChatSession`
+   - Or suffix with `Props`: `ChatMessageProps`
+   - Define in `ui.ts`
+
+## Type Safety Rules
+
+1. Always use TypeScript's strict mode
+2. Avoid `any` - use `unknown` when type is uncertain
+3. Use `satisfies` for schema validation
+4. Make impossible states unrepresentable
+5. Use union types for finite sets of values
+6. Use branded types for type safety (e.g., `UserId`)
 
 ## Best Practices
 
-1. **Type Safety**:
-   - Use branded types for IDs
-   - Prefer union types over enums
-   - Use type guards for runtime checks
-   - Leverage TypeScript's type system
+1. Keep type definitions close to their use
+2. Use type inference where possible
+3. Document complex types
+4. Use discriminated unions for state management
+5. Avoid type assertions (`as`)
+6. Use proper type transformations between layers
 
-2. **Documentation**:
-   - JSDoc for complex types
-   - Clear section headers
-   - Usage examples
-   - Dependency documentation
+## File Organization
 
-3. **Organization**:
-   - Keep related types together
-   - Clear layer separation
-   - Minimal dependencies
-   - No circular imports
+1. Group related types in domain files
+2. Keep validation schemas separate from types
+3. Use index files for public exports
+4. Organize by feature, not by type
+5. Keep UI types in `ui.ts`
 
-4. **Imports**:
-   ```typescript
-   // Comprehensive imports
-   import type * as Types from '@/types'
-   
-   // Selective imports
-   import type { User, AuthUser } from '@/types'
-   
-   // UI component imports
-   import type { BaseProps, ChatMessageProps } from '@/types'
-   ```
+## Common Patterns
 
-## Adding New Types
-
-1. **Database Types**:
-   - Add to `db.ts`
-   - Follow `Db` prefix convention
-   - Update from Supabase schema
-
-2. **Domain Types**:
-   - Choose appropriate domain file
-   - Add type definition
-   - Update domain index
-   - Add to selective exports if commonly used
-
-3. **UI Types**:
-   - Add to `ui.ts`
-   - Group with related components
-   - Extend `BaseProps`
-   - Document with JSDoc
-
-## Type Dependencies
-
-```
-UI Layer (ui.ts)
-    ↑
-Service Layer (ai.ts, webhooks.ts)
-    ↑
-Domain Layer (users.ts, cases.ts, etc.)
-    ↑
-Database Layer (db.ts)
-    ↑
-Supabase Schema (supabase.ts)
+1. State Management Types
+```typescript
+interface State {
+  status: 'idle' | 'loading' | 'success' | 'error'
+  data: Data | null
+  error: Error | null
+}
 ```
 
-Each layer should only depend on the layers below it to maintain a clean architecture.
+2. Form Types
+```typescript
+interface FormData extends Pick<Domain, 'field1' | 'field2'> {
+  extraField: string
+}
+```
+
+3. API Response Types
+```typescript
+interface ApiResponse<T> {
+  data: T
+  meta: ResponseMetadata
+}
+```

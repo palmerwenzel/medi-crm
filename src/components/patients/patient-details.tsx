@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/providers/auth-provider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileText, MessageSquare, Calendar, Clock } from "lucide-react"
-import type { Database } from "@/types/supabase"
+import type { DbUser, DbCase } from "@/types/domain/db"
 
-type Patient = Database['public']['Tables']['users']['Row']
-type Case = Database['public']['Tables']['cases']['Row']
+type Patient = DbUser
+type Case = DbCase
 
 interface PatientWithCases extends Patient {
   cases: Case[]

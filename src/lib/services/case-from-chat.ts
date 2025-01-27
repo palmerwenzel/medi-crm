@@ -1,8 +1,10 @@
-import { ChatRequest, MessageMetadata } from '@/types/chat';
+import { MessageMetadata, TriageDecision } from '@/types/domain/chat';
+import { ChatRequest, isAIProcessingMetadata, isHandoffMetadata } from '@/types/domain/ai';
 import { generateChatResponse, extractStructuredData } from '@/lib/ai/openai';
-import { createCase } from '@/lib/services/case-service';
+import { createCase } from '@/lib/actions/cases';
 import { createClient } from '@/utils/supabase/client';
 import { MEDICAL_SUMMARY_PROMPT } from '@/lib/ai/prompts';
+import { CaseCategory } from '@/types/domain/cases';
 
 interface ChatSummary {
   title: string;
@@ -58,10 +60,10 @@ async function generateChatSummary(messages: ChatRequest['messages']): Promise<C
 
   const response = await generateChatResponse([
     ...messages,
-    { role: 'system', content: summaryPrompt }
+    { role: 'assistant', content: summaryPrompt }
   ], { 
     temperature: 0,
-    max_tokens: 1000 // Ensure we have enough tokens for detailed response
+    maxTokens: 1000 // Ensure we have enough tokens for detailed response
   });
 
   try {
@@ -94,7 +96,8 @@ export async function createCaseFromChat(
 ): Promise<{ caseId: string; error?: string }> {
   try {
     // Verify consent unless it's an emergency
-    if (!patientConsent && metadata.triageDecision !== 'EMERGENCY') {
+    if (!isHandoffMetadata(metadata) || 
+        (!patientConsent && metadata.triageDecision !== 'EMERGENCY')) {
       return { 
         caseId: '', 
         error: 'Patient consent required to create case' 
@@ -111,13 +114,19 @@ export async function createCaseFromChat(
       emergency: 'high'
     } as const;
 
+    // Determine category based on urgency and triage decision
+    const category: CaseCategory = summary.urgency_level === 'emergency' || metadata.triageDecision === 'EMERGENCY'
+      ? 'emergency'
+      : 'general';
+
     // Create the case
     const caseData = {
       title: summary.title,
       description: summary.description,
       patient_id: patientId,
+      category,
       priority: priorityMap[summary.urgency_level],
-      status: 'open',
+      status: 'open' as const,
       metadata: {
         source: 'chat',
         conversation_id: conversationId,
@@ -125,21 +134,27 @@ export async function createCaseFromChat(
         key_symptoms: summary.key_symptoms,
         duration: summary.duration,
         severity: summary.severity,
-        ai_confidence: metadata.confidenceScore,
         handoff_reason: metadata.triageDecision,
         recommended_specialties: summary.recommended_specialties
       }
     };
 
-    const case_ = await createCase(caseData);
+    const result = await createCase(caseData);
+    
+    if (!result.success || !result.data) {
+      return {
+        caseId: '',
+        error: result.error || 'Failed to create case'
+      };
+    }
 
     // Update conversation with case ID
     await updateConversation(conversationId, {
-      case_id: case_.id,
+      case_id: result.data.id,
       can_create_case: false
     });
 
-    return { caseId: case_.id };
+    return { caseId: result.data.id };
   } catch (error) {
     console.error('Error creating case from chat:', error);
     return {
@@ -160,6 +175,14 @@ export async function canCreateCase(
   missingInfo: string[];
   confidence: number;
 }> {
+  if (!isAIProcessingMetadata(metadata)) {
+    return {
+      canCreate: false,
+      missingInfo: ['Required information not collected'],
+      confidence: 0
+    };
+  }
+
   const requiredInfo = [
     'chiefComplaint',
     'duration',

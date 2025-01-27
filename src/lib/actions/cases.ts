@@ -11,14 +11,20 @@ import {
   type CreateCaseInput, 
   type CaseResponse,
   type CaseQueryParams,
-  type PaginatedCaseResponse,
-  caseQuerySchema
-} from '@/lib/validations/case'
+  type PaginatedCaseResponse
+} from '@/types/domain/cases'
+import { caseQuerySchema } from '@/lib/validations/cases'
 import { uploadFile, removeFile } from './files'
 
 type ActionResponse<T = void> = {
   success: boolean
   data?: T
+  error?: string
+}
+
+type FileUploadResult = {
+  success: boolean
+  url?: string
   error?: string
 }
 
@@ -176,13 +182,13 @@ export async function createCase(
 
     // Upload files if provided
     if (files?.length) {
-      const uploadPromises = files.map(file => uploadFile(file, newCase.id))
+      const uploadPromises = files.map((file: File) => uploadFile(file, newCase.id))
       const uploadResults = await Promise.all(uploadPromises)
       
       // Filter successful uploads and get URLs
       const uploadedUrls = uploadResults
-        .filter(result => result.success && result.url)
-        .map(result => result.url!)
+        .filter((result: FileUploadResult) => result.success && result.url)
+        .map((result: FileUploadResult) => result.url!)
 
       // Update case with attachment URLs
       if (uploadedUrls.length) {

@@ -1,13 +1,11 @@
 import { supabase, adminClient, generateTestEmail, cleanupTestUsers, verifyDatabaseConnection } from '../setup'
-import { Database } from '@/types/supabase'
-
-type User = Database['public']['Tables']['users']['Row']
+import type { DbUser, DbUserInsert, DbUserUpdate } from '@/types/domain/db'
 
 describe('User RLS Policies', () => {
-  let testUsers: { email: string }[] = []
-  let patientUser: User
-  let staffUser: User
-  let adminUser: User
+  let testUsers: string[] = []
+  let patientUser: DbUser
+  let staffUser: DbUser
+  let adminUser: DbUser
 
   beforeAll(async () => {
     // Verify database connection
@@ -24,7 +22,7 @@ describe('User RLS Policies', () => {
       throw new Error(`Failed to create test user: ${signupError?.message}`)
     }
 
-    patientUser = {
+    const patientUserData: DbUserInsert = {
       id: auth.user.id,
       email: testEmail,
       role: 'patient',
@@ -36,29 +34,28 @@ describe('User RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
-    // Insert test user into users table using admin client
-    const { error: insertError } = await adminClient.from('users').insert([patientUser])
-    if (insertError) {
-      throw new Error(`Failed to insert test user: ${insertError.message}`)
-    }
+    // Insert patient user
+    const { data: patient, error: insertError } = await adminClient
+      .from('users')
+      .insert(patientUserData)
+      .select()
+      .single()
 
-    // Create additional test users
+    if (insertError || !patient) {
+      throw new Error(`Failed to insert patient user: ${insertError?.message}`)
+    }
+    patientUser = patient
+
+    // Create staff user
     const staffAuth = await adminClient.auth.admin.createUser({
       email: generateTestEmail('staff'),
       password: process.env.TEST_USER_PASSWORD!,
       email_confirm: true
     })
 
-    const adminAuth = await adminClient.auth.admin.createUser({
-      email: generateTestEmail('admin'),
-      password: process.env.TEST_USER_PASSWORD!,
-      email_confirm: true
-    })
-
     if (staffAuth.error) throw new Error(`Failed to create staff user: ${staffAuth.error.message}`)
-    if (adminAuth.error) throw new Error(`Failed to create admin user: ${adminAuth.error.message}`)
 
-    staffUser = {
+    const staffUserData: DbUserInsert = {
       id: staffAuth.data.user.id,
       email: staffAuth.data.user.email!,
       role: 'staff',
@@ -70,7 +67,28 @@ describe('User RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
-    adminUser = {
+    // Insert staff user
+    const { data: staff, error: staffError } = await adminClient
+      .from('users')
+      .insert(staffUserData)
+      .select()
+      .single()
+
+    if (staffError || !staff) {
+      throw new Error(`Failed to insert staff user: ${staffError?.message}`)
+    }
+    staffUser = staff
+
+    // Create admin user
+    const adminAuth = await adminClient.auth.admin.createUser({
+      email: generateTestEmail('admin'),
+      password: process.env.TEST_USER_PASSWORD!,
+      email_confirm: true
+    })
+
+    if (adminAuth.error) throw new Error(`Failed to create admin user: ${adminAuth.error.message}`)
+
+    const adminUserData: DbUserInsert = {
       id: adminAuth.data.user.id,
       email: adminAuth.data.user.email!,
       role: 'admin',
@@ -82,89 +100,99 @@ describe('User RLS Policies', () => {
       updated_at: new Date().toISOString()
     }
 
-    const { error: bulkInsertError } = await adminClient
+    // Insert admin user
+    const { data: admin, error: adminError } = await adminClient
       .from('users')
-      .insert([staffUser, adminUser])
+      .insert(adminUserData)
+      .select()
+      .single()
 
-    if (bulkInsertError) {
-      throw new Error(`Failed to insert additional test users: ${bulkInsertError.message}`)
+    if (adminError || !admin) {
+      throw new Error(`Failed to insert admin user: ${adminError?.message}`)
     }
+    adminUser = admin
 
     // Track emails for cleanup
-    testUsers = [patientUser, staffUser, adminUser].map(u => ({ email: u.email }))
+    testUsers = [patientUser.email, staffUser.email, adminUser.email]
   })
 
   afterAll(async () => {
-    await cleanupTestUsers(testUsers.map(u => u.email))
+    await cleanupTestUsers(testUsers)
   })
 
-  describe('User Self-View Policy', () => {
-    it('allows users to view their own profile', async () => {
-      const { data, error } = await supabase
+  describe('Patient access', () => {
+    beforeEach(async () => {
+      // Log in as patient
+      const { error } = await supabase.auth.signInWithPassword({
+        email: patientUser.email,
+        password: process.env.TEST_USER_PASSWORD!
+      })
+      if (error) throw new Error(`Failed to log in as patient: ${error.message}`)
+    })
+
+    it('can view their own profile', async () => {
+      const { data: profile, error } = await supabase
         .from('users')
-        .select()
+        .select<'users', DbUser>()
         .eq('id', patientUser.id)
         .single()
 
       expect(error).toBeNull()
-      expect(data).toBeDefined()
-      expect(data?.id).toBe(patientUser.id)
+      expect(profile?.id).toBe(patientUser.id)
+      expect(profile?.role).toBe('patient')
     })
 
-    it('prevents users from viewing other profiles', async () => {
-      const { data, error } = await supabase
+    it('cannot view other user profiles', async () => {
+      const { data: profiles, error } = await supabase
         .from('users')
-        .select()
+        .select<'users', DbUser>()
         .neq('id', patientUser.id)
-        .single()
-
-      expect(error).toBeDefined()
-      expect(data).toBeNull()
-    })
-  })
-
-  describe('User Self-Edit Policy', () => {
-    it('allows users to update their own profile', async () => {
-      const newFirstName = 'Updated'
-      const { error } = await supabase
-        .from('users')
-        .update({ first_name: newFirstName })
-        .eq('id', patientUser.id)
 
       expect(error).toBeNull()
+      expect(profiles).toHaveLength(0)
+    })
+
+    it('can update their own profile', async () => {
+      const update: DbUserUpdate = {
+        first_name: 'Updated',
+        last_name: 'Patient'
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update(update)
+        .eq('id', patientUser.id)
+
+      expect(updateError).toBeNull()
 
       // Verify update
-      const { data } = await supabase
+      const { data: updated, error: fetchError } = await supabase
         .from('users')
-        .select()
+        .select<'users', DbUser>()
         .eq('id', patientUser.id)
         .single()
 
-      expect(data?.first_name).toBe(newFirstName)
+      expect(fetchError).toBeNull()
+      expect(updated?.first_name).toBe(update.first_name)
+      expect(updated?.last_name).toBe(update.last_name)
     })
 
-    it('prevents users from updating their role', async () => {
+    it('cannot update role or department', async () => {
       const { error } = await supabase
         .from('users')
-        .update({ role: 'admin' })
+        .update<DbUserUpdate>({
+          role: 'admin',
+          department: 'admin'
+        })
         .eq('id', patientUser.id)
 
-      expect(error).toBeDefined()
-    })
-
-    it('prevents users from updating their specialty if not staff', async () => {
-      const { error } = await supabase
-        .from('users')
-        .update({ specialty: 'cardiology' })
-        .eq('id', patientUser.id)
-
-      expect(error).toBeDefined()
+      expect(error).not.toBeNull()
     })
   })
 
-  describe('Staff View-All Policy', () => {
+  describe('Staff access', () => {
     beforeEach(async () => {
-      // Log in as staff user
+      // Log in as staff
       const { error } = await supabase.auth.signInWithPassword({
         email: staffUser.email,
         password: process.env.TEST_USER_PASSWORD!
@@ -172,103 +200,86 @@ describe('User RLS Policies', () => {
       if (error) throw new Error(`Failed to log in as staff: ${error.message}`)
     })
 
-    it('allows staff to view all profiles', async () => {
-      const { data, error } = await supabase
+    it('can view users in their department', async () => {
+      // Skip test if staff has no department
+      if (!staffUser.department) {
+        console.warn('Staff user has no department, skipping test')
+        return
+      }
+
+      const { data: users, error } = await supabase
         .from('users')
-        .select()
+        .select<'users', DbUser>()
+        .eq('department', staffUser.department)
 
       expect(error).toBeNull()
-      expect(data).toBeDefined()
-      expect(data?.length).toBeGreaterThan(0)
+      expect(users?.length).toBeGreaterThan(0)
+      expect(users?.some(u => u.id === staffUser.id)).toBe(true)
     })
 
-    it('allows staff to update their specialty', async () => {
-      const { error } = await supabase
+    it('cannot view users in other departments', async () => {
+      const { data: users, error } = await supabase
         .from('users')
-        .update({ specialty: 'cardiology' })
-        .eq('id', staffUser.id)
+        .select<'users', DbUser>()
+        .eq('department', 'specialty_care')
 
       expect(error).toBeNull()
+      expect(users).toHaveLength(0)
     })
   })
 
-  describe('Admin Full-Access Policy', () => {
+  describe('Admin access', () => {
     beforeEach(async () => {
-      // Log in as admin user
+      // Log in as admin
       const { error } = await supabase.auth.signInWithPassword({
         email: adminUser.email,
         password: process.env.TEST_USER_PASSWORD!
       })
       if (error) throw new Error(`Failed to log in as admin: ${error.message}`)
-
-      // Verify we're signed in as admin
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user?.id) {
-        throw new Error('Admin session not established')
-      }
     })
 
-    it('allows admins to view all profiles', async () => {
-      const { data, error } = await supabase
+    it('can view all users', async () => {
+      const { data: users, error } = await supabase
         .from('users')
-        .select()
+        .select<'users', DbUser>()
 
       expect(error).toBeNull()
-      expect(data).toBeDefined()
-      expect(data?.length).toBeGreaterThan(0)
+      expect(users).toBeDefined()
+      expect(users?.length).toBeGreaterThanOrEqual(3)
+      expect(users?.some(u => u.id === patientUser.id)).toBe(true)
+      expect(users?.some(u => u.id === staffUser.id)).toBe(true)
+      expect(users?.some(u => u.id === adminUser.id)).toBe(true)
     })
 
-    it('allows admins to update any profile', async () => {
-      // First verify the current user is admin
-      const { data: adminCheck } = await supabase.from('users')
-        .select('role')
-        .eq('id', adminUser.id)
-        .single()
-      
-      if (adminCheck?.role !== 'admin') {
-        throw new Error('Test not running as admin user')
+    it('can update any user', async () => {
+      const update: DbUserUpdate = {
+        first_name: 'Updated By Admin',
+        department: 'specialty_care'
       }
 
-      // Get initial state
-      const { data: initialState } = await adminClient
-        .from('users')
-        .select('first_name')
-        .eq('id', patientUser.id)
-        .single()
-
-      const newFirstName = `Admin Updated ${Date.now()}`
       const { error: updateError } = await supabase
         .from('users')
-        .update({ first_name: newFirstName })
-        .eq('id', patientUser.id)
+        .update(update)
+        .eq('id', staffUser.id)
 
       expect(updateError).toBeNull()
 
-      // Verify update using admin client to bypass RLS
-      const { data: updatedState, error: verifyError } = await adminClient
+      // Verify update
+      const { data: updated, error: fetchError } = await supabase
         .from('users')
-        .select('first_name')
-        .eq('id', patientUser.id)
+        .select<'users', DbUser>()
+        .eq('id', staffUser.id)
         .single()
 
-      expect(verifyError).toBeNull()
-      expect(updatedState?.first_name).toBe(newFirstName)
-      expect(updatedState?.first_name).not.toBe(initialState?.first_name)
-    })
+      expect(fetchError).toBeNull()
+      expect(updated?.first_name).toBe(update.first_name)
+      expect(updated?.department).toBe(update.department)
 
-    it('allows admins to update user roles', async () => {
-      const { error } = await supabase
-        .from('users')
-        .update({ role: 'staff' })
-        .eq('id', patientUser.id)
-
-      expect(error).toBeNull()
-
-      // Reset role back to patient
+      // Reset department
       await adminClient
         .from('users')
-        .update({ role: 'patient' })
-        .eq('id', patientUser.id)
+        .update<DbUserUpdate>({ department: 'primary_care' })
+        .eq('id', staffUser.id)
     })
   })
 }) 

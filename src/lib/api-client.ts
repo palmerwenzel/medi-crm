@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from './database.types'
 import type { User } from '@supabase/supabase-js'
+import type { DbUserRole } from '@/types/domain/db'
+import type { Database } from '@/types/supabase' // Needed only for createClient generic
 
 export type ApiClient = {
   supabase: ReturnType<typeof createClient<Database>>
   user: User | null
-  role: Database['public']['Tables']['users']['Row']['role'] | null
+  role: DbUserRole | null
 }
 
 export async function createApiClient(): Promise<ApiClient> {

@@ -1,26 +1,31 @@
-import type { Database } from '../supabase'
 import type { 
-  NotificationsRow,
-  NotificationsInsert,
-  NotificationsUpdate 
-} from '@/lib/validations/notifications'
-import type {
-  NotificationPreferencesRow,
-  NotificationPreferencesInsert,
-  NotificationPreferencesUpdate
-} from '@/lib/validations/notification-preferences'
+  DbNotification,
+  DbNotificationType,
+  DbNotificationPriority,
+  DbNotificationChannel,
+  DbNotificationPreference
+} from './db'
 
-// Base types from database
-export type NotificationType = Database['public']['Enums']['notification_type']
-export type NotificationPriority = Database['public']['Enums']['notification_priority']
-export type NotificationChannel = Database['public']['Enums']['notification_channel']
+// Base types from database layer
+export type NotificationType = DbNotificationType
+export type NotificationPriority = DbNotificationPriority
+export type NotificationChannel = DbNotificationChannel
 
 /**
  * Extended notification type with proper metadata typing
  */
-export interface Notification extends Omit<NotificationsRow, 'metadata'> {
+export interface Notification extends Omit<DbNotification, 'metadata'> {
   metadata: NotificationMetadata
 }
+
+export type NotificationInsert = Partial<DbNotification> & {
+  type: NotificationType
+  user_id: string
+  title: string
+  body: string
+}
+
+export type NotificationUpdate = Partial<NotificationInsert>
 
 /**
  * Strongly typed metadata for different notification types
@@ -44,9 +49,32 @@ export interface NotificationMetadata {
 }
 
 /**
- * Extended preferences type with proper date handling
+ * User notification preferences
  */
-export interface NotificationPreferences extends Omit<NotificationPreferencesRow, 'created_at' | 'updated_at'> {
-  created_at: Date
-  updated_at: Date
+export interface NotificationPreference extends DbNotificationPreference {
+  channels: NotificationChannel[]
+}
+
+export type NotificationPreferenceInsert = Partial<DbNotificationPreference> & {
+  user_id: string
+  type: NotificationType
+  channels: NotificationChannel[]
+}
+
+export type NotificationPreferenceUpdate = Partial<NotificationPreferenceInsert>
+
+/**
+ * Helper type for notification settings form
+ */
+export interface NotificationSettings {
+  preferences: NotificationPreference[]
+  channels: {
+    [K in NotificationChannel]: boolean
+  }
+  types: {
+    [K in NotificationType]: {
+      enabled: boolean
+      priority: NotificationPriority
+    }
+  }
 } 

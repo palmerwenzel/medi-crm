@@ -3,7 +3,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { processAIMessage } from '@/lib/actions/ai';
-import { type ChatRequest, type ChatResponse } from '@/types/chat';
+import { type ChatRequest, type ChatResponse } from '@/types/domain/ai';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
 
     const result = await processAIMessage(body.messages);
 
-    if (!result.success) {
-      throw new Error(result.error);
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'No response data');
     }
 
     return NextResponse.json<ChatResponse>({ 

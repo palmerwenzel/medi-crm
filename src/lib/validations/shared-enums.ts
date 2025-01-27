@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import type { Database } from '@/types/supabase'
+import type { DbConversationStatus } from '@/types/domain/db'
 
 /**
  * Because Database['public']['Enums'] is only a type, we must define
- * each enum’s values as a literal array, while still tying them to
+ * each enum's values as a literal array, while still tying them to
  * the DB enum type for type safety. Then we build a Zod enum from
  * that array.
  */
@@ -45,7 +45,7 @@ const caseStatusValues = [
 ] as const
 export const caseStatusEnum = z.enum(caseStatusValues)
 
-type ConversationStatus = Database['public']['Enums']['conversation_status']
+type ConversationStatus = DbConversationStatus
 const conversationStatusValues = [
   'active',
   'archived',
@@ -64,7 +64,7 @@ export const departmentEnum = z.enum(departmentValues)
 
 const messageRoleValues = [
   'user',
-  'assistant',
+  'assistant'
 ] as const
 export const messageRoleEnum = z.enum(messageRoleValues)
 

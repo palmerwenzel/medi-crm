@@ -12,25 +12,24 @@ import { CaseMetadata } from '@/components/cases/case-metadata'
 import { SLAIndicator } from '../sla-indicator'
 import { cn } from '@/lib/utils'
 import { priorityColors } from '@/lib/utils/case-formatting'
-import { claimCase } from '@/lib/services/case-service'
 import { useToast } from '@/hooks/use-toast'
-import type { CaseResponse } from '@/lib/validations/case'
-
-interface CaseMetadata {
-  sla?: {
-    response_target: string
-    resolution_target: string
-    last_updated: string
-  }
-  tags?: string[]
-  internal_notes?: string
-  specialties?: string[]
-  chat_status?: 'needs_response' | 'active' | 'completed' | null
-}
+import { createClient } from '@/utils/supabase/client'
+import type { CasesRow } from '@/lib/validations/cases'
+import type { CasePriority, ConversationStatus } from '@/types/domain/cases'
 
 interface CaseListItemProps {
-  case_: CaseResponse & {
-    metadata?: CaseMetadata
+  case_: CasesRow & {
+    metadata?: {
+      sla?: {
+        response_target: string
+        resolution_target: string
+        last_updated: string
+      }
+      tags?: string[]
+      internal_notes?: string
+      specialties?: string[]
+      chat_status?: ConversationStatus
+    }
   }
   isSelected?: boolean
   onSelect?: (id: string) => void
@@ -41,9 +40,31 @@ interface CaseListItemProps {
 }
 
 const chatStatusColors = {
-  needs_response: 'bg-red-500/10 text-red-500 border-red-500/20',
   active: 'bg-green-500/10 text-green-500 border-green-500/20',
-  completed: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+  archived: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+} as const
+
+const supabase = createClient()
+
+/**
+ * Claims a case and assigns it to the current staff member
+ * @throws {Error} If no user is authenticated or if case is already assigned
+ */
+async function claimCase(caseId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No authenticated user')
+
+  const { error } = await supabase.rpc('claim_case', {
+    case_id: caseId,
+    staff_id: user.id
+  })
+
+  if (error) {
+    if (error.message.includes('already assigned')) {
+      throw new Error('Case is already assigned to another staff member')
+    }
+    throw error
+  }
 }
 
 export function CaseListItem({
@@ -108,12 +129,12 @@ export function CaseListItem({
                   <h3 className="text-base font-semibold">{case_.title}</h3>
                   <CaseStatusBadge status={case_.status} />
                   {case_.priority && (
-                    <Badge variant="outline" className={cn('border', priorityColors[case_.priority])}>
+                    <Badge variant="outline" className={cn('border', priorityColors[case_.priority as CasePriority])}>
                       {case_.priority}
                     </Badge>
                   )}
                   {case_.metadata?.chat_status && (
-                    <Badge variant="outline" className={cn(chatStatusColors[case_.metadata.chat_status])}>
+                    <Badge variant="outline" className={cn(chatStatusColors[case_.metadata.chat_status as keyof typeof chatStatusColors])}>
                       {case_.metadata.chat_status.replace('_', ' ')}
                     </Badge>
                   )}
@@ -122,7 +143,7 @@ export function CaseListItem({
                   )}
                   {case_.metadata?.specialties && case_.metadata.specialties.length > 0 && (
                     <div className="flex gap-1">
-                      {case_.metadata.specialties.map(specialty => (
+                      {case_.metadata.specialties.map((specialty: string) => (
                         <Badge key={specialty} variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                           {specialty.replace('_', ' ')}
                         </Badge>
@@ -131,7 +152,7 @@ export function CaseListItem({
                   )}
                   {case_.metadata?.tags && case_.metadata.tags.length > 0 && (
                     <div className="flex gap-1">
-                      {case_.metadata.tags.map(tag => (
+                      {case_.metadata.tags.map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
                           #{tag}
                         </Badge>
@@ -160,11 +181,11 @@ export function CaseListItem({
                           size="sm"
                           className={cn(
                             "gap-2",
-                            case_.metadata?.chat_status === 'needs_response' && "border-red-500 text-red-500 hover:bg-red-500/10"
+                            case_.metadata?.chat_status === 'active' && "border-green-500 text-green-500 hover:bg-green-500/10"
                           )}
                         >
                           <MessageSquare className="h-4 w-4" />
-                          {case_.metadata?.chat_status === 'needs_response' ? 'Needs Response' : 'View Chat'}
+                          {case_.metadata?.chat_status === 'active' ? 'Active Chat' : 'View Chat'}
                         </Button>
                       </Link>
                     )}

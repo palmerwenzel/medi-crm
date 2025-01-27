@@ -10,10 +10,10 @@ import * as React from "react"
 import { createContext, useContext, useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js"
-import type { Database } from "@/lib/database.types"
+import type { DbUserRole } from "@/types/domain/db"
 import { log, logPerformance } from '@/lib/utils/logging'
 
-type Role = Database['public']['Tables']['users']['Row']['role']
+type Role = DbUserRole
 
 interface AuthState {
   user: User | null
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const roleStartTime = performance.now()
       const { data: userData, error: roleError } = await retryWithBackoff<{
-        data: Pick<Database['public']['Tables']['users']['Row'], 'role'> | null,
+        data: { role: DbUserRole } | null,
         error: Error | null
       }>(
         async () => {

@@ -1,15 +1,10 @@
-import type { 
-  MedicalMessagesRow,
-  MedicalMessagesInsert,
-  MedicalMessagesUpdate 
-} from '@/lib/validations/medical-messages'
-import type {
-  MedicalConversationsRow,
-  MedicalConversationsInsert,
-  MedicalConversationsUpdate
-} from '@/lib/validations/medical-conversations'
 import type { UserId } from './users'
-import type { DbMessageRole } from './db'
+import type { 
+  DbMessageRole, 
+  DbMedicalMessage,
+  DbMedicalConversation,
+  DbConversationStatus
+} from './db'
 
 // Branded types for type safety
 export type ConversationId = string & { readonly __brand: unique symbol }
@@ -26,14 +21,26 @@ export const ChatSessionStatuses = ['active', 'waiting_provider', 'with_provider
 export type ChatSessionStatus = (typeof ChatSessionStatuses)[number]
 
 export const TriageDecisions = [
-  'EXISTING_PROVIDER',
-  'NEW_TICKET',
-  'CONTINUE_GATHERING',
-  'EMERGENCY'
+  'EMERGENCY',
+  'URGENT',
+  'NON_URGENT',
+  'SELF_CARE'
 ] as const
 export type TriageDecision = (typeof TriageDecisions)[number]
 
-// Message metadata types
+// Message types
+export interface Message extends DbMedicalMessage {
+  metadata: MessageMetadata
+}
+
+export type MessageInsert = Partial<DbMedicalMessage> & {
+  conversation_id: string
+  role: MessageRole
+  content: string
+}
+
+export type MessageUpdate = Partial<MessageInsert>
+
 export type MessageMetadata = 
   | { 
       type: 'ai_processing'
@@ -56,7 +63,6 @@ export type MessageMetadata =
       type: 'standard'
     }
 
-// Chat access types
 export type ChatAccess = 
   | { canAccess: 'ai' }
   | { 
@@ -69,20 +75,24 @@ export type ChatAccess =
       handoffTimestamp?: string
     }
 
-// Base conversation type
-export interface MedicalConversation extends Omit<MedicalConversationsRow, 'access'> {
-  messages: MedicalMessagesRow[]
+// Conversation types
+export interface MedicalConversation extends DbMedicalConversation {
+  messages: Message[]
   access: ChatAccess
+  status: DbConversationStatus
 }
 
-// Re-export message type for convenience
-export type { MedicalMessagesRow }
+export type ConversationInsert = Partial<DbMedicalConversation> & {
+  patient_id: string
+  status: DbConversationStatus
+}
 
-// Chat session type
+export type ConversationUpdate = Partial<ConversationInsert>
+
 export interface ChatSession {
   id: ConversationId
   patientId: UserId
-  messages: MedicalMessagesRow[]
+  messages: Message[]
   access: ChatAccess
   status: ChatSessionStatus
   messageCount: number

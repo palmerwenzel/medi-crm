@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Archive, MessageSquare, Plus, MessagesSquare } from 'lucide-react'
-import { type MedicalConversationWithMessages } from '@/types/chat'
+import { type UIMedicalConversation } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 interface ConversationListProps {
-  conversations: MedicalConversationWithMessages[]
+  conversations: UIMedicalConversation[]
   activeId?: string
   isLoading?: boolean
   onCreateConversation?: () => void
@@ -73,7 +73,7 @@ export function ConversationList({
               </p>
             </div>
           ) : (
-            conversations.map((conversation: MedicalConversationWithMessages) => (
+            conversations.map((conversation: UIMedicalConversation) => (
               <Card
                 key={conversation.id}
                 className={cn(

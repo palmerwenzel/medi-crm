@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import type { CaseResponse } from '@/lib/validations/case'
+import type { CaseResponse } from '@/types/domain/cases'
 
 interface UseCaseReturn {
   case_: CaseResponse | null

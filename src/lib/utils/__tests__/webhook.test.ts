@@ -7,7 +7,7 @@ import {
   isRateLimited,
   resetRateLimits
 } from '../webhook'
-import { WebhookPayload } from '@/lib/validations/webhook'
+import { WebhookPayload } from '@/lib/validations/webhooks'
 
 // Mock getCurrentTimestamp for consistent testing
 const mockCurrentTime = 1706011200 // 2024-01-23T12:00:00Z

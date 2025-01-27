@@ -1,6 +1,6 @@
 'use client'
 
-import { TypingStatus } from '@/types/chat'
+import { TypingStatus } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 

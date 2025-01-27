@@ -1,11 +1,9 @@
 import { createClient } from '@/utils/supabase/client'
 import { 
   type NotificationType,
-  type NotificationPriority,
   type NotificationChannel,
   type Notification,
-  type NotificationPreferences
-} from '@/types/notifications'
+} from '@/types/domain/notifications'
 
 const supabase = createClient()
 
@@ -88,9 +86,16 @@ export async function updateNotificationPreferences(
     channels?: NotificationChannel[]
   }
 ) {
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    throw new Error('User not authenticated')
+  }
+
   const { error } = await supabase
     .from('notification_preferences')
     .upsert({
+      user_id: user.id,
       type,
       ...updates,
       updated_at: new Date().toISOString()

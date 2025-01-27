@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { MessageMetadata, UIMessage } from '@/types/chat';
+import { MessageMetadata } from '@/types/domain/chat';
+import { UIMessage } from '@/types/domain/ui';
 import { canCreateCase, createCaseFromChat } from '@/lib/services/case-from-chat';
 import { ConsentDialog } from './consent-dialog';
 import { generateChatResponse } from '@/lib/ai/openai';
 import { CONSENT_REQUEST_PROMPT } from '@/lib/ai/prompts';
+import { isAIProcessingMetadata } from '@/types/domain/ai';
 
 interface ChatActionsProps {
   conversationId: string;
@@ -69,10 +71,12 @@ export function ChatActions({
     return {
       title: 'Medical Consultation',
       description: 'Patient seeking medical attention',
-      key_symptoms: metadata.collectedInfo?.chiefComplaint ? [metadata.collectedInfo.chiefComplaint] : [],
-      severity: metadata.collectedInfo?.severity || 'Not specified',
-      duration: metadata.collectedInfo?.duration || 'Not specified',
-      urgency_level: metadata.triageDecision === 'EMERGENCY' ? 'emergency' : 'routine'
+      key_symptoms: isAIProcessingMetadata(metadata) && metadata.collectedInfo?.chiefComplaint 
+        ? [metadata.collectedInfo.chiefComplaint] 
+        : [],
+      severity: isAIProcessingMetadata(metadata) ? metadata.collectedInfo?.severity || 'Not specified' : 'Not specified',
+      duration: isAIProcessingMetadata(metadata) ? metadata.collectedInfo?.duration || 'Not specified' : 'Not specified',
+      urgency_level: metadata.type === 'handoff' && metadata.triageDecision === 'EMERGENCY' ? 'emergency' : 'routine'
     };
   };
 
