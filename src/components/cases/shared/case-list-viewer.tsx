@@ -29,10 +29,10 @@ export function CaseListViewer({
   className
 }: CaseListViewerProps) {
   return (
-    <div className={cn('flex-1 min-h-0 relative', className)}>
-      <ScrollArea className="h-full">
+    <div className={cn('h-full flex flex-col', className)}>
+      <ScrollArea className="flex-1 min-h-0">
         <div 
-          className="space-y-2 p-4" 
+          className="space-y-2 px-4" 
           role="list" 
           aria-label="Case list"
           aria-live="polite"

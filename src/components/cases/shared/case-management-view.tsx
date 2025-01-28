@@ -96,7 +96,7 @@ export function CaseManagementView({
 
   if (isLoading) {
     return (
-      <div className={cn('flex flex-col h-full', className)}>
+      <div className={cn('flex flex-col h-[calc(100vh-4rem)]', className)}>
         <Card className="p-6 mb-4">
           <div className="space-y-3">
             <Skeleton className="h-4 w-[250px]" />
@@ -108,14 +108,14 @@ export function CaseManagementView({
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={cn('flex flex-col h-[calc(100vh-4rem)]', className)}>
+      <div className="flex-none mb-4">
         <FilterBar 
           filters={filters} 
           onFilterChange={onFilterChange} 
         />
         {showActions && selectedCases.length > 0 && (
-          <div className="flex items-center gap-2" role="toolbar" aria-label="Bulk actions">
+          <div className="flex items-center gap-2 mt-4" role="toolbar" aria-label="Bulk actions">
             <Button 
               variant="outline" 
               onClick={handleDeselectAll}
@@ -157,13 +157,15 @@ export function CaseManagementView({
       </Card>
 
       {showActions && selectedCases.length > 0 && (
-        <BulkOperationsBar
-          selectedCount={selectedCases.length}
-          staffMembers={staffMembers}
-          onStatusChange={handleBulkStatusChange}
-          onAssignmentChange={handleBulkAssignmentChange}
-          onDeselectAll={handleDeselectAll}
-        />
+        <div className="flex-none mt-4">
+          <BulkOperationsBar
+            selectedCount={selectedCases.length}
+            staffMembers={staffMembers}
+            onStatusChange={handleBulkStatusChange}
+            onAssignmentChange={handleBulkAssignmentChange}
+            onDeselectAll={handleDeselectAll}
+          />
+        </div>
       )}
     </div>
   )

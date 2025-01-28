@@ -111,21 +111,70 @@ export interface UIMessage extends Omit<Message, 'metadata'> {
    - Prefix with `Db`: `DbCase`, `DbUser`
    - Use for raw database types
    - Only defined in `db.ts`
+   - Use snake_case for field names (following Supabase convention)
 
 2. Domain Types
    - No prefix: `Case`, `User`
    - Use for business logic types
    - Define in appropriate domain file
+   - Use snake_case for field names to match database convention
 
 3. Validation Types
    - Suffix with purpose: `CasesRow`, `CasesInsert`
    - Infer from Zod schemas
    - Must validate against domain types
+   - Use snake_case for field names to match domain types
 
 4. UI Types
    - Prefix with `UI`: `UIMessage`, `UIChatSession`
    - Or suffix with `Props`: `ChatMessageProps`
    - Define in `ui.ts`
+   - Use camelCase for React props and UI-specific fields
+
+## Casing Conventions
+
+1. snake_case
+   - Database fields (from Supabase)
+   - Domain type fields
+   - Validation schema fields
+   - API response/request fields
+   Example:
+   ```typescript
+   interface Case {
+     case_id: string
+     patient_id: string
+     chief_complaint: string
+     created_at: string
+   }
+   ```
+
+2. camelCase
+   - React component props
+   - UI event handlers
+   - UI-specific state
+   Example:
+   ```typescript
+   interface ChatProps {
+     onMessageSent: (message: string) => void
+     isLoading: boolean
+     lastMessageId?: string
+   }
+   ```
+
+3. Mixed Context (Domain + UI)
+   When dealing with both domain data and UI props, maintain the respective conventions:
+   ```typescript
+   interface ChatMessageProps {
+     // Domain data (snake_case)
+     message_id: string
+     user_id: string
+     created_at: string
+     
+     // UI props (camelCase)
+     onReply: () => void
+     isHighlighted: boolean
+   }
+   ```
 
 ## Type Safety Rules
 

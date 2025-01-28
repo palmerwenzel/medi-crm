@@ -16,11 +16,11 @@ interface ProcessMessageParams {
 }
 
 interface CollectedInfo {
-  chiefComplaint?: string;
+  chief_complaint?: string;
   duration?: string;
   severity?: string;
-  existingProvider?: string;
-  urgencyIndicators: string[];
+  existing_provider?: string;
+  urgency_indicators: string[];
 }
 
 interface TriageResult {
@@ -63,13 +63,13 @@ export async function processMessage({
     let metadata: MessageMetadata = { type: 'ai_processing' };
 
     // Update collected information
-    const collectedInfo = await extractStructuredData(content);
-    if (!collectedInfo) {
+    const collected_info = await extractStructuredData(content);
+    if (!collected_info) {
       throw new Error('Failed to extract information from message');
     }
 
     if (isAIProcessingMetadata(metadata)) {
-      metadata.collectedInfo = collectedInfo;
+      metadata.collected_info = collected_info;
     }
 
     if (messageCount >= DECISION_THRESHOLD) {
@@ -87,15 +87,15 @@ export async function processMessage({
         aiResponse = await generateHandoffMessage(decision, reasoning, openAIMessages);
         metadata = {
           type: 'ai_processing',
-          confidenceScore: confidence,
-          collectedInfo: {
-            urgencyIndicators: [decision, reasoning]
+          confidence_score: confidence,
+          collected_info: {
+            urgency_indicators: [decision, reasoning]
           }
         } satisfies MessageMetadata;
       }
     } else {
       // Continue gathering information
-      const gatheringPrompt = createGatheringPrompt(messageCount, collectedInfo);
+      const gatheringPrompt = createGatheringPrompt(messageCount, collected_info);
       
       aiResponse = await generateChatResponse([
         ...openAIMessages,
@@ -130,10 +130,10 @@ function isValidTriageResult(result: unknown): result is TriageResult {
 
 function createGatheringPrompt(messageCount: number, info: CollectedInfo): string {
   const missingInfo = [];
-  if (!info.chiefComplaint) missingInfo.push('chief complaint');
+  if (!info.chief_complaint) missingInfo.push('chief complaint');
   if (!info.duration) missingInfo.push('duration of symptoms');
   if (!info.severity) missingInfo.push('severity level');
-  if (!info.existingProvider) missingInfo.push('existing provider information');
+  if (!info.existing_provider) missingInfo.push('existing provider information');
 
   return `Based on the conversation so far, we still need information about: ${missingInfo.join(', ')}. 
     ${messageCount === 1 ? 'Start by asking about their main concern.' : 'Focus on gathering this missing information.'}
@@ -156,4 +156,4 @@ async function generateHandoffMessage(
     ...history,
     { role: 'system' as const, content: prompts[decision] }
   ]);
-} 
+}

@@ -38,11 +38,13 @@ export interface Message extends Omit<DbMedicalMessage, 'metadata'> {
  * Shared medical information structure
  */
 export interface CollectedMedicalInfo extends Record<string, Json | undefined> {
-  chiefComplaint?: string
+  chief_complaint?: string
   duration?: string
   severity?: string
-  existingProvider?: string
-  urgencyIndicators: string[]
+  existing_provider?: string
+  urgency_indicators: string[]
+  key_symptoms?: string[]
+  recommended_specialties?: string[]
 }
 
 export type MessageInsert = Partial<DbMedicalMessage> & {
@@ -56,14 +58,14 @@ export type MessageUpdate = Partial<MessageInsert>
 export type MessageMetadata = 
   | { 
       type: 'ai_processing'
-      confidenceScore?: number
-      collectedInfo?: CollectedMedicalInfo
+      confidence_score?: number
+      collected_info?: CollectedMedicalInfo
   } & Record<string, Json | undefined>
   | ({
       type: 'handoff'
-      handoffStatus: HandoffStatus
-      providerId: UserId
-      triageDecision: TriageDecision
+      handoff_status: HandoffStatus
+      provider_id: UserId
+      triage_decision: TriageDecision
   } & Record<string, Json | undefined>)
   | ({
       type: 'standard'

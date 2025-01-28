@@ -58,7 +58,42 @@ export async function extractStructuredData(content: string): Promise<CollectedM
   const messages: Message[] = [
     {
       role: 'system',
-      content: 'Extract structured medical information from the following text. Return a JSON object with fields: chiefComplaint, duration, severity, existingProvider, and urgencyIndicators (array).'
+      content: `Extract structured medical information from the conversation. Return a JSON object matching this format exactly:
+
+{
+  "title": "Brief (5-7 words) clinical summary of main complaint",
+  "description": "2-3 sentence summary of the patient's situation, symptoms, and context",
+  "chief_complaint": "Primary symptom or concern",
+  "key_symptoms": ["Array of distinct symptoms", "Include secondary symptoms"],
+  "duration": "How long symptoms have been present (e.g., '3 days', '2 weeks')",
+  "severity": "One of: 'Mild', 'Moderate', 'Severe', or 'Critical'",
+  "existing_provider": "Name of current provider if mentioned, otherwise null",
+  "recommended_specialties": ["Relevant medical specialties based on symptoms"],
+  "urgency_indicators": ["Any red flags", "Concerning symptoms", "Risk factors"]
+}
+
+Guidelines:
+- Title should be clinical and concise (e.g., "Acute Migraine with Visual Disturbance")
+- Description should prioritize medical relevance
+- Duration must be in standardized format (e.g., "2 days", "3 weeks", "4 months")
+- Severity must be one of the specified levels
+- Include all symptoms mentioned, not just the primary complaint
+- List specialties that would be relevant for the symptoms described
+
+Example:
+For "I've had a bad headache for 3 days with some blurry vision. It's worse than usual."
+
+{
+  "title": "Severe Headache with Visual Disturbance",
+  "description": "Patient presents with a severe headache lasting 3 days, accompanied by blurred vision. Reports symptoms are worse than previous episodes.",
+  "chief_complaint": "Severe headache",
+  "key_symptoms": ["Headache", "Blurred vision"],
+  "duration": "3 days",
+  "severity": "Moderate",
+  "existing_provider": null,
+  "recommended_specialties": ["Neurology", "Ophthalmology"],
+  "urgency_indicators": ["Vision changes", "Worsening severity"]
+}`
     },
     {
       role: 'user',

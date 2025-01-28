@@ -90,12 +90,12 @@ export function ChatActions({
     return {
       title: 'Medical Consultation',
       description: 'Patient seeking medical attention',
-      key_symptoms: isAIProcessingMetadata(metadata) && metadata.collectedInfo?.chiefComplaint 
-        ? [metadata.collectedInfo.chiefComplaint] 
+      key_symptoms: isAIProcessingMetadata(metadata) && metadata.collected_info?.chief_complaint
+        ? [metadata.collected_info.chief_complaint]
         : [],
-      severity: isAIProcessingMetadata(metadata) ? metadata.collectedInfo?.severity || 'Not specified' : 'Not specified',
-      duration: isAIProcessingMetadata(metadata) ? metadata.collectedInfo?.duration || 'Not specified' : 'Not specified',
-      urgency_level: metadata.type === 'handoff' && metadata.triageDecision === 'EMERGENCY' ? 'emergency' : 'routine'
+      severity: isAIProcessingMetadata(metadata) ? metadata.collected_info?.severity || 'Not specified' : 'Not specified',
+      duration: isAIProcessingMetadata(metadata) ? metadata.collected_info?.duration || 'Not specified' : 'Not specified',
+      urgency_level: metadata.type === 'handoff' && metadata.triage_decision === 'EMERGENCY' ? 'emergency' : 'routine'
     };
   };
 
