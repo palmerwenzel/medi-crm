@@ -54,6 +54,60 @@ Once these are working, we can move on to enhancements.
    - Chat endpoint with error handling
    - Response formatting
 
+## New Case Assessment System
+
+### Overview
+Instead of using metadata for AI-extracted medical information, we'll create a dedicated `case_assessment` table. This allows:
+- Multiple assessments per case (AI, provider updates)
+- Clear audit trail
+- Structured querying
+- Role-based access control
+- Assessment versioning
+
+### Required Components
+
+1. [ ] Database Schema
+   ```typescript
+   interface CaseAssessment {
+     id: string;
+     case_id: string;
+     created_at: string;
+     created_by: string;
+     created_by_type: 'ai' | 'staff' | 'admin';
+     key_symptoms: string[];
+     recommended_specialties: string[];
+     urgency_indicators: string[];
+     confidence_score?: number; // For AI assessments
+     notes?: string; // Optional provider notes
+     status: 'active' | 'superseded';
+   }
+   ```
+
+2. [ ] Access Control
+   - Staff/Admin: Full CRUD access
+   - Patients: Read-only access
+   - AI: Create initial assessments
+
+3. [ ] Integration Points
+   - [ ] Update AI extraction to create assessments
+   - [ ] Add provider UI for assessment management
+   - [ ] Implement assessment history viewing
+   - [ ] Add assessment update notifications
+
+4. [ ] Activity Tracking
+   - Add new activity types:
+     - `assessment_added`
+     - `assessment_updated`
+   - Track assessment changes in case history
+
+### Implementation Order
+1. [ ] Create database table and migrations
+2. [ ] Add validation schemas
+3. [ ] Update AI extraction pipeline
+4. [ ] Implement provider assessment UI
+5. [ ] Add activity tracking
+6. [ ] Create assessment viewing components
+
 ## Implementation Tasks
 
 ### 1. AI Data Extraction Enhancement

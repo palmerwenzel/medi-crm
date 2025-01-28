@@ -37,7 +37,7 @@ export async function createConversation(
       patient_id: patientId,
       status: 'active',
       metadata: {},
-      access: { canAccess: 'ai' }
+      access: { can_access: 'ai' }
     }
 
     const { data, error } = await supabase

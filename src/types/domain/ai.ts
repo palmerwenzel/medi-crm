@@ -48,12 +48,12 @@ export function isHandoffMetadata(
 
 export function isProviderAccess(
   access: ChatAccess
-): access is Extract<ChatAccess, { canAccess: 'provider' }> {
-  return access.canAccess === 'provider'
+): access is Extract<ChatAccess, { can_access: 'provider' }> {
+  return access.can_access === 'provider'
 }
 
 export function isBothAccess(
   access: ChatAccess
-): access is Extract<ChatAccess, { canAccess: 'both' }> {
-  return access.canAccess === 'both'
+): access is Extract<ChatAccess, { can_access: 'both' }> {
+  return access.can_access === 'both'
 } 

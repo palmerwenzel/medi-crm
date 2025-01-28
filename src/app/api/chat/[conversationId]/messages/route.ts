@@ -62,7 +62,7 @@ export async function POST(
     const transformedMetadata = metadata?.type === 'handoff' 
       ? { 
           ...metadata,
-          providerId: rawToUserIdSchema.parse(metadata.providerId)
+          provider_id: rawToUserIdSchema.parse(metadata.provider_id)
         }
       : metadata
 
@@ -122,9 +122,9 @@ export async function POST(
             {
               type: 'ai_processing' as const,
               status: 'delivered',
-              confidenceScore: aiResult.data.metadata?.confidenceScore,
-              collectedInfo: {
-                urgencyIndicators: [],
+              confidence_score: aiResult.data.metadata?.confidence_score,
+              collected_info: {
+                urgency_indicators: [],
                 ...(aiResult.data.metadata?.extractedData || {})
               }
             } satisfies MessageMetadata

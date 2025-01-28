@@ -97,7 +97,7 @@ export async function createCaseFromChat(
   try {
     // Verify consent unless it's an emergency
     if (!isHandoffMetadata(metadata) || 
-        (!patientConsent && metadata.triageDecision !== 'EMERGENCY')) {
+        (!patientConsent && metadata.triage_decision !== 'EMERGENCY')) {
       return { 
         caseId: '', 
         error: 'Patient consent required to create case' 
@@ -115,7 +115,7 @@ export async function createCaseFromChat(
     } as const;
 
     // Determine category based on urgency and triage decision
-    const category: CaseCategory = summary.urgency_level === 'emergency' || metadata.triageDecision === 'EMERGENCY'
+    const category: CaseCategory = summary.urgency_level === 'emergency' || metadata.triage_decision === 'EMERGENCY'
       ? 'emergency'
       : 'general';
 
@@ -134,7 +134,7 @@ export async function createCaseFromChat(
         key_symptoms: summary.key_symptoms,
         duration: summary.duration,
         severity: summary.severity,
-        handoff_reason: metadata.triageDecision,
+        handoff_reason: metadata.triage_decision,
         recommended_specialties: summary.recommended_specialties
       }
     };
@@ -184,16 +184,16 @@ export async function canCreateCase(
   }
 
   const requiredInfo = [
-    'chiefComplaint',
+    'chief_complaint',
     'duration',
     'severity'
   ] as const;
 
   const missingInfo = requiredInfo.filter(
-    info => !metadata.collectedInfo?.[info]
+    info => !metadata.collected_info?.[info]
   );
 
-  const confidence = metadata.confidenceScore || 0;
+  const confidence = metadata.confidence_score || 0;
 
   return {
     canCreate: missingInfo.length === 0 && confidence >= 0.7,

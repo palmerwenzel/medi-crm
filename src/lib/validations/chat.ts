@@ -18,22 +18,22 @@ export const conversationStatusEnum = z.enum(['active', 'archived'])
 export const aiProcessingMetadataSchema = z.object({
   type: z.literal('ai_processing'),
   status: messageStatusEnum,
-  confidenceScore: z.number().optional(),
-  collectedInfo: z.object({
-    chiefComplaint: z.string().optional(),
+  confidence_score: z.number().optional(),
+  collected_info: z.object({
+    chief_complaint: z.string().optional(),
     duration: z.string().optional(),
     severity: z.string().optional(),
-    existingProvider: z.string().optional(),
-    urgencyIndicators: z.array(z.string())
+    existing_provider: z.string().optional(),
+    urgency_indicators: z.array(z.string())
   }).optional()
 })
 
 export const handoffMetadataSchema = z.object({
   type: z.literal('handoff'),
   status: messageStatusEnum,
-  handoffStatus: handoffStatusEnum,
-  providerId: z.string(),
-  triageDecision: triageDecisionEnum
+  handoff_status: handoffStatusEnum,
+  provider_id: z.string(),
+  triage_decision: triageDecisionEnum
 })
 
 export const standardMetadataSchema = z.object({
@@ -80,9 +80,9 @@ export const conversationSchema = z.object({
   case_id: z.string().nullable().optional(),
   can_create_case: z.boolean().optional(),
   access: z.object({
-    canAccess: z.enum(['ai', 'provider', 'both']),
-    providerId: z.string().optional(),
-    handoffTimestamp: z.string().optional()
+    can_access: z.enum(['ai', 'provider', 'both']),
+    provider_id: z.string().optional(),
+    handoff_timestamp: z.string().optional()
   }).optional()
 })
 

@@ -11,8 +11,8 @@ const openai = new OpenAI({
 type AIResponse = {
   message: string
   metadata?: {
-    triageDecision?: 'EMERGENCY' | 'URGENT' | 'ROUTINE'
-    confidenceScore?: number
+    triage_decision?: 'EMERGENCY' | 'URGENT' | 'ROUTINE'
+    confidence_score?: number
     extractedData?: ExtractedAIData
   }
 }

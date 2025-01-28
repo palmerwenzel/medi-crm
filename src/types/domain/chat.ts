@@ -72,15 +72,15 @@ export type MessageMetadata =
   } & Record<string, Json | undefined>)
 
 export type ChatAccess = 
-  | { canAccess: 'ai' }
+  | { can_access: 'ai' }
   | { 
-      canAccess: 'provider'
-      providerId: UserId
+      can_access: 'provider'
+      provider_id: UserId
     }
   | {
-      canAccess: 'both'
-      providerId?: UserId
-      handoffTimestamp?: string
+      can_access: 'both'
+      provider_id?: UserId
+      handoff_timestamp?: string
     }
 
 // Conversation types

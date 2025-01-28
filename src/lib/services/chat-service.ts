@@ -324,12 +324,12 @@ export async function sendMessage(
         metadata: {
           type: metadata.type,
           ...(metadata.type === 'ai_processing' ? {
-            confidenceScore: metadata.confidenceScore,
-            collectedInfo: metadata.collectedInfo
+            confidence_score: metadata.confidence_score,
+            collected_info: metadata.collected_info
           } : metadata.type === 'handoff' ? {
-            handoffStatus: metadata.handoffStatus,
-            providerId: metadata.providerId,
-            triageDecision: metadata.triageDecision
+            handoff_status: metadata.handoff_status,
+            provider_id: metadata.provider_id,
+            triage_decision: metadata.triage_decision
           } : {})
         }
       })
@@ -432,7 +432,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
         patient_id: patientId,
         status: 'active',
         metadata: {},
-        access: { canAccess: 'ai' }
+        access: { can_access: 'ai' }
       })
       .select('*')
       .single()
@@ -455,7 +455,7 @@ export async function createConversation(patientId: UserId): Promise<MedicalConv
               patient_id: patientId,
               status: 'active',
               metadata: {},
-              access: { canAccess: 'ai' }
+              access: { can_access: 'ai' }
             }
           },
           userContext: {

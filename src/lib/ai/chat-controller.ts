@@ -40,9 +40,9 @@ export class ChatController {
       // Handle handoff if decision was made
       if (
         baseMetadata.type === 'handoff' && 
-        baseMetadata.triageDecision
+        baseMetadata.triage_decision
       ) {
-        await this.initiateHandoff(baseMetadata.triageDecision);
+        await this.initiateHandoff(baseMetadata.triage_decision);
       }
 
       // Generate response message
@@ -92,8 +92,8 @@ export class ChatController {
 
       // Update session access with selected provider
       const newAccess: ChatAccess = {
-        canAccess: 'provider',
-        providerId: staff.id as UserId
+        can_access: 'provider',
+        provider_id: staff.id as UserId
       };
       
       this.session.access = newAccess;

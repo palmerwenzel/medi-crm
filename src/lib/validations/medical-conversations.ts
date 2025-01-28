@@ -4,18 +4,18 @@ import { rawToConversationIdSchema, rawToUserIdSchema, userIdSchema, jsonSchema 
 import { medicalMessagesRowSchema } from './medical-messages'
 
 // Chat access schema
-const chatAccessSchema = z.discriminatedUnion('canAccess', [
+const chatAccessSchema = z.discriminatedUnion('can_access', [
   z.object({
-    canAccess: z.literal('ai')
+    can_access: z.literal('ai')
   }),
   z.object({
-    canAccess: z.literal('provider'),
-    providerId: userIdSchema
+    can_access: z.literal('provider'),
+    provider_id: userIdSchema
   }),
   z.object({
-    canAccess: z.literal('both'),
-    providerId: userIdSchema.optional(),
-    handoffTimestamp: z.string().optional()
+    can_access: z.literal('both'),
+    provider_id: userIdSchema.optional(),
+    handoff_timestamp: z.string().optional()
   })
 ])
 

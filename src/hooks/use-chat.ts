@@ -62,8 +62,8 @@ function logWarning(context: string, data?: LogData) {
 }
 
 // Update the handoff message content based on triage decision
-function getHandoffMessage(triageDecision: TriageDecision): string {
-  switch (triageDecision) {
+function getHandoffMessage(triage_decision: TriageDecision): string {
+  switch (triage_decision) {
     case 'EMERGENCY':
       return 'Based on our conversation, this appears to be an emergency situation. I recommend seeking immediate medical attention.';
     case 'URGENT':
@@ -78,8 +78,8 @@ function getHandoffMessage(triageDecision: TriageDecision): string {
 }
 
 // Update the department mapping based on triage decision
-function getDepartment(triageDecision: TriageDecision): DbDepartment {
-  switch (triageDecision) {
+function getDepartment(triage_decision: TriageDecision): DbDepartment {
+  switch (triage_decision) {
     case 'EMERGENCY':
       return 'emergency';
     case 'URGENT':
@@ -107,7 +107,7 @@ export function useChat({
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingStatus>>(new Map())
   const [presenceState, setPresenceState] = useState<PresenceState>({})
   const [chatAccess, setChatAccess] = useState<ChatAccess>({
-    canAccess: 'ai',
+    can_access: 'ai',
   })
   const channelRef = useRef<RealtimeChannel | null>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -136,16 +136,16 @@ export function useChat({
         if (!conversationId) {
           let access: ChatAccess
           if (userRole === 'admin') {
-            access = { canAccess: 'both' }
+            access = { can_access: 'both' }
           } else if (userRole === 'staff' && user?.id) {
             access = { 
-              canAccess: 'provider',
-              providerId: user.id as UserId
+              can_access: 'provider',
+              provider_id: user.id as UserId
             }
           } else if (userRole === 'patient') {
-            access = { canAccess: 'both' }
+            access = { can_access: 'both' }
           } else {
-            access = { canAccess: 'ai' }
+            access = { can_access: 'ai' }
           }
           logDebug('Setting initial access', { access, userRole })
           setChatAccess(access)
@@ -163,9 +163,9 @@ export function useChat({
           logError('Database error checking access', dbError, { conversationId })
           // Don't default to AI access on error for patients
           if (userRole === 'patient') {
-            setChatAccess({ canAccess: 'both' })
+            setChatAccess({ can_access: 'both' })
           } else {
-            setChatAccess({ canAccess: 'ai' })
+            setChatAccess({ can_access: 'ai' })
           }
           return
         }
@@ -178,9 +178,9 @@ export function useChat({
           })
           // Don't default to AI access for patients
           if (userRole === 'patient') {
-            setChatAccess({ canAccess: 'both' })
+            setChatAccess({ can_access: 'both' })
           } else {
-            setChatAccess({ canAccess: 'ai' })
+            setChatAccess({ can_access: 'ai' })
           }
           return
         }
@@ -214,20 +214,20 @@ export function useChat({
         let access: ChatAccess
         if (userRole === 'patient' && conversation.patient_id === user?.id) {
           // Patients always have access to their own conversations
-          access = { canAccess: 'both' }
+          access = { can_access: 'both' }
         } else if (userRole === 'admin') {
-          access = { canAccess: 'both' }
+          access = { can_access: 'both' }
         } else if (userRole === 'staff' && user?.id && (conversation.assigned_staff_id === user.id || hasStaffAccess)) {
           access = { 
-            canAccess: 'provider',
-            providerId: user.id as UserId
+            can_access: 'provider',
+            provider_id: user.id as UserId
           }
         } else if (conversation.can_create_case) {
           // If no specific access and case can be created, default to AI
-          access = { canAccess: 'ai' }
+          access = { can_access: 'ai' }
         } else {
           // Default to AI access for non-owners
-          access = { canAccess: 'ai' }
+          access = { can_access: 'ai' }
         }
 
         logDebug('Setting conversation access', { 
@@ -247,9 +247,9 @@ export function useChat({
         // Don't default to AI access on error for patients
         if (mounted) {
           if (userRole === 'patient') {
-            setChatAccess({ canAccess: 'both' })
+            setChatAccess({ can_access: 'both' })
           } else {
-            setChatAccess({ canAccess: 'ai' })
+            setChatAccess({ can_access: 'ai' })
           }
         }
       }
@@ -517,8 +517,8 @@ export function useChat({
       })
 
       // Always send as user for AI responses unless explicitly in provider mode
-      const role = chatAccess.canAccess === 'provider' ? 'assistant' : 'user'
-      const requireAI = chatAccess.canAccess !== 'provider'
+      const role = chatAccess.can_access === 'provider' ? 'assistant' : 'user'
+      const requireAI = chatAccess.can_access !== 'provider'
 
       const message = await sendMessage(
         content,
@@ -527,9 +527,9 @@ export function useChat({
         requireAI ? {
           type: 'ai_processing' as const,
           status: 'pending',
-          confidenceScore: 0,
-          collectedInfo: {
-            urgencyIndicators: []
+          confidence_score: 0,
+          collected_info: {
+            urgency_indicators: []
           }
         } : {
           type: 'standard' as const,
@@ -552,7 +552,7 @@ export function useChat({
   }
 
   // Handle AI-to-staff handoff with notifications
-  const handleHandoff = async (triageDecision: TriageDecision) => {
+  const handleHandoff = async (triage_decision: TriageDecision) => {
     if (!conversationId) return
 
     try {
@@ -567,12 +567,12 @@ export function useChat({
       // Send handoff message
       const handoffMessage: MessageInsert = {
         conversation_id: conversationId,
-        content: getHandoffMessage(triageDecision),
+        content: getHandoffMessage(triage_decision),
         role: 'assistant',
         metadata: {
           type: 'handoff',
-          handoffStatus: 'pending',
-          triageDecision
+          handoff_status: 'pending',
+          triage_decision
         }
       }
 
@@ -587,7 +587,7 @@ export function useChat({
         .from('users')
         .select('id, department')
         .eq('role', 'staff')
-        .eq('department', getDepartment(triageDecision))
+        .eq('department', getDepartment(triage_decision))
 
       // Send notifications to available staff
       if (staffMembers?.length) {
@@ -600,7 +600,7 @@ export function useChat({
             p_metadata: {
               handoff: {
                 from_ai: true,
-                reason: triageDecision,
+                reason: triage_decision,
                 urgency: 'medium'
               },
               conversation: {
@@ -615,7 +615,7 @@ export function useChat({
       // Update access state
       setChatAccess(prev => ({
         ...prev,
-        canAccess: 'both'
+        can_access: 'both'
       } as ChatAccess))
     } catch (err) {
       console.error('Error handling handoff:', err)

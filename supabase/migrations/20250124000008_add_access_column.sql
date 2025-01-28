@@ -1,6 +1,6 @@
 -- Add access column to medical_conversations
 ALTER TABLE medical_conversations
-ADD COLUMN IF NOT EXISTS access jsonb DEFAULT jsonb_build_object('canAccess', 'both');
+ADD COLUMN IF NOT EXISTS access jsonb DEFAULT jsonb_build_object('can_access', 'both');
 
 -- Add comment for documentation
 COMMENT ON COLUMN medical_conversations.access IS 'Access control configuration for the conversation. Controls AI vs provider access.';
