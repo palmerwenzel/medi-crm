@@ -249,9 +249,11 @@ export async function sendMessage(
   content: string,
   conversationId: ConversationId,
   role: MessageRole = 'user',
-  metadata: MessageMetadata & { status: MessageStatus } = { 
-    type: 'standard', 
-    status: 'pending' 
+  metadata: MessageMetadata = { 
+    type: 'standard',
+    is_case_creation: false,
+    is_assessment_creation: false,
+    is_final: false
   }
 ): Promise<UIMessage> {
   // Create temporary message for optimistic update
@@ -261,7 +263,7 @@ export async function sendMessage(
     content,
     role,
     created_at: new Date().toISOString(),
-    metadata,
+    metadata: { ...metadata, status: 'pending' },
     state: { status: 'sending', tempId: crypto.randomUUID() }
   })
 
@@ -321,17 +323,7 @@ export async function sendMessage(
       body: JSON.stringify({ 
         content, 
         role, 
-        metadata: {
-          type: metadata.type,
-          ...(metadata.type === 'ai_processing' ? {
-            confidence_score: metadata.confidence_score,
-            collected_info: metadata.collected_info
-          } : metadata.type === 'handoff' ? {
-            handoff_status: metadata.handoff_status,
-            provider_id: metadata.provider_id,
-            triage_decision: metadata.triage_decision
-          } : {})
-        }
+        metadata
       })
     })
 

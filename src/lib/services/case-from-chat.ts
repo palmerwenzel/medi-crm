@@ -1,10 +1,14 @@
 import { MessageMetadata } from '@/types/domain/chat';
-import { ChatRequest, isAIProcessingMetadata, isHandoffMetadata } from '@/types/domain/ai';
+import { ChatRequest } from '@/types/domain/ai';
 import { generateChatResponse } from '@/lib/ai/openai';
 import { createCase } from '@/lib/actions/cases';
 import { createClient } from '@/utils/supabase/client';
 import { MEDICAL_SUMMARY_PROMPT } from '@/lib/ai/prompts';
 import { CaseCategory } from '@/types/domain/cases';
+import { CaseAssessment } from '@/types/domain/cases';
+import { AssessmentCreatorType } from '@/types/domain/cases';
+import { log, logPerformance } from '@/lib/utils/logging';
+import { createAssessmentFromMetadata } from './case-assessments';
 
 interface ChatSummary {
   title: string;
@@ -33,53 +37,94 @@ interface ChatSummary {
  * Generates a structured summary of the chat conversation with detailed medical context
  */
 async function generateChatSummary(messages: ChatRequest['messages']): Promise<ChatSummary> {
+  const startTime = performance.now();
+  log('Generating chat summary from messages:', messages.length, 'messages');
+
   const summaryPrompt = `${MEDICAL_SUMMARY_PROMPT}
   Return a JSON object with the following structure:
   {
-    "title": "Brief, descriptive title for the case",
-    "description": "Detailed summary of the patient's situation",
-    "key_symptoms": ["list", "of", "main", "symptoms"],
-    "severity": "Description of severity",
-    "duration": "How long issues have been present",
-    "existing_provider": "Name of provider if mentioned",
-    "recommended_specialties": ["relevant", "medical", "specialties"],
-    "urgency_level": "routine" | "urgent" | "emergency",
-    "clinical_details": {
-      "progression": "How symptoms have changed over time",
-      "impact_on_daily_life": "How this affects the patient",
-      "previous_treatments": ["list", "of", "treatments"],
-      "medical_history": ["relevant", "history", "items"],
-      "risk_factors": ["identified", "risk", "factors"]
+    "domain_data": {
+      "title": "Brief, descriptive title for the case",
+      "description": "Detailed summary of the patient's situation",
+      "key_symptoms": ["list", "of", "main", "symptoms"],
+      "severity": "Description of severity",
+      "duration": "How long issues have been present",
+      "existing_provider": "Name of provider if mentioned",
+      "recommended_specialties": ["relevant", "medical", "specialties"],
+      "urgency_level": "routine" | "urgent" | "emergency",
+      "clinical_details": {
+        "progression": "How symptoms have changed over time",
+        "impact_on_daily_life": "How this affects the patient",
+        "previous_treatments": ["list", "of", "treatments"],
+        "medical_history": ["relevant", "history", "items"],
+        "risk_factors": ["identified", "risk", "factors"]
+      },
+      "patient_context": {
+        "treatment_preferences": ["patient's", "preferences"],
+        "access_to_care": "Any access considerations",
+        "support_system": "Available support"
+      }
     },
-    "patient_context": {
-      "treatment_preferences": ["patient's", "preferences"],
-      "access_to_care": "Any access considerations",
-      "support_system": "Available support"
+    "internal_metrics": {
+      "field_confidence": {
+        "symptoms": 0.0-1.0,
+        "severity": 0.0-1.0,
+        "duration": 0.0-1.0,
+        "urgency": 0.0-1.0,
+        "clinical_details": 0.0-1.0,
+        "patient_context": 0.0-1.0
+      },
+      "missing_info": ["list", "of", "missing", "fields"],
+      "uncertainty_flags": ["areas", "needing", "clarification"],
+      "suggested_questions": ["follow-up", "questions"],
+      "triage_hints": ["areas", "needing", "clarification"]
     }
   }`;
 
-  const response = await generateChatResponse([
-    ...messages,
-    { role: 'assistant', content: summaryPrompt }
-  ], { 
-    temperature: 0,
-    maxTokens: 1000 // Ensure we have enough tokens for detailed response
-  });
-
   try {
-    const summary = JSON.parse(response);
-    return {
+    const response = await generateChatResponse([
+      ...messages,
+      { role: 'assistant', content: summaryPrompt }
+    ], { 
+      temperature: 0,
+      maxTokens: 1000
+    });
+
+    const fullResponse = JSON.parse(response);
+    
+    log('Chat summary generated:', {
+      title: fullResponse.domain_data.title,
+      symptoms: fullResponse.domain_data.key_symptoms,
+      urgency: fullResponse.domain_data.urgency_level
+    });
+    
+    log('Internal metrics:', {
+      confidence: fullResponse.internal_metrics.field_confidence,
+      missingInfo: fullResponse.internal_metrics.missing_info,
+      uncertaintyFlags: fullResponse.internal_metrics.uncertainty_flags,
+      triageHints: fullResponse.internal_metrics.triage_hints
+    });
+
+    // Extract only the domain data
+    const summary = fullResponse.domain_data;
+    
+    // Ensure required fields exist with clean domain data
+    const result = {
       ...summary,
-      // Ensure required fields exist
       title: summary.title || 'Medical Consultation',
       description: summary.description || 'Patient seeking medical attention',
       key_symptoms: summary.key_symptoms || [],
       severity: summary.severity || 'Not specified',
       duration: summary.duration || 'Not specified',
-      urgency_level: summary.urgency_level || 'routine'
+      urgency_level: summary.urgency_level || 'routine',
+      clinical_details: summary.clinical_details || {},
+      patient_context: summary.patient_context || {}
     };
+
+    logPerformance('generateChatSummary', startTime);
+    return result;
   } catch (error) {
-    console.error('Error parsing chat summary:', error);
+    log('Error generating chat summary:', error);
     throw new Error('Failed to generate chat summary');
   }
 }
@@ -94,10 +139,13 @@ export async function createCaseFromChat(
   patientId: string,
   patientConsent: boolean = false
 ): Promise<{ caseId: string; error?: string }> {
+  const startTime = performance.now();
+  log('Starting case creation from chat:', { conversationId, patientId, consent: patientConsent });
+
   try {
     // Verify consent unless it's an emergency
-    if (!isHandoffMetadata(metadata) || 
-        (!patientConsent && metadata.triage_decision !== 'EMERGENCY')) {
+    if (!patientConsent && metadata.triage_decision !== 'EMERGENCY') {
+      log('Case creation blocked: No patient consent');
       return { 
         caseId: '', 
         error: 'Patient consent required to create case' 
@@ -106,6 +154,11 @@ export async function createCaseFromChat(
 
     // Generate chat summary
     const summary = await generateChatSummary(messages);
+    log('Generated summary for case:', {
+      title: summary.title,
+      urgency: summary.urgency_level,
+      symptoms: summary.key_symptoms
+    });
 
     // Determine priority based on urgency
     const priorityMap = {
@@ -118,6 +171,8 @@ export async function createCaseFromChat(
     const category: CaseCategory = summary.urgency_level === 'emergency' || metadata.triage_decision === 'EMERGENCY'
       ? 'emergency'
       : 'general';
+
+    log('Case classification:', { category, priority: priorityMap[summary.urgency_level] });
 
     // Create the case
     const caseData = {
@@ -134,18 +189,45 @@ export async function createCaseFromChat(
         key_symptoms: summary.key_symptoms,
         duration: summary.duration,
         severity: summary.severity,
-        handoff_reason: metadata.triage_decision,
-        recommended_specialties: summary.recommended_specialties
+        triage_decision: metadata.triage_decision,
+        recommended_specialties: summary.recommended_specialties,
+        clinical_details: summary.clinical_details
       }
     };
 
     const result = await createCase(caseData);
     
     if (!result.success || !result.data) {
+      log('Failed to create case:', result.error);
       return {
         caseId: '',
         error: result.error || 'Failed to create case'
       };
+    }
+
+    log('Case created successfully:', { caseId: result.data.id });
+
+    // Create initial assessment
+    try {
+      const enrichedMetadata: MessageMetadata = {
+        ...metadata,
+        key_symptoms: summary.key_symptoms,
+        recommended_specialties: summary.recommended_specialties,
+        urgency_indicators: summary.clinical_details?.risk_factors || [],
+        notes: `Initial Assessment from Chat\n\nDuration: ${summary.duration}\nSeverity: ${summary.severity}\n\nClinical Details:\n${summary.clinical_details?.progression || 'Not specified'}\n\nImpact: ${summary.clinical_details?.impact_on_daily_life || 'Not specified'}`
+      };
+
+      await createAssessmentFromMetadata({
+        caseId: result.data.id,
+        metadata: enrichedMetadata,
+        createdBy: 'system',
+        createdByType: 'ai'
+      });
+
+      log('Initial assessment created for case:', result.data.id);
+    } catch (assessmentError) {
+      log('Failed to create initial assessment:', assessmentError);
+      // Continue with case creation even if assessment fails
     }
 
     // Update conversation with case ID
@@ -154,9 +236,10 @@ export async function createCaseFromChat(
       can_create_case: false
     });
 
+    logPerformance('createCaseFromChat', startTime);
     return { caseId: result.data.id };
   } catch (error) {
-    console.error('Error creating case from chat:', error);
+    log('Error in case creation flow:', error);
     return {
       caseId: '',
       error: 'Failed to create case from chat'
@@ -173,13 +256,11 @@ export async function canCreateCase(
 ): Promise<{ 
   canCreate: boolean; 
   missingInfo: string[];
-  confidence: number;
 }> {
-  if (!isAIProcessingMetadata(metadata)) {
+  if (!metadata.collected_info) {
     return {
       canCreate: false,
-      missingInfo: ['Required information not collected'],
-      confidence: 0
+      missingInfo: ['Required information not collected']
     };
   }
 
@@ -193,12 +274,9 @@ export async function canCreateCase(
     info => !metadata.collected_info?.[info]
   );
 
-  const confidence = metadata.confidence_score || 0;
-
   return {
-    canCreate: missingInfo.length === 0 && confidence >= 0.7,
-    missingInfo,
-    confidence
+    canCreate: missingInfo.length === 0,
+    missingInfo
   };
 }
 

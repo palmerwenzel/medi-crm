@@ -69,6 +69,14 @@ const activityConfig: Record<CaseActivityType, { icon: React.ReactNode; color: s
   metadata_change: { 
     icon: <ArrowUpDown className="h-4 w-4" />, 
     color: 'bg-gray-500/10 text-gray-500'
+  },
+  assessment_added: {
+    icon: <FileText className="h-4 w-4" />,
+    color: 'bg-teal-500/10 text-teal-500'
+  },
+  assessment_updated: {
+    icon: <FileText className="h-4 w-4" />,
+    color: 'bg-cyan-500/10 text-cyan-500'
   }
 }
 
@@ -131,6 +139,26 @@ function formatActivityDetails(entry: CaseHistoryWithActor) {
     }
     case 'metadata_change':
       return `${actorName} updated case metadata`
+    case 'assessment_added': {
+      const symptoms = Array.isArray(newJson?.key_symptoms) ? newJson.key_symptoms.length : 0
+      return `${actorName} added a new assessment with ${symptoms} key symptom${symptoms !== 1 ? 's' : ''}`
+    }
+    case 'assessment_updated': {
+      const changes = []
+      if (oldJson?.status !== newJson?.status) {
+        changes.push(`status to ${newJson?.status}`)
+      }
+      if (oldJson?.key_symptoms !== newJson?.key_symptoms) {
+        changes.push('symptoms')
+      }
+      if (oldJson?.recommended_specialties !== newJson?.recommended_specialties) {
+        changes.push('recommended specialties')
+      }
+      if (oldJson?.urgency_indicators !== newJson?.urgency_indicators) {
+        changes.push('urgency indicators')
+      }
+      return `${actorName} updated assessment ${changes.length ? `(${changes.join(', ')})` : ''}`
+    }
     default:
       return 'Unknown activity'
   }

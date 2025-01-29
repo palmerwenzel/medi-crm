@@ -19,13 +19,11 @@ interface CollectedInfo {
   chief_complaint?: string;
   duration?: string;
   severity?: string;
-  existing_provider?: string;
-  urgency_indicators: string[];
+  urgency?: string;
 }
 
 interface TriageResult {
   decision: TriageDecision;
-  confidence: number;
   reasoning: string;
 }
 
@@ -60,17 +58,10 @@ export async function processMessage({
     ];
 
     let aiResponse: string;
-    let metadata: MessageMetadata = { type: 'ai_processing' };
-
-    // Update collected information
-    const collected_info = await extractStructuredData(content);
-    if (!collected_info) {
-      throw new Error('Failed to extract information from message');
-    }
-
-    if (isAIProcessingMetadata(metadata)) {
-      metadata.collected_info = collected_info;
-    }
+    let metadata: MessageMetadata = {
+      is_assessment_creation: true,
+      collected_info: await extractStructuredData(content)
+    };
 
     if (messageCount >= DECISION_THRESHOLD) {
       const triageResult = await makeTriageDecision(openAIMessages);
@@ -78,24 +69,25 @@ export async function processMessage({
         throw new Error('Invalid triage decision received');
       }
 
-      const { decision, confidence, reasoning } = triageResult;
+      const { decision, reasoning } = triageResult;
       
-      // If confidence is too low, continue gathering information
-      if (confidence < 0.7 && decision !== 'EMERGENCY') {
-        aiResponse = await generateChatResponse(openAIMessages);
-      } else {
+      // If it's an emergency, proceed with handoff
+      if (decision === 'EMERGENCY') {
         aiResponse = await generateHandoffMessage(decision, reasoning, openAIMessages);
         metadata = {
-          type: 'ai_processing',
-          confidence_score: confidence,
+          is_assessment_creation: true,
           collected_info: {
-            urgency_indicators: [decision, reasoning]
+            urgency: decision,
+            severity: reasoning
           }
-        } satisfies MessageMetadata;
+        };
+      } else {
+        // Continue gathering information
+        aiResponse = await generateChatResponse(openAIMessages);
       }
     } else {
       // Continue gathering information
-      const gatheringPrompt = createGatheringPrompt(messageCount, collected_info);
+      const gatheringPrompt = createGatheringPrompt(messageCount, metadata.collected_info || {});
       
       aiResponse = await generateChatResponse([
         ...openAIMessages,
@@ -113,7 +105,7 @@ export async function processMessage({
     };
   } catch (error) {
     console.error('Error in processMessage:', error);
-    throw error; // Let ChatController handle the error
+    throw error;
   }
 }
 
@@ -122,7 +114,6 @@ function isValidTriageResult(result: unknown): result is TriageResult {
   const r = result as TriageResult;
   return (
     typeof r.decision === 'string' &&
-    typeof r.confidence === 'number' &&
     typeof r.reasoning === 'string' &&
     ['EMERGENCY', 'URGENT', 'NON_URGENT', 'SELF_CARE'].includes(r.decision)
   );
@@ -133,7 +124,6 @@ function createGatheringPrompt(messageCount: number, info: CollectedInfo): strin
   if (!info.chief_complaint) missingInfo.push('chief complaint');
   if (!info.duration) missingInfo.push('duration of symptoms');
   if (!info.severity) missingInfo.push('severity level');
-  if (!info.existing_provider) missingInfo.push('existing provider information');
 
   return `Based on the conversation so far, we still need information about: ${missingInfo.join(', ')}. 
     ${messageCount === 1 ? 'Start by asking about their main concern.' : 'Focus on gathering this missing information.'}
@@ -156,4 +146,20 @@ async function generateHandoffMessage(
     ...history,
     { role: 'system' as const, content: prompts[decision] }
   ]);
+}
+
+export async function processAIResponse(
+  response: string,
+  metadata: MessageMetadata
+): Promise<{
+  content: string
+  metadata: MessageMetadata
+}> {
+  return {
+    content: response,
+    metadata: {
+      ...metadata,
+      is_final: true
+    }
+  }
 }

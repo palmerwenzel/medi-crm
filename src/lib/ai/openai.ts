@@ -3,6 +3,7 @@
 import OpenAI from 'openai';
 import type { OpenAIRole } from '@/types/domain/roles';
 import type { TriageDecision, CollectedMedicalInfo } from '@/types/domain/chat';
+import { log, logPerformance } from '@/lib/utils/logging';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -32,7 +33,15 @@ export async function generateChatResponse(
   messages: Message[],
   options: ChatOptions = {}
 ): Promise<string> {
+  const startTime = performance.now();
   const { temperature, maxTokens, model = DEFAULT_MODEL } = { ...DEFAULT_OPTIONS, ...options };
+
+  log('Generating chat response:', {
+    model,
+    temperature,
+    maxTokens,
+    messageCount: messages.length
+  });
 
   try {
     const completion = await openai.chat.completions.create({
@@ -44,55 +53,173 @@ export async function generateChatResponse(
 
     const response = completion.choices[0]?.message?.content;
     if (!response) {
+      log('No response from OpenAI');
       throw new Error('No response from OpenAI');
     }
 
+    log('Generated response length:', response.length);
+    logPerformance('generateChatResponse', startTime);
     return response;
   } catch (error) {
-    console.error('Error generating chat response:', error);
+    log('Error generating chat response:', error);
     throw error;
   }
 }
 
 export async function extractStructuredData(content: string): Promise<CollectedMedicalInfo> {
+  const startTime = performance.now();
+  log('Extracting structured data from content length:', content.length);
+
   const messages: Message[] = [
     {
       role: 'system',
-      content: `Extract structured medical information from the conversation. Return a JSON object matching this format exactly:
+      content: `You are a medical data extraction specialist tasked with extracting structured medical information from patient conversations. Your goal is to prepare data for case assessment and triage.
+
+Return a JSON object with two sections - public medical data and internal assessment metrics:
 
 {
-  "title": "Brief (5-7 words) clinical summary of main complaint",
-  "description": "2-3 sentence summary of the patient's situation, symptoms, and context",
-  "chief_complaint": "Primary symptom or concern",
-  "key_symptoms": ["Array of distinct symptoms", "Include secondary symptoms"],
-  "duration": "How long symptoms have been present (e.g., '3 days', '2 weeks')",
-  "severity": "One of: 'Mild', 'Moderate', 'Severe', or 'Critical'",
-  "existing_provider": "Name of current provider if mentioned, otherwise null",
-  "recommended_specialties": ["Relevant medical specialties based on symptoms"],
-  "urgency_indicators": ["Any red flags", "Concerning symptoms", "Risk factors"]
+  "domain_data": {
+    "title": "Brief (5-7 words) clinical summary using standard medical terminology",
+    "description": "2-3 sentence clinical assessment following SOAP note format",
+    "chief_complaint": "Primary presenting symptom or concern (required)",
+    "key_symptoms": [
+      "Array of distinct symptoms in clinical terms",
+      "Include both primary and secondary symptoms",
+      "Use standardized medical terminology"
+    ],
+    "duration": "Standardized duration (e.g., '3 days', '2 weeks')",
+    "severity": "One of: 'Mild', 'Moderate', 'Severe', or 'Critical'",
+    "existing_provider": "Current provider name or null",
+    "recommended_specialties": [
+      "Medical specialties based on symptoms and clinical assessment"
+    ],
+    "urgency_indicators": [
+      "Clinical red flags",
+      "High-risk symptoms",
+      "Concerning vital signs or measurements",
+      "Risk factors requiring immediate attention"
+    ],
+    "clinical_details": {
+      "progression": "How symptoms have evolved over time",
+      "impact_on_daily_life": "Functional impact assessment",
+      "previous_treatments": ["Prior interventions", "Current medications"],
+      "medical_history": ["Relevant past conditions", "Risk factors"],
+      "vital_signs": {
+        "reported_temperature": "If mentioned",
+        "reported_blood_pressure": "If mentioned",
+        "other_vitals": "Any other reported measurements"
+      }
+    }
+  },
+  "internal_metrics": {
+    "field_confidence": {
+      "chief_complaint": 0.0-1.0,
+      "key_symptoms": 0.0-1.0,
+      "duration": 0.0-1.0,
+      "severity": 0.0-1.0,
+      "urgency": 0.0-1.0,
+      "clinical_details": 0.0-1.0
+    },
+    "missing_critical_info": [
+      "List required fields that are missing",
+      "Note any vital information gaps"
+    ],
+    "uncertainty_flags": [
+      "Areas needing clinical clarification",
+      "Ambiguous symptoms or timeline"
+    ],
+    "follow_up_questions": [
+      "Specific clinical questions to improve assessment",
+      "Questions to clarify risk factors"
+    ],
+    "triage_hints": {
+      "emergency_indicators": ["Immediate action needed if present"],
+      "urgent_indicators": ["Require prompt but not immediate care"],
+      "routine_indicators": ["Can be handled in normal office hours"]
+    }
+  }
 }
 
-Guidelines:
-- Title should be clinical and concise (e.g., "Acute Migraine with Visual Disturbance")
-- Description should prioritize medical relevance
-- Duration must be in standardized format (e.g., "2 days", "3 weeks", "4 months")
-- Severity must be one of the specified levels
-- Include all symptoms mentioned, not just the primary complaint
-- List specialties that would be relevant for the symptoms described
+Clinical Guidelines:
+1. Title & Description:
+   - Use standard medical terminology
+   - Follow SOAP note format for description
+   - Be concise but clinically precise
 
-Example:
-For "I've had a bad headache for 3 days with some blurry vision. It's worse than usual."
+2. Symptoms & Assessment:
+   - List symptoms in order of clinical significance
+   - Use standardized medical terms
+   - Note any concerning combinations
+   - Include relevant negatives if mentioned
 
+3. Urgency Assessment:
+   - Flag any emergency indicators
+   - Note time-sensitive symptoms
+   - Consider risk factors
+   - Evaluate symptom progression
+
+4. Specialty Recommendations:
+   - Base on symptom clusters
+   - Consider comorbidities
+   - Include both primary and consulting specialties
+
+5. Confidence Scoring:
+   - Score based on clinical clarity
+   - Consider information completeness
+   - Flag diagnostic uncertainties
+   - Note missing critical data
+
+Example Response:
 {
-  "title": "Severe Headache with Visual Disturbance",
-  "description": "Patient presents with a severe headache lasting 3 days, accompanied by blurred vision. Reports symptoms are worse than previous episodes.",
-  "chief_complaint": "Severe headache",
-  "key_symptoms": ["Headache", "Blurred vision"],
-  "duration": "3 days",
-  "severity": "Moderate",
-  "existing_provider": null,
-  "recommended_specialties": ["Neurology", "Ophthalmology"],
-  "urgency_indicators": ["Vision changes", "Worsening severity"]
+  "domain_data": {
+    "title": "Acute Migraine with Visual Aura",
+    "description": "Patient presents with severe throbbing headache and scintillating scotoma for 3 days. Associated symptoms include photophobia and nausea. No prior history of similar intensity.",
+    "chief_complaint": "Severe migraine headache",
+    "key_symptoms": ["Throbbing headache", "Visual aura", "Photophobia", "Nausea"],
+    "duration": "3 days",
+    "severity": "Severe",
+    "existing_provider": null,
+    "recommended_specialties": ["Neurology", "Ophthalmology"],
+    "urgency_indicators": ["Unprecedented severity", "Persistent visual symptoms", "Duration > 72 hours"],
+    "clinical_details": {
+      "progression": "Symptoms worsening over 72 hours",
+      "impact_on_daily_life": "Unable to work or perform daily activities",
+      "previous_treatments": ["OTC pain medications - ineffective"],
+      "medical_history": ["No prior migraines of this severity"],
+      "vital_signs": {}
+    }
+  },
+  "internal_metrics": {
+    "field_confidence": {
+      "chief_complaint": 0.9,
+      "key_symptoms": 0.8,
+      "duration": 1.0,
+      "severity": 0.9,
+      "urgency": 0.7,
+      "clinical_details": 0.6
+    },
+    "missing_critical_info": [
+      "Prior migraine history details",
+      "Current medication list",
+      "Family history"
+    ],
+    "uncertainty_flags": [
+      "Exact nature of visual changes",
+      "Response to previous medications"
+    ],
+    "follow_up_questions": [
+      "Have you experienced similar headaches before?",
+      "Can you describe the visual changes in detail?",
+      "What medications have you tried and their effects?"
+    ],
+    "triage_hints": {
+      "urgent_indicators": [
+        "Severe persistent headache",
+        "New visual symptoms",
+        "Treatment resistant"
+      ]
+    }
+  }
 }`
     },
     {
@@ -107,9 +234,25 @@ For "I've had a bad headache for 3 days with some blurry vision. It's worse than
       model: DEFAULT_MODEL
     });
 
-    return JSON.parse(response);
+    const fullResponse = JSON.parse(response);
+    
+    log('Extracted structured data:', {
+      title: fullResponse.domain_data.title,
+      symptoms: fullResponse.domain_data.key_symptoms?.length,
+      hasUrgencyIndicators: Boolean(fullResponse.domain_data.urgency_indicators?.length)
+    });
+    
+    log('Extraction metrics:', {
+      confidence: fullResponse.internal_metrics.field_confidence,
+      missingFields: fullResponse.internal_metrics.missing_critical_info?.length,
+      uncertaintyFlags: fullResponse.internal_metrics.uncertainty_flags?.length,
+      followUpQuestions: fullResponse.internal_metrics.follow_up_questions?.length
+    });
+    
+    logPerformance('extractStructuredData', startTime);
+    return fullResponse.domain_data;
   } catch (error) {
-    console.error('Error extracting structured data:', error);
+    log('Error extracting structured data:', error);
     throw error;
   }
 }
@@ -117,6 +260,9 @@ For "I've had a bad headache for 3 days with some blurry vision. It's worse than
 export async function makeTriageDecision(
   messages: Message[]
 ): Promise<{ decision: TriageDecision; confidence: number; reasoning: string }> {
+  const startTime = performance.now();
+  log('Making triage decision from messages:', messages.length);
+
   const systemPrompt = {
     role: 'system' as const,
     content: `Analyze the conversation and make a triage decision. Return a JSON object with:
@@ -135,9 +281,18 @@ export async function makeTriageDecision(
       model: DEFAULT_MODEL
     });
 
-    return JSON.parse(response);
+    const result = JSON.parse(response);
+    
+    log('Triage decision:', {
+      decision: result.decision,
+      confidence: result.confidence,
+      reasoningLength: result.reasoning?.length
+    });
+    
+    logPerformance('makeTriageDecision', startTime);
+    return result;
   } catch (error) {
-    console.error('Error making triage decision:', error);
+    log('Error making triage decision:', error);
     throw error;
   }
 } 

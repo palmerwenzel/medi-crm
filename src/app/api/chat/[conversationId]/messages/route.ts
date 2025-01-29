@@ -7,7 +7,8 @@ import { processAIMessage } from '@/lib/actions/ai'
 import { medicalMessagesInsertSchema } from '@/lib/validations/medical-messages'
 import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
 import { rawToUserIdSchema } from '@/lib/validations/shared-schemas'
-import type { Message, MessageMetadata } from '@/types/domain/chat'
+import type { Message, MessageMetadata, CollectedMedicalInfo } from '@/types/domain/chat'
+import { validateMessageMetadata } from '@/lib/validations/message-metadata'
 
 export async function GET(
   req: NextRequest,
@@ -119,15 +120,7 @@ export async function POST(
             aiResult.data.message,
             message.conversation_id,
             'assistant',
-            {
-              type: 'ai_processing' as const,
-              status: 'delivered',
-              confidence_score: aiResult.data.metadata?.confidence_score,
-              collected_info: {
-                urgency_indicators: [],
-                ...(aiResult.data.metadata?.extractedData || {})
-              }
-            } satisfies MessageMetadata
+            aiResult.data.metadata
           )
         } catch (error) {
           console.error('AI response error:', error)

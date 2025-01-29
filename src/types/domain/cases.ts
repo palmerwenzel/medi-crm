@@ -11,18 +11,33 @@ import type {
   DbCaseHistory,
   DbCaseHistoryInsert,
   DbCaseHistoryUpdate,
-  DbCaseActivityType
+  DbCaseActivityType,
+  DbCaseAssessment,
+  DbCaseAssessmentInsert,
+  DbCaseAssessmentUpdate,
+  DbAssessmentCreatorType,
+  DbAssessmentStatus
 } from './db'
 import type { StaffSpecialty } from './users'
 import type { Json } from '../supabase'
 
-// Base case types (source of truth)
+/**
+ * Core case types and interfaces for medical case management
+ */
+
+/**
+ * Base case interface extending database case type.
+ * Represents the source of truth for case data.
+ */
 export interface Case extends DbCase {
   attachments: Json | null
   metadata: Json | null
 }
 
-// Case response type (with joined fields)
+/**
+ * Enriched case response with joined user and assessment data.
+ * Used when displaying case details in the UI.
+ */
 export interface CaseResponse {
   id: string
   assigned_to: {
@@ -49,20 +64,28 @@ export interface CaseResponse {
   status: CaseStatus
   title: string
   updated_at: string
+  latest_assessment?: CaseAssessmentResponse
 }
 
-// Case notes types
+/**
+ * Case Notes - For internal documentation and updates
+ */
 export interface CaseNote extends DbCaseNote {}
 export type CaseNoteInsert = DbCaseNoteInsert
 export type CaseNoteUpdate = DbCaseNoteUpdate
 
-// Case history types
+/**
+ * Case History - For tracking changes and activities
+ */
 export interface CaseHistory extends DbCaseHistory {}
 export type CaseHistoryInsert = DbCaseHistoryInsert
 export type CaseHistoryUpdate = DbCaseHistoryUpdate
 export type CaseActivityType = DbCaseActivityType
 
-// Case history with joined fields
+/**
+ * Case history with actor information.
+ * Used for displaying who made changes to a case.
+ */
 export interface CaseHistoryWithActor extends CaseHistory {
   actor: {
     id: string
@@ -72,6 +95,9 @@ export interface CaseHistoryWithActor extends CaseHistory {
   }
 }
 
+/**
+ * Types for creating and updating cases
+ */
 export type CaseInsert = Partial<Case> & {
   category: CaseCategory
   description: string
@@ -83,38 +109,89 @@ export type CaseInsert = Partial<Case> & {
 
 export type CaseUpdate = Partial<CaseInsert>
 
-// Shared enum types
+/**
+ * Case Assessment Types - For medical evaluations
+ */
+export interface CaseAssessment extends DbCaseAssessment {
+  case?: Case
+  creator?: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    role: string
+  }
+}
+
+/**
+ * Enriched assessment response with joined case and creator data.
+ * Used when displaying assessment details.
+ */
+export interface CaseAssessmentResponse {
+  id: string
+  key_symptoms: string[]
+  recommended_specialties: string[]
+  urgency_indicators: string[]
+  notes: string | null
+  status: AssessmentStatus
+  created_at: string
+  updated_at: string
+  created_by_type: AssessmentCreatorType
+  case: CaseResponse
+  creator: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    role: string
+  }
+}
+
+export type CaseAssessmentInsert = DbCaseAssessmentInsert
+export type CaseAssessmentUpdate = DbCaseAssessmentUpdate
+
+/**
+ * Shared enum types from database layer
+ */
 export type CaseStatus = DbCaseStatus
 export type CasePriority = DbCasePriority
 export type CaseCategory = DbCaseCategory
 export type CaseDepartment = DbDepartment
 export type ConversationStatus = DbConversationStatus
+export type AssessmentCreatorType = DbAssessmentCreatorType
+export type AssessmentStatus = DbAssessmentStatus
 
-// Re-export for convenience
 export type { StaffSpecialty }
 
-// Shared field types
 export type CaseSortField = keyof DbCase
 
-// Domain-specific metadata interface
+/**
+ * Domain-specific metadata interfaces
+ */
+
+/**
+ * Additional case metadata for tracking source and custom fields
+ */
 export interface CaseMetadata {
-  source?: 'web' | 'mobile' | 'phone'
-  tags?: string[]
+  source?: 'web' | 'mobile' | 'phone'  // Source of case creation
+  tags?: string[]                      // Custom tags for categorization
   custom_fields?: Record<string, string | number | boolean>
-  last_contact?: string
-  follow_up_date?: string
+  last_contact?: string                // Timestamp of last patient contact
+  follow_up_date?: string             // Scheduled follow-up date
 }
 
-// SLA metadata interface
+/**
+ * Service Level Agreement (SLA) tracking metadata
+ */
 export interface SLAMetadata {
-  sla_breached: boolean
-  response_target: string
-  resolution_target: string
-  first_response_at: string | null
-  sla_tier: string
+  sla_breached: boolean               // Whether SLA has been breached
+  response_target: string             // Target time for first response
+  resolution_target: string           // Target time for resolution
+  first_response_at: string | null    // Timestamp of first response
+  sla_tier: string                   // SLA tier level
 }
 
-// Domain-specific history details
+/**
+ * Details for tracking case history changes
+ */
 export interface CaseHistoryDetails {
   previous_status?: CaseStatus
   new_status?: CaseStatus
@@ -124,12 +201,17 @@ export interface CaseHistoryDetails {
   changes?: Record<string, { old: unknown; new: unknown }>
 }
 
-// Hook interfaces
+/**
+ * Hook interfaces for case management
+ */
 export interface CaseManagementOptions {
   limit?: number
   isDashboard?: boolean
 }
 
+/**
+ * Return type for case management hook
+ */
 export interface CaseManagementReturn {
   cases: CaseResponse[]
   filteredCases: CaseResponse[]
@@ -164,8 +246,13 @@ export interface CaseFilters {
     from?: Date
     to?: Date
   }
+  has_assessment?: boolean
+  assessment_creator?: AssessmentCreatorType | 'all'
 }
 
+/**
+ * Parameters for case queries
+ */
 export interface CaseQueryParams {
   limit?: number
   offset?: number
@@ -179,6 +266,9 @@ export interface CaseQueryParams {
   search?: string
 }
 
+/**
+ * Paginated response for case queries
+ */
 export interface PaginatedCaseResponse {
   cases: CaseResponse[]
   total: number

@@ -34,6 +34,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      case_assessments: {
+        Row: {
+          case_id: string
+          created_at: string
+          created_by: string
+          created_by_type: Database["public"]["Enums"]["assessment_creator_type"]
+          id: string
+          key_symptoms: string[]
+          notes: string | null
+          recommended_specialties: string[]
+          status: Database["public"]["Enums"]["assessment_status"]
+          updated_at: string
+          urgency_indicators: string[]
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          created_by: string
+          created_by_type: Database["public"]["Enums"]["assessment_creator_type"]
+          id?: string
+          key_symptoms?: string[]
+          notes?: string | null
+          recommended_specialties?: string[]
+          status?: Database["public"]["Enums"]["assessment_status"]
+          updated_at?: string
+          urgency_indicators?: string[]
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          created_by_type?: Database["public"]["Enums"]["assessment_creator_type"]
+          id?: string
+          key_symptoms?: string[]
+          notes?: string | null
+          recommended_specialties?: string[]
+          status?: Database["public"]["Enums"]["assessment_status"]
+          updated_at?: string
+          urgency_indicators?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_assessments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_history: {
         Row: {
           activity_type: Database["public"]["Enums"]["case_activity_type"]
@@ -470,6 +527,8 @@ export type Database = {
       }
     }
     Enums: {
+      assessment_creator_type: "ai" | "staff" | "admin"
+      assessment_status: "active" | "superseded"
       case_activity_type:
         | "status_change"
         | "priority_change"
@@ -480,6 +539,8 @@ export type Database = {
         | "file_added"
         | "file_removed"
         | "metadata_change"
+        | "assessment_added"
+        | "assessment_updated"
       case_category:
         | "general"
         | "followup"

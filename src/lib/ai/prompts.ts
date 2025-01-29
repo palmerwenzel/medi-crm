@@ -43,28 +43,40 @@ export const TEST_PROVIDER_PROMPT = `You are a test medical provider who:
 export const MEDICAL_SUMMARY_PROMPT = `You are a medical scribe tasked with creating a structured summary of a patient conversation. Your role is to:
 
 1. Extract and organize key medical information:
-   - Present illness/symptoms
-   - Chronological progression
-   - Severity indicators
-   - Impact on daily life
-   - Previous treatments/medications
-   - Relevant medical history
+   - Present illness/symptoms (be specific and detailed)
+   - Chronological progression with clear timelines
+   - Severity indicators using standardized scale
+   - Impact on daily life with concrete examples
+   - Previous treatments/medications with dates
+   - Relevant medical history prioritized by relevance
 
 2. Identify clinical priorities:
-   - Primary symptoms
-   - Red flags or urgent concerns
-   - Required specialties
-   - Risk factors
+   - Primary symptoms with clear descriptions
+   - Red flags or urgent concerns with reasoning
+   - Required specialties based on symptom patterns
+   - Risk factors with clinical relevance
+   - Confidence assessment (internal only)
 
 3. Note patient context:
    - Existing provider relationships
-   - Treatment preferences
+   - Treatment preferences and constraints
    - Access to care considerations
-   - Support system
+   - Support system details
 
-Format the information as a structured JSON object that will be used to create a medical case.
+4. Internal Assessment (not for patient/provider display):
+   - Track information completeness
+   - Flag areas needing clarification
+   - Note confidence levels per data point
+   - Identify follow-up questions
+   - Monitor conversation quality
+
+Format the information as a structured JSON object that separates:
+1. Domain data for case creation (clean medical data)
+2. Internal metrics for AI system use (confidence scores, etc.)
+
 Be precise, clinical, and thorough while maintaining patient privacy.
-Focus on medically relevant details that will help providers understand the situation quickly.` as const;
+Focus on medically relevant details that will help providers understand the situation quickly.
+Keep all AI metrics and confidence scores internal - never expose these in the domain data.` as const;
 
 export const CONSENT_REQUEST_PROMPT = `Based on our conversation, I recommend creating a medical case to better assist you. This will help us:
 

@@ -6,46 +6,16 @@ import {
   TriageDecisions
 } from '@/types/domain/chat'
 import { MessageStatuses } from '@/types/domain/ui'
+import type { ChatMessage } from '@/types/domain/chat'
+import { messageMetadataSchema } from './message-metadata'
 
 // Enum schemas
 export const messageRoleEnum = z.enum(MessageRoles)
+export const chatMessageRoleEnum = z.enum(['user', 'assistant'] as const)
 export const messageStatusEnum = z.enum(MessageStatuses)
 export const handoffStatusEnum = z.enum(HandoffStatuses)
 export const triageDecisionEnum = z.enum(TriageDecisions)
 export const conversationStatusEnum = z.enum(['active', 'archived'])
-
-// Message metadata schemas
-export const aiProcessingMetadataSchema = z.object({
-  type: z.literal('ai_processing'),
-  status: messageStatusEnum,
-  confidence_score: z.number().optional(),
-  collected_info: z.object({
-    chief_complaint: z.string().optional(),
-    duration: z.string().optional(),
-    severity: z.string().optional(),
-    existing_provider: z.string().optional(),
-    urgency_indicators: z.array(z.string())
-  }).optional()
-})
-
-export const handoffMetadataSchema = z.object({
-  type: z.literal('handoff'),
-  status: messageStatusEnum,
-  handoff_status: handoffStatusEnum,
-  provider_id: z.string(),
-  triage_decision: triageDecisionEnum
-})
-
-export const standardMetadataSchema = z.object({
-  type: z.literal('standard'),
-  status: messageStatusEnum
-})
-
-export const metadataSchema = z.discriminatedUnion('type', [
-  aiProcessingMetadataSchema,
-  handoffMetadataSchema,
-  standardMetadataSchema
-])
 
 // Base message schema
 export const messageSchema = z.object({
@@ -54,7 +24,7 @@ export const messageSchema = z.object({
   content: z.string(),
   role: messageRoleEnum,
   created_at: z.string(),
-  metadata: metadataSchema
+  metadata: messageMetadataSchema
 })
 
 /**
@@ -63,8 +33,8 @@ export const messageSchema = z.object({
 export const messageInsertSchema = z.object({
   conversation_id: z.string(),
   content: z.string(),
-  role: messageRoleEnum.refine(role => role === 'user' || role === 'assistant'),
-  metadata: metadataSchema
+  role: chatMessageRoleEnum,
+  metadata: messageMetadataSchema
 })
 
 // Conversation schemas
@@ -128,7 +98,7 @@ export const uiMessageSchema = z.object({
   role: messageRoleEnum,
   created_at: z.string(),
   state: messageStateSchema,
-  metadata: metadataSchema
+  metadata: messageMetadataSchema
 })
 
 /**
@@ -150,8 +120,18 @@ export const messageQuerySchema = z.object({
 // Export inferred types
 export type Message = z.infer<typeof messageSchema>
 export type MessageInsertSchema = z.infer<typeof messageInsertSchema>
-export type MessageMetadata = z.infer<typeof metadataSchema>
+export type MessageMetadata = z.infer<typeof messageMetadataSchema>
 export type UIMessage = z.infer<typeof uiMessageSchema>
 export type Conversation = z.infer<typeof conversationSchema>
 export type MessageQuerySchema = z.infer<typeof messageQuerySchema>
-export type ConversationQuerySchema = z.infer<typeof conversationQuerySchema> 
+export type ConversationQuerySchema = z.infer<typeof conversationQuerySchema>
+
+export const chatMessageSchema = z.object({
+  id: z.string(),
+  conversation_id: z.string(),
+  role: chatMessageRoleEnum,
+  content: z.string(),
+  metadata: messageMetadataSchema,
+  created_at: z.string(),
+  updated_at: z.string()
+}) satisfies z.ZodType<ChatMessage> 

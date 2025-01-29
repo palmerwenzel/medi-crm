@@ -1,20 +1,26 @@
 'use server'
 
 import OpenAI from 'openai'
-import { type Message } from '@/types/domain/chat'
+import { type Message, type TriageDecision, type MessageMetadata } from '@/types/domain/chat'
 import type { ExtractedAIData } from '@/types/domain/ai'
+import { generateChatResponse, makeTriageDecision as aiMakeTriageDecision, extractStructuredData } from '@/lib/ai/openai'
+import { validateMessageMetadata } from '@/lib/validations/message-metadata'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
+export type AIResult = {
+  data: {
+    content: string
+    metadata: MessageMetadata
+  }
+  error?: string
+}
+
 type AIResponse = {
   message: string
-  metadata?: {
-    triage_decision?: 'EMERGENCY' | 'URGENT' | 'ROUTINE'
-    confidence_score?: number
-    extractedData?: ExtractedAIData
-  }
+  metadata: MessageMetadata
 }
 
 type ActionResponse<T = void> = {
@@ -41,20 +47,31 @@ export async function processAIMessage(
       }))
     ]
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: formattedMessages
-    })
+    const aiMessage = await generateChatResponse(formattedMessages)
 
-    const aiMessage = response.choices[0].message.content || ''
+    // Extract structured data if available
+    let extractedData: ExtractedAIData | undefined
+    try {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage && lastMessage.role === 'user') {
+        extractedData = await extractStructuredData(lastMessage.content)
+      }
+    } catch (error) {
+      console.warn('Non-critical: Failed to extract structured data:', error)
+    }
+
+    // Create and validate metadata
+    const metadata = validateMessageMetadata({
+      type: 'ai_processing',
+      collected_info: extractedData,
+      triage_decision: undefined // Will be set by makeTriageDecision if needed
+    })
 
     return {
       success: true,
       data: {
         message: aiMessage,
-        metadata: {
-          // Add metadata extraction here if needed
-        }
+        metadata
       }
     }
   } catch (error) {
@@ -72,38 +89,17 @@ export async function processAIMessage(
 export async function makeTriageDecision(
   messages: Message[]
 ): Promise<ActionResponse<{ 
-  decision: 'EMERGENCY' | 'URGENT' | 'ROUTINE'
+  decision: TriageDecision
   confidence: number 
 }>> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: 'system',
-          content: `You are a medical triage assistant. Based on the conversation, determine the urgency level:
-            EMERGENCY: Life-threatening conditions requiring immediate attention
-            URGENT: Serious but not immediately life-threatening
-            ROUTINE: Can be handled during regular office hours
-            
-            Respond only with the decision and confidence score in JSON format:
-            {"decision": "EMERGENCY|URGENT|ROUTINE", "confidence": 0.0-1.0}`
-        },
-        ...messages.map(msg => ({
-          role: msg.role as 'system' | 'user' | 'assistant',
-          content: msg.content
-        }))
-      ],
-      response_format: { type: "json_object" }
-    })
-
-    const result = JSON.parse(response.choices[0].message.content || '{}')
-
+    const { decision, confidence } = await aiMakeTriageDecision(messages)
+    
     return {
       success: true,
       data: {
-        decision: result.decision,
-        confidence: result.confidence
+        decision,
+        confidence
       }
     }
   } catch (error) {

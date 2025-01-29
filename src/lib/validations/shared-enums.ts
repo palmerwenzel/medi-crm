@@ -17,6 +17,8 @@ const caseActivityTypeValues = [
   'file_added',
   'file_removed',
   'metadata_change',
+  'assessment_added',
+  'assessment_updated'
 ] as const
 export const caseActivityTypeEnum = z.enum(caseActivityTypeValues)
 

@@ -88,11 +88,7 @@ export async function signUpUser(formData: FormData | SignUpData): Promise<SignU
         email: data.email,
         role: data.role,
         department: data.department,
-        specialty: data.specialty,
-        metadata: {
-          created_at: new Date().toISOString(),
-          auth_provider: 'email'
-        }
+        specialty: data.specialty
       })
 
     if (profileError) {

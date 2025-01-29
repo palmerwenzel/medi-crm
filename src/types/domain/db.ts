@@ -5,6 +5,10 @@ export type DbCase = Database['public']['Tables']['cases']['Row']
 export type DbCaseInsert = Database['public']['Tables']['cases']['Insert']
 export type DbCaseUpdate = Database['public']['Tables']['cases']['Update']
 
+export type DbCaseAssessment = Database['public']['Tables']['case_assessments']['Row']
+export type DbCaseAssessmentInsert = Database['public']['Tables']['case_assessments']['Insert']
+export type DbCaseAssessmentUpdate = Database['public']['Tables']['case_assessments']['Update']
+
 export type DbCaseNote = Database['public']['Tables']['case_notes']['Row']
 export type DbCaseNoteInsert = Database['public']['Tables']['case_notes']['Insert']
 export type DbCaseNoteUpdate = Database['public']['Tables']['case_notes']['Update']
@@ -63,4 +67,6 @@ export type DbConversationStatus = Database['public']['Enums']['conversation_sta
 export type DbMessageRole = Database['public']['Enums']['message_role']
 export type DbNotificationType = Database['public']['Enums']['notification_type']
 export type DbNotificationPriority = Database['public']['Enums']['notification_priority']
-export type DbNotificationChannel = Database['public']['Enums']['notification_channel'] 
+export type DbNotificationChannel = Database['public']['Enums']['notification_channel']
+export type DbAssessmentCreatorType = Database['public']['Enums']['assessment_creator_type']
+export type DbAssessmentStatus = Database['public']['Enums']['assessment_status'] 

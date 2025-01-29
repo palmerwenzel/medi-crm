@@ -8,33 +8,47 @@
    - Basic message processing
    - State management
 
-2. 🟨 AI Data Extraction (Blocking Issues)
-   - ❌ Extraction prompt needs immediate fix
-     - Current prompt is too basic
-     - Not capturing all required case fields
-   - ❌ Extracted data not properly mapped to case creation
-     - Need to ensure extracted fields match case requirements
+### Recent Changes
+1. ✅ Architectural Updates
+   - Moved from metadata-based to structured case assessments
+   - Removed confidence_score from database (now internal AI tool)
+   - Enhanced type system implementation
+   - Improved case creation with metadata handling
+
+2. ✅ AI Data Extraction
+   - ✅ Enhanced extraction prompt with medical context
+     - Added SOAP note format
+     - Improved clinical detail capture
+     - Added internal confidence tracking
+   - ✅ Connected extraction to case creation
+     - Added validation
+     - Enhanced error handling
+     - Improved logging
 
 3. ✅ Case Creation from Data
    - Case creation function works
    - Consent handling exists
    - Basic validation present
+   - Added comprehensive logging
+
+4. ✅ Case Assessment System
+   - Added schema validation
+   - Enhanced error handling
+   - Added performance tracking
+   - Implemented assessment lifecycle management
 
 ### Immediate Tasks (Critical Path Only)
-1. [ ] Fix AI Extraction Prompt
-   - Update prompt to extract minimum required case fields:
-     - Chief complaint
-     - Duration
-     - Severity
-     - Urgency indicators
-   - Ensure JSON structure matches our types
+1. [ ] Enhance Provider UI
+   - Add assessment management interface
+   - Show assessment history
+   - Enable assessment updates
+   - Display confidence indicators
 
-2. [ ] Connect Extraction to Case Creation
-   - Verify data mapping between extraction and case creation
-   - Add basic error handling for missing fields
-   - Test end-to-end flow
-
-Once these are working, we can move on to enhancements.
+2. [ ] Add Testing Framework
+   - Unit tests for extraction
+   - Integration tests for case creation
+   - End-to-end conversation tests
+   - Performance benchmarks
 
 ## Existing Infrastructure
 
@@ -66,7 +80,7 @@ Instead of using metadata for AI-extracted medical information, we'll create a d
 
 ### Required Components
 
-1. [ ] Database Schema
+1. ✅ Database Schema
    ```typescript
    interface CaseAssessment {
      id: string;
@@ -77,13 +91,12 @@ Instead of using metadata for AI-extracted medical information, we'll create a d
      key_symptoms: string[];
      recommended_specialties: string[];
      urgency_indicators: string[];
-     confidence_score?: number; // For AI assessments
      notes?: string; // Optional provider notes
      status: 'active' | 'superseded';
    }
    ```
 
-2. [ ] Access Control
+2. ✅ Access Control
    - Staff/Admin: Full CRUD access
    - Patients: Read-only access
    - AI: Create initial assessments
@@ -94,18 +107,18 @@ Instead of using metadata for AI-extracted medical information, we'll create a d
    - [ ] Implement assessment history viewing
    - [ ] Add assessment update notifications
 
-4. [ ] Activity Tracking
+4. ✅ Activity Tracking
    - Add new activity types:
      - `assessment_added`
      - `assessment_updated`
    - Track assessment changes in case history
 
 ### Implementation Order
-1. [ ] Create database table and migrations
-2. [ ] Add validation schemas
+1. ✅ Create database table and migrations
+2. ✅ Add validation schemas
 3. [ ] Update AI extraction pipeline
 4. [ ] Implement provider assessment UI
-5. [ ] Add activity tracking
+5. ✅ Add activity tracking
 6. [ ] Create assessment viewing components
 
 ## Implementation Tasks
@@ -115,53 +128,70 @@ Instead of using metadata for AI-extracted medical information, we'll create a d
 - 🟨 Basic `extractStructuredData` function exists but needs enhancement
   - ✅ Basic JSON extraction
   - ❌ Comprehensive medical data extraction
-  - ❌ Field-level confidence scoring
-- 🟨 Medical information prompts
-  - ✅ Basic extraction prompt
-  - ❌ Detailed medical context prompts
-  - ❌ Progressive information gathering
-- 🟨 Data validation
-  - ✅ Basic JSON parsing
-  - ❌ Type validation
-  - ❌ Medical data validation
-- 🟨 Confidence scoring
-  - ✅ Overall confidence score
-  - ❌ Field-level confidence
-  - ❌ Uncertainty handling
+  - ❌ Internal AI confidence tracking
+
+Important Note: AI Implementation Details vs Domain Model
+- AI confidence scores, uncertainty tracking, and other AI-specific metrics should:
+  - Be kept internal to the AI implementation
+  - Never be exposed in the domain model or stored in the database
+  - Only be used for:
+    - AI decision-making logic
+    - Information gathering strategies
+    - Internal AI performance monitoring
+    - Informing staff through meaningful UI indicators (not raw scores)
 
 Required Improvements:
-- [ ] Enhance extraction prompt with medical context
-  - Add symptom categorization
-  - Include medical terminology mapping
-  - Add temporal information extraction
-- [ ] Implement field-level validation
-  - Add Zod schemas for each field
-  - Validate against medical terminology
-  - Handle partial/uncertain data
-- [ ] Add confidence scoring system
-  - Per-field confidence scores
-  - Confidence thresholds
-  - Uncertainty indicators
-- [ ] Improve error handling
-  - Graceful degradation
-  - Partial data handling
-  - Recovery strategies
+1. [ ] Enhance extraction prompt with medical context
+   - Add symptom categorization
+   - Include medical terminology mapping
+   - Add temporal information extraction
+   - Keep AI confidence tracking internal
+
+2. [ ] Implement internal AI validation
+   - Add internal confidence scoring per field
+   - Use scores to guide information gathering
+   - Track uncertainty without exposing raw scores
+   - Trigger follow-up questions when confidence is low
+
+3. [ ] Improve error handling
+   - Graceful degradation
+   - Partial data handling
+   - Recovery strategies
+   - Clear error messages for users
+
+4. [ ] Add AI monitoring
+   - Log confidence scores for analysis
+   - Track extraction quality metrics
+   - Monitor decision accuracy
+   - Keep all metrics internal
+
+Implementation Guidelines:
+- AI extraction should output clean, human-readable medical data
+- Confidence scoring stays within AI service layer
+- Domain types remain focused on medical information
+- UI shows meaningful indicators, not raw AI metrics
 
 ### 2. Case Creation Integration
-✅ Most functionality exists:
+✅ Complete implementation:
 - ✅ Transformation layer (in case-from-chat.ts)
   - Chat summary generation
   - Structured data extraction
   - Priority mapping
+  - Comprehensive logging
 - ✅ Case creation action
   - Consent handling
   - Metadata preservation
   - Error handling
+  - Performance tracking
 - ✅ Validation checks
   - Required field validation
-  - Confidence scoring
+  - Schema validation
   - Missing info detection
-- ✅ Basic rollback (error handling)
+- ✅ Assessment creation
+  - Initial AI assessment
+  - Validation layer
+  - Error recovery
+  - Audit logging
 
 Potential Enhancements:
 - [ ] Add more sophisticated data validation

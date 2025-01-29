@@ -21,46 +21,62 @@ import type {
 } from './chat'
 
 /**
- * Case UI-specific types
+ * UI-specific domain types for the medical system.
+ * These types extend domain types with UI-specific fields and behaviors.
+ */
+
+/**
+ * UI-specific metadata for cases, including SLA tracking and UI state
  */
 export interface CaseUIMetadata {
   sla?: {
-    response_target: string
-    resolution_target: string
-    last_updated: string
-    sla_breached: boolean
-    first_response_at: string | null
-    sla_tier: string
+    response_target: string         // Target time for first response
+    resolution_target: string       // Target time for case resolution
+    last_updated: string           // Last SLA update timestamp
+    sla_breached: boolean          // Whether SLA has been breached
+    first_response_at: string | null // Time of first response
+    sla_tier: string               // SLA service tier
   }
-  tags?: string[]
-  internal_notes?: string
-  specialties?: string[]
-  chat_status?: 'active' | 'closed'
+  tags?: string[]                  // UI tags for filtering/categorization
+  internal_notes?: string          // Staff-only notes
+  specialties?: string[]           // Medical specialties involved
+  chat_status?: 'active' | 'closed' // Chat availability status
 }
 
 /**
- * Base Props interface for UI components
+ * Base interface for all UI component props
  */
 export interface BaseProps {
   /** Optional className for styling */
   className?: string
 }
 
-// UI-specific conversation type
+/**
+ * UI-enhanced medical conversation with additional display fields
+ */
 export interface UIMedicalConversation extends MedicalConversation {
-  topic: string | null
-  updated_at: string | null
-  created_at: string
+  topic: string | null             // Conversation topic/subject
+  updated_at: string | null        // Last update timestamp
+  created_at: string              // Creation timestamp
 }
 
-// Real-time presence types
+/**
+ * Real-time chat presence tracking
+ */
+
+/**
+ * Typing indicator state for real-time updates
+ */
 export interface TypingStatus {
-  conversationId: ConversationId
-  userId: UserId
-  isTyping: boolean
-  timestamp: string
+  conversationId: ConversationId   // Current conversation
+  userId: UserId                  // User who is typing
+  isTyping: boolean               // Whether user is currently typing
+  timestamp: string               // When typing state last changed
 }
 
+/**
+ * Real-time presence state tracking who's online
+ */
 export interface PresenceState {
   [key: string]: {
     user_id: UserId
@@ -68,15 +84,23 @@ export interface PresenceState {
   }[]
 }
 
-// UI-specific message types
+/**
+ * Message status tracking for UI display
+ */
 export const MessageStatuses = ['pending', 'sent', 'delivered', 'read'] as const
 export type MessageStatus = (typeof MessageStatuses)[number]
 
+/**
+ * Message state for optimistic updates and error handling
+ */
 export type MessageState = 
-  | { status: 'sending'; tempId: string }
-  | { status: 'sent'; id: string }
-  | { status: 'error'; error: string }
+  | { status: 'sending'; tempId: string }  // Message being sent
+  | { status: 'sent'; id: string }         // Successfully sent
+  | { status: 'error'; error: string }     // Failed to send
 
+/**
+ * UI-enhanced message with delivery status and state
+ */
 export interface UIMessage extends Omit<Message, 'metadata'> {
   conversation_id: ConversationId
   state: MessageState
@@ -85,19 +109,25 @@ export interface UIMessage extends Omit<Message, 'metadata'> {
   }
 }
 
-// UI-specific chat session type
+/**
+ * UI-specific chat session with unread count and status
+ */
 export interface UIChatSession {
   id: ConversationId
   messages: Message[]
   access: MedicalConversation['access']
-  unread_count: number
+  unread_count: number            // Number of unread messages
   status: ChatSessionStatus
-  messageCount: number
-  lastMessageAt: Date
+  messageCount: number            // Total message count
+  lastMessageAt: Date            // Timestamp of last message
 }
 
 /**
- * Case-related Props
+ * Props interfaces for UI components
+ */
+
+/**
+ * Props for case filtering components
  */
 export interface FilterBarProps extends BaseProps {
   /** Current filter state */
@@ -106,6 +136,9 @@ export interface FilterBarProps extends BaseProps {
   onFilterChange: (filters: CaseFilters) => void
 }
 
+/**
+ * Props for multi-select filter components
+ */
 export interface MultiSelectFilterProps<T extends string> extends BaseProps {
   /** Current selected values */
   values: T[] | 'all'
@@ -121,6 +154,9 @@ export interface MultiSelectFilterProps<T extends string> extends BaseProps {
   emptyMessage?: string
 }
 
+/**
+ * Props for date range filter components
+ */
 export interface DateRangeFilterProps extends BaseProps {
   /** Current date range */
   value?: {
@@ -131,6 +167,9 @@ export interface DateRangeFilterProps extends BaseProps {
   onChange: (range?: { from?: Date; to?: Date }) => void
 }
 
+/**
+ * Props for sort control components
+ */
 export interface SortControlsProps extends BaseProps {
   /** Current sort field */
   sortBy: CaseSortField
@@ -140,6 +179,9 @@ export interface SortControlsProps extends BaseProps {
   onSortChange: (sortBy: CaseSortField, sortOrder: 'asc' | 'desc') => void
 }
 
+/**
+ * Props for active filters display
+ */
 export interface ActiveFiltersProps extends BaseProps {
   /** Current filter state */
   filters: CaseFilters
@@ -148,7 +190,11 @@ export interface ActiveFiltersProps extends BaseProps {
 }
 
 /**
- * Staff-related Props
+ * Props for staff-related components
+ */
+
+/**
+ * Props for staff selection components
  */
 export interface StaffSelectProps extends BaseProps {
   /** Currently selected staff member */
@@ -163,6 +209,9 @@ export interface StaffSelectProps extends BaseProps {
   department?: CaseDepartment
 }
 
+/**
+ * Props for staff list display
+ */
 export interface StaffListProps extends BaseProps {
   /** List of staff members to display */
   staff: StaffMember[]
@@ -173,7 +222,11 @@ export interface StaffListProps extends BaseProps {
 }
 
 /**
- * Notification-related Props
+ * Props for notification-related components
+ */
+
+/**
+ * Props for notification list display
  */
 export interface NotificationListProps extends BaseProps {
   notifications: Notification[]
@@ -181,17 +234,27 @@ export interface NotificationListProps extends BaseProps {
   onMarkAsRead: (id: string) => Promise<void>
 }
 
+/**
+ * Props for notification preferences form
+ */
 export interface NotificationPreferencesFormProps extends BaseProps {
   preferences: NotificationPreference[]
   onPreferenceChange: (preference: NotificationPreference) => Promise<void>
 }
 
+/**
+ * Props for notification count badge
+ */
 export interface NotificationBadgeProps extends BaseProps {
   count: number
 }
 
 /**
- * Chat-related Props
+ * Props for chat-related components
+ */
+
+/**
+ * Props for individual chat message display
  */
 export interface ChatMessageProps extends BaseProps {
   message: UIMessage
@@ -199,43 +262,55 @@ export interface ChatMessageProps extends BaseProps {
   onRetry?: (message: UIMessage) => Promise<void>
 }
 
+/**
+ * Props for chat session container
+ */
 export interface ChatSessionProps extends BaseProps {
   session: UIChatSession
   onSendMessage: (content: string) => Promise<void>
   onEndSession?: () => Promise<void>
 }
 
+/**
+ * Props for chat input component
+ */
 export interface ChatInputProps extends BaseProps {
   onSend: (content: string) => Promise<void>
   disabled?: boolean
   placeholder?: string
 }
 
+/**
+ * Props for chat message list display
+ */
 export interface ChatMessageListProps extends BaseProps {
   messages: UIMessage[]
   onRetry?: (message: UIMessage) => Promise<void>
   showTimestamps?: boolean
 }
 
+/**
+ * Props for typing indicator display
+ */
 export interface ChatTypingIndicatorProps extends BaseProps {
   typingState: TypingStatus
   presenceState: PresenceState
 }
 
 /**
- * Case Summary for consent dialog
+ * Case summary for patient consent dialog
  */
 export interface CaseSummary {
-  title: string
-  description: string
-  key_symptoms: string[]
-  severity: string
-  duration: string
-  urgency_level: 'emergency' | 'routine'
+  title: string                    // Case title
+  description: string              // Case description
+  key_symptoms: string[]           // Main symptoms
+  severity: string                 // Severity level
+  duration: string                 // Duration of symptoms
+  urgency_level: 'emergency' | 'routine' // Urgency assessment
 }
 
 /**
- * Logging types for chat hook
+ * Type for structured logging data in chat system
  */
 export type LogData = 
   | string

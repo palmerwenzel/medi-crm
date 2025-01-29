@@ -4,19 +4,6 @@
 -- Dependencies: 20250121000002_case_system (for case references)
 --
 
--- Types/Enums first
-CREATE TYPE case_activity_type AS ENUM (
-  'status_change',
-  'priority_change',
-  'category_change',
-  'department_change',
-  'assignment_change',
-  'note_added',
-  'file_added',
-  'file_removed',
-  'metadata_change'
-);
-
 -- Case History Table
 CREATE TABLE case_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
