@@ -110,3 +110,16 @@ const userRoleValues = [
   'patient',
 ] as const
 export const userRoleEnum = z.enum(userRoleValues)
+
+const assessmentCreatorTypeValues = [
+  'ai',
+  'staff',
+  'admin'
+] as const
+export const assessmentCreatorTypeEnum = z.enum(assessmentCreatorTypeValues)
+
+const assessmentStatusValues = [
+  'active',
+  'superseded'
+] as const
+export const assessmentStatusEnum = z.enum(assessmentStatusValues)

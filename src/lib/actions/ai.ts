@@ -3,12 +3,13 @@
 import OpenAI from 'openai'
 import { type Message, type TriageDecision, type MessageMetadata } from '@/types/domain/chat'
 import type { ExtractedAIData } from '@/types/domain/ai'
-import { generateChatResponse, makeTriageDecision as aiMakeTriageDecision, extractStructuredData } from '@/lib/ai/openai'
+import {
+  generateChatResponse,
+  generateClinicalInterviewResponse,
+  makeTriageDecision as aiMakeTriageDecision,
+  extractStructuredData
+} from '@/lib/ai/openai'
 import { validateMessageMetadata } from '@/lib/validations/message-metadata'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
 
 export type AIResult = {
   data: {
@@ -30,7 +31,8 @@ type ActionResponse<T = void> = {
 }
 
 /**
- * Processes a message through OpenAI and returns the response with metadata
+ * Processes a generic message through OpenAI and returns the response with metadata.
+ * Useful for non-medical queries or simpler tasks.
  */
 export async function processAIMessage(
   messages: Array<Message | { role: 'user' | 'assistant'; content: string }>,
@@ -38,9 +40,9 @@ export async function processAIMessage(
 ): Promise<ActionResponse<AIResponse>> {
   try {
     const formattedMessages = [
-      // Include system prompt if provided
+      // Optional system prompt, e.g., if you want a special role or style.
       ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-      // Include message history
+      // Message history
       ...messages.map(msg => ({
         role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content
@@ -49,22 +51,10 @@ export async function processAIMessage(
 
     const aiMessage = await generateChatResponse(formattedMessages)
 
-    // Extract structured data if available
-    let extractedData: ExtractedAIData | undefined
-    try {
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage && lastMessage.role === 'user') {
-        extractedData = await extractStructuredData(lastMessage.content)
-      }
-    } catch (error) {
-      console.warn('Non-critical: Failed to extract structured data:', error)
-    }
-
-    // Create and validate metadata
     const metadata = validateMessageMetadata({
       type: 'ai_processing',
-      collected_info: extractedData,
-      triage_decision: undefined // Will be set by makeTriageDecision if needed
+      collected_info: undefined,
+      triage_decision: undefined
     })
 
     return {
@@ -84,7 +74,39 @@ export async function processAIMessage(
 }
 
 /**
- * Makes a triage decision based on conversation context
+ * Initiates or continues a standard 'clinical interview' style conversation.
+ * This uses generateClinicalInterviewResponse.
+ */
+export async function processClinicalInterviewMessage(
+  messages: Array<Message>
+): Promise<ActionResponse<AIResponse>> {
+  try {
+    const aiMessage = await generateClinicalInterviewResponse(messages)
+
+    const metadata = validateMessageMetadata({
+      type: 'ai_processing',
+      collected_info: undefined,
+      triage_decision: undefined
+    })
+
+    return {
+      success: true,
+      data: {
+        message: aiMessage,
+        metadata
+      }
+    }
+  } catch (error) {
+    console.error('Clinical interview error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to process clinical interview'
+    }
+  }
+}
+
+/**
+ * Makes a triage decision based on conversation context.
  */
 export async function makeTriageDecision(
   messages: Message[]
@@ -94,7 +116,6 @@ export async function makeTriageDecision(
 }>> {
   try {
     const { decision, confidence } = await aiMakeTriageDecision(messages)
-    
     return {
       success: true,
       data: {
@@ -107,6 +128,27 @@ export async function makeTriageDecision(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to make triage decision'
+    }
+  }
+}
+
+/**
+ * Extracts structured medical data from user content.
+ */
+export async function extractMedicalInformation(
+  content: string
+): Promise<ActionResponse<ExtractedAIData>> {
+  try {
+    const data = await extractStructuredData(content)
+    return {
+      success: true,
+      data
+    }
+  } catch (error) {
+    console.error('Medical extraction error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to extract medical data'
     }
   }
 } 

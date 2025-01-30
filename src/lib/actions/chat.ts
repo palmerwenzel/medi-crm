@@ -8,15 +8,13 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { 
   type Message,
-  type MessageInsert,
   type Conversation,
-  type ConversationInsert,
   messageInsertSchema,
   conversationInsertSchema,
   messageQuerySchema,
   conversationQuerySchema
 } from '@/lib/validations/chat'
-import type { MessageMetadata } from '@/types/domain/chat'
+import type { MessageMetadata, MessageInsert, ConversationInsert } from '@/types/domain/chat'
 
 type ActionResponse<T = void> = {
   success: boolean
@@ -77,10 +75,7 @@ export async function sendMessage(
       conversation_id: conversationId,
       content,
       role,
-      metadata: {
-        ...metadata,
-        status: metadata.type === 'ai_processing' ? 'pending' : 'delivered'
-      }
+      metadata
     }
 
     const { data, error } = await supabase

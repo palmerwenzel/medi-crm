@@ -9,6 +9,8 @@ import { CaseAssessment } from '@/types/domain/cases';
 import { AssessmentCreatorType } from '@/types/domain/cases';
 import { log, logPerformance } from '@/lib/utils/logging';
 import { createAssessmentFromMetadata } from './case-assessments';
+import { isAIProcessingMetadata } from '@/types/domain/ai';
+import { TriageDecision } from '@/types/domain/chat';
 
 interface ChatSummary {
   title: string;
@@ -144,7 +146,8 @@ export async function createCaseFromChat(
 
   try {
     // Verify consent unless it's an emergency
-    if (!patientConsent && metadata.triage_decision !== 'EMERGENCY') {
+    const triageDecision = isAIProcessingMetadata(metadata) ? metadata.triage_decision : undefined;
+    if (!patientConsent && triageDecision !== 'EMERGENCY') {
       log('Case creation blocked: No patient consent');
       return { 
         caseId: '', 
@@ -168,7 +171,7 @@ export async function createCaseFromChat(
     } as const;
 
     // Determine category based on urgency and triage decision
-    const category: CaseCategory = summary.urgency_level === 'emergency' || metadata.triage_decision === 'EMERGENCY'
+    const category: CaseCategory = summary.urgency_level === 'emergency' || triageDecision === 'EMERGENCY'
       ? 'emergency'
       : 'general';
 
@@ -189,7 +192,7 @@ export async function createCaseFromChat(
         key_symptoms: summary.key_symptoms,
         duration: summary.duration,
         severity: summary.severity,
-        triage_decision: metadata.triage_decision,
+        triage_decision: triageDecision,
         recommended_specialties: summary.recommended_specialties,
         clinical_details: summary.clinical_details
       }
@@ -257,7 +260,7 @@ export async function canCreateCase(
   canCreate: boolean; 
   missingInfo: string[];
 }> {
-  if (!metadata.collected_info) {
+  if (!isAIProcessingMetadata(metadata) || !metadata.collected_info) {
     return {
       canCreate: false,
       missingInfo: ['Required information not collected']

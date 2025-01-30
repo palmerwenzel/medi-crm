@@ -14,7 +14,10 @@ export const caseUIMetadataSchema = z.object({
   sla: z.object({
     response_target: z.string(),
     resolution_target: z.string(),
-    last_updated: z.string()
+    last_updated: z.string(),
+    sla_breached: z.boolean(),
+    first_response_at: z.string().nullable(),
+    sla_tier: z.string()
   }).optional(),
   tags: z.array(z.string()).optional(),
   internal_notes: z.string().optional(),
@@ -31,7 +34,10 @@ export function isCaseUIMetadata(metadata: unknown): metadata is CaseUIMetadata 
     const sla = m.sla as Record<string, unknown>
     if (typeof sla.response_target !== 'string' ||
         typeof sla.resolution_target !== 'string' ||
-        typeof sla.last_updated !== 'string') {
+        typeof sla.last_updated !== 'string' ||
+        typeof sla.sla_breached !== 'boolean' ||
+        typeof sla.sla_tier !== 'string' ||
+        (sla.first_response_at !== null && typeof sla.first_response_at !== 'string')) {
       return false
     }
   }
