@@ -20,6 +20,8 @@ import {
 } from "@langchain/core/messages";
 import { type ToolCall } from "@langchain/core/messages/tool";
 import { task } from "@langchain/langgraph";
+import { createCase } from "@/lib/actions/cases";
+import type { CaseCategory, CasePriority, CaseStatus } from "@/types/domain/cases";
 
 // Initialize the model
 const model = new ChatOpenAI({
@@ -86,11 +88,65 @@ const extractMedicalData = tool(async ({ content }) => {
   })
 });
 
+// Case Suggestion Tool
+const suggestCaseCreation = tool(async ({ 
+  title,
+  description,
+  category,
+  priority,
+  triage_decision,
+  structured_data,
+  metadata = {}
+}) => {
+  try {
+    // Format the suggestion in a consistent way
+    const suggestion = {
+      type: 'SUGGEST_CASE_CREATION',
+      suggestion: {
+        title,
+        description,
+        category,
+        priority,
+        metadata: {
+          source: 'ai',
+          triage_assessment: triage_decision,
+          medical_data: structured_data,
+          ...metadata
+        }
+      }
+    };
+
+    return JSON.stringify(suggestion, null, 2);
+  } catch (error) {
+    return JSON.stringify({
+      type: 'ERROR',
+      error: error instanceof Error ? error.message : 'Failed to create case suggestion'
+    }, null, 2);
+  }
+}, {
+  name: "suggestCaseCreation",
+  description: "Signals to the application that enough information has been gathered to create a case, and provides the structured case data for user confirmation.",
+  schema: z.object({
+    title: z.string().describe("Clear summary of chief complaint"),
+    description: z.string().describe("Detailed description from gathered medical info"),
+    category: z.enum(['general', 'followup', 'prescription', 'test_results', 'emergency']).describe("Case category"),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).describe("Case priority based on triage"),
+    triage_decision: z.object({
+      decision: z.string(),
+      confidence: z.number(),
+      reasoning: z.string()
+    }).describe("Triage assessment results"),
+    structured_data: z.record(z.any()).optional().describe("Structured OPQRST and other medical data"),
+    metadata: z.record(z.any()).optional().describe("Additional metadata about the case")
+  })
+});
+
 // Combine all tools
 const tools = [
   conductClinicalInterview,
   assessTriage,
-  extractMedicalData
+  extractMedicalData,
+  suggestCaseCreation
 ];
 
 // Create a map of tools by name for easy lookup
@@ -109,11 +165,23 @@ const callModel = task("callModel", async (messages: BaseMessageLike[]) => {
 1. Conduct clinical interviews using OPQRST framework
 2. Assess medical situations for triage
 3. Extract structured medical information
-4. Provide clear, accurate medical guidance within scope
+4. Suggest case creation when sufficient information is gathered
+5. Provide clear, accurate medical guidance within scope
 
 Use available tools to gather information and make assessments.
 Always err on the side of caution for patient safety.
-If you detect any emergency indicators, prioritize immediate medical attention.`
+If you detect any emergency indicators, prioritize immediate medical attention.
+
+When suggesting case creation:
+- Ensure you have gathered comprehensive OPQRST information
+- Include a clear title that captures the chief complaint
+- Provide detailed description with all relevant medical details
+- Set appropriate priority based on triage assessment
+- Choose appropriate category based on context
+- Include all structured data and triage assessment
+
+Only suggest case creation when you have gathered sufficient information to make an informed assessment.
+For emergency situations, suggest case creation as soon as you have confirmed the emergency indicators.`
   };
 
   // Combine system prompt with existing messages
