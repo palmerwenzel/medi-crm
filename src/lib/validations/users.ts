@@ -6,7 +6,6 @@ import {
   departmentEnum,
   staffSpecialtyEnum
 } from '@/lib/validations/shared-enums'
-import { rawToUserIdSchema } from './shared-schemas'
 
 // Base database schema
 const dbUserSchema = z.object({

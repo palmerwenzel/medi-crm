@@ -1,67 +1,11 @@
 'use server'
 
-import { type Message, type TriageDecision, type MessageMetadata } from '@/types/domain/chat'
+import { type Message, type MessageMetadata } from '@/types/domain/chat'
 import type { ExtractedAIData, ChatResponse } from '@/types/domain/ai'
 import { medicalAgent } from '@/lib/ai/langchain/medical-agent'
 import { validateMessageMetadata } from '@/lib/validations/message-metadata'
-import { BaseMessageLike, HumanMessage, AIMessage, SystemMessage, isAIMessage, type BaseMessage } from '@langchain/core/messages'
-import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
+import { BaseMessageLike, HumanMessage, AIMessage, type BaseMessage } from '@langchain/core/messages'
 import { type ActionResponse } from '@/types/domain/actions'
-
-/**
- * Helper function to get the last AI message from a stream
- */
-async function getLastAIMessage(stream: AsyncIterable<Record<string, BaseMessage>>): Promise<BaseMessage | null> {
-  let lastMessage: BaseMessage | null = null;
-  
-  for await (const step of stream) {
-    for (const [taskName, message] of Object.entries(step)) {
-      if (taskName === "medicalAgent") continue;
-      if (isAIMessage(message)) {
-        lastMessage = message;
-      }
-    }
-  }
-  
-  return lastMessage;
-}
-
-/**
- * Transforms database/UI messages to LangChain format
- */
-function adaptMessagesToLangChain(params: {
-  content: string;
-  messageCount: number;
-  messageHistory: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-  }>;
-}): BaseMessageLike[] {
-  const messages: BaseMessageLike[] = [];
-
-  // Add system prompt for new conversations or if it's not present
-  const hasSystemPrompt = params.messageHistory.some(
-    msg => msg.role === 'assistant' && msg.content === MEDICAL_INTAKE_PROMPT
-  );
-  
-  if (params.messageCount === 0 || !hasSystemPrompt) {
-    messages.push(new SystemMessage({ content: MEDICAL_INTAKE_PROMPT }));
-  }
-
-  // Add existing messages
-  messages.push(
-    ...params.messageHistory.map(msg =>
-      msg.role === 'user'
-        ? new HumanMessage({ content: msg.content })
-        : new AIMessage({ content: msg.content })
-    )
-  );
-
-  // Add the new message
-  messages.push(new HumanMessage({ content: params.content }));
-
-  return messages;
-}
 
 /**
  * Processes messages through the medical agent and returns a response with metadata.

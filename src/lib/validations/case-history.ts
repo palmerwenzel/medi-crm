@@ -4,14 +4,12 @@ import type {
   CaseHistoryInsert, 
   CaseHistoryUpdate,
   CaseHistoryWithActor,
-  CaseHistoryDetails,
-  CaseStatus
+  CaseHistoryDetails
 } from '@/types/domain/cases'
 import type { Json } from '@/types/supabase'
 import { 
   caseActivityTypeEnum,
-  caseStatusEnum,
-  userRoleEnum 
+  caseStatusEnum
 } from '@/lib/validations/shared-enums'
 import { jsonSchema } from '@/lib/validations/shared-schemas'
 

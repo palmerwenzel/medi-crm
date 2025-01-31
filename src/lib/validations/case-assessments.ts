@@ -6,7 +6,6 @@ import type {
   CaseAssessmentResponse
 } from '@/types/domain/cases'
 import { 
-  userRoleEnum,
   assessmentCreatorTypeEnum,
   assessmentStatusEnum
 } from './shared-enums'

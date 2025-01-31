@@ -4,15 +4,12 @@ import type {
   CaseInsert, 
   CaseUpdate, 
   CaseResponse,
-  CaseQueryParams,
   CaseMetadata,
   CaseSortField,
   CaseAssessmentResponse,
   CaseFilters,
-  SLAMetadata,
   CaseManagementOptions
 } from '@/types/domain/cases'
-import type { Json } from '@/types/supabase'
 import {
   caseCategoryEnum,
   casePriorityEnum,
@@ -34,14 +31,6 @@ const caseMetadataSchema = z.object({
   last_contact: z.string().optional(),
   follow_up_date: z.string().optional()
 }) satisfies z.ZodType<CaseMetadata>
-
-const slaMetadataSchema = z.object({
-  sla_breached: z.boolean(),
-  response_target: z.string(),
-  resolution_target: z.string(),
-  first_response_at: z.string().nullable(),
-  sla_tier: z.string()
-}) satisfies z.ZodType<SLAMetadata>
 
 // Base case schema
 export const casesRowSchema = z.object({

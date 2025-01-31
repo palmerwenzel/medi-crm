@@ -5,12 +5,9 @@ import { createCase } from '@/lib/actions/cases';
 import { createClient } from '@/utils/supabase/client';
 import { MEDICAL_SUMMARY_PROMPT } from '@/lib/ai/prompts';
 import { CaseCategory } from '@/types/domain/cases';
-import { CaseAssessment } from '@/types/domain/cases';
-import { AssessmentCreatorType } from '@/types/domain/cases';
 import { log, logPerformance } from '@/lib/utils/logging';
 import { createAssessmentFromMetadata } from './case-assessments';
 import { isAIProcessingMetadata } from '@/types/domain/ai';
-import { TriageDecision } from '@/types/domain/chat';
 import { BaseMessageLike, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 interface ChatSummary {

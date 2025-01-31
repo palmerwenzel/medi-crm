@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Archive, MessageSquare, Plus, MessagesSquare, MoreVertical } from 'lucide-react'
+import { MessageSquare, Plus, MessagesSquare, MoreVertical } from 'lucide-react'
 import { type UIMedicalConversation } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'

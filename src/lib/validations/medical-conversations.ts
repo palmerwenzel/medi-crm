@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import type { MedicalConversation, ConversationInsert } from '@/types/domain/chat'
-import type { UserId } from '@/types/domain/users'
 import { rawToConversationIdSchema, rawToUserIdSchema, userIdSchema, jsonSchema } from './shared-schemas'
 import { medicalMessagesRowSchema } from './medical-messages'
 

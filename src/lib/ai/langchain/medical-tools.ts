@@ -6,20 +6,13 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { type Message } from "@/types/domain/chat";
 import {
   type BaseMessageLike,
-  type BaseMessage,
-  AIMessage,
   ToolMessage,
 } from "@langchain/core/messages";
 import { type ToolCall } from "@langchain/core/messages/tool";
 import { task } from "@langchain/langgraph";
-import type { CaseCategory, CasePriority, CaseStatus } from "@/types/domain/cases";
-import { 
-  MEDICAL_AGENT_PROMPT,
-  MEDICAL_SUMMARY_PROMPT
-} from "@/lib/ai/prompts";
+import { MEDICAL_AGENT_PROMPT } from "@/lib/ai/prompts";
 
 // Initialize the model
 const model = new ChatOpenAI({
@@ -31,166 +24,204 @@ const model = new ChatOpenAI({
  * Tool Definitions
  */
 
-// Triage Assessment Tool
-const assessTriage = tool(async ({ messages }) => {
-  try {
-    const systemPrompt = {
-      role: "system",
-      content: `Assess the medical situation using standard triage criteria:
-
-EMERGENCY (immediate attention needed):
-- Life-threatening conditions
-- Severe chest pain, difficulty breathing
-- Stroke symptoms
-- Severe trauma
-
-URGENT (within 24 hours):
-- Moderate trauma
-- Persistent fever
-- Severe pain
-- Worsening chronic conditions
-
-NON_URGENT (within 72 hours):
-- Minor injuries
-- Mild symptoms
-- Routine follow-up
-- Medication refills
-
-SELF_CARE:
-- Minor cold symptoms
-- Simple first aid
-- General wellness
-
-Return a JSON object with:
-- decision: One of the above categories
-- confidence: 0-1 score
-- reasoning: Brief explanation`
-    };
-
-    const response = await model.invoke([systemPrompt, ...messages]);
-    const content = response.content;
+// Case Creation Tool
+const CaseSchema = z.object({
+  title: z.string()
+    .min(5, "Title must be at least 5 characters")
+    .max(100, "Title must not exceed 100 characters")
+    .describe("A clear, concise title describing the main complaint"),
+  
+  description: z.string()
+    .min(20, "Description must be at least 20 characters")
+    .describe("Detailed description from the OPQRST summary"),
+  
+  category: z.enum(['general', 'followup', 'prescription', 'test_results', 'emergency'])
+    .describe("The category of medical case"),
+  
+  priority: z.enum(['low', 'medium', 'high', 'urgent'])
+    .describe("Priority level based on severity and recommendations"),
+  
+  metadata: z.object({
+    symptoms: z.array(z.string())
+      .min(1, "At least one symptom must be provided")
+      .describe("List of key symptoms"),
     
-    // Parse the response if it's not already JSON
-    if (typeof content === 'string' && !content.startsWith('{')) {
-      return JSON.stringify({
-        decision: content.includes('EMERGENCY') ? 'EMERGENCY' :
-                 content.includes('URGENT') ? 'URGENT' :
-                 content.includes('NON_URGENT') ? 'NON_URGENT' : 'SELF_CARE',
-        confidence: 0.8,
-        reasoning: content
-      });
-    }
+    severity: z.number()
+      .min(1)
+      .max(10)
+      .describe("Pain/severity level (1-10)"),
     
-    return content;
-  } catch (error) {
-    console.error('Triage assessment error:', error);
-    throw error;
-  }
-}, {
-  name: "assessTriage",
-  description: "Assesses the medical situation and makes a triage decision (EMERGENCY, URGENT, NON_URGENT, SELF_CARE).",
-  schema: z.object({
-    messages: z.array(z.object({
-      role: z.enum(['system', 'user', 'assistant']),
-      content: z.string()
-    })).describe("Array of conversation messages to analyze for triage")
-  })
+    duration: z.string()
+      .describe("How long symptoms have been present"),
+    
+    aggravating_factors: z.array(z.string())
+      .optional()
+      .describe("What makes symptoms worse"),
+    
+    alleviating_factors: z.array(z.string())
+      .optional()
+      .describe("What makes symptoms better"),
+    
+    recommendations: z.array(z.string())
+      .min(1, "At least one recommendation must be provided")
+      .describe("List of care recommendations"),
+    
+    follow_up_timeframe: z.string()
+      .describe("Suggested timeframe for follow-up"),
+    
+    warning_signs: z.array(z.string())
+      .optional()
+      .describe("Symptoms that would require immediate attention")
+  }).describe("Additional structured information about the case")
 });
 
-// Medical Data Extraction Tool
-const extractMedicalData = tool(async ({ content }) => {
+const createCase = tool(async ({ summary }) => {
   try {
     const systemPrompt = {
       role: "system",
-      content: MEDICAL_SUMMARY_PROMPT
+      content: `You are creating a structured medical case from an OPQRST summary.
+You will receive a well-formatted OPQRST summary with clear sections.
+
+Your task is to create a structured case with:
+1. A clear, descriptive title that captures the main complaint
+2. A comprehensive description incorporating all OPQRST details
+3. An appropriate category based on severity and urgency
+4. A priority level reflecting the clinical situation
+5. Detailed metadata including:
+   - All reported symptoms
+   - Pain/severity level
+   - Duration information
+   - Any aggravating or alleviating factors
+   - Specific recommendations based on the case
+   - Appropriate follow-up timeframe
+   - Any warning signs that require immediate attention
+
+Base your assessment on:
+- Symptom severity and progression
+- Presence of concerning symptoms
+- Treatment response
+- Overall clinical picture
+
+Format your response as a JSON object matching the specified schema.
+Ensure all required fields are included and properly validated.`
     };
 
     const response = await model.invoke([
       systemPrompt,
-      { role: "user", content }
-    ]);
+      { role: "user", content: summary }
+    ], {
+      functions: [{
+        name: "create_case",
+        description: "Creates a structured medical case from OPQRST summary",
+        parameters: {
+          type: "object",
+          required: ["title", "description", "category", "priority", "metadata"],
+          properties: {
+            title: {
+              type: "string",
+              description: "A clear, concise title describing the main complaint",
+              minLength: 5,
+              maxLength: 100
+            },
+            description: {
+              type: "string",
+              description: "Detailed description from the OPQRST summary",
+              minLength: 20
+            },
+            category: {
+              type: "string",
+              enum: ['general', 'followup', 'prescription', 'test_results', 'emergency'],
+              description: "The category of medical case"
+            },
+            priority: {
+              type: "string",
+              enum: ['low', 'medium', 'high', 'urgent'],
+              description: "Priority level based on severity and recommendations"
+            },
+            metadata: {
+              type: "object",
+              required: ["symptoms", "severity", "duration", "recommendations", "follow_up_timeframe"],
+              properties: {
+                symptoms: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "List of key symptoms",
+                  minItems: 1
+                },
+                severity: {
+                  type: "number",
+                  description: "Pain/severity level (1-10)",
+                  minimum: 1,
+                  maximum: 10
+                },
+                duration: {
+                  type: "string",
+                  description: "How long symptoms have been present"
+                },
+                aggravating_factors: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "What makes symptoms worse"
+                },
+                alleviating_factors: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "What makes symptoms better"
+                },
+                recommendations: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "List of care recommendations",
+                  minItems: 1
+                },
+                follow_up_timeframe: {
+                  type: "string",
+                  description: "Suggested timeframe for follow-up"
+                },
+                warning_signs: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Symptoms that would require immediate attention"
+                }
+              }
+            }
+          }
+        }
+      }],
+      function_call: { name: "create_case" }
+    });
     
-    // Ensure response is properly formatted JSON
-    const responseContent = response.content;
-    if (typeof responseContent === 'string' && !responseContent.startsWith('{')) {
+    // Parse and validate the response
+    const functionCall = response.additional_kwargs.function_call;
+    if (!functionCall?.arguments) {
+      throw new Error("No function call arguments received");
+    }
+
+    const parsedCase = CaseSchema.parse(JSON.parse(functionCall.arguments));
+    return JSON.stringify(parsedCase);
+  } catch (error) {
+    console.error('Case creation error:', error);
+    if (error instanceof z.ZodError) {
       return JSON.stringify({
-        chief_complaint: content,
-        structured: false,
-        raw_text: responseContent
+        type: 'VALIDATION_ERROR',
+        errors: error.errors
       });
     }
-    
-    return responseContent;
-  } catch (error) {
-    console.error('Medical data extraction error:', error);
-    throw error;
-  }
-}, {
-  name: "extractMedicalData",
-  description: "Extracts structured medical information from conversation text.",
-  schema: z.object({
-    content: z.string().describe("Text content to extract medical information from")
-  })
-});
-
-// Case Creation Suggestion Tool
-const suggestCaseCreation = tool(async ({ 
-  title,
-  description,
-  category,
-  priority,
-  triage_decision,
-  structured_data,
-  metadata = {}
-}) => {
-  try {
-    const suggestion = {
-      type: 'SUGGEST_CASE_CREATION',
-      suggestion: {
-        title,
-        description,
-        category,
-        priority,
-        metadata: {
-          source: 'ai',
-          triage_assessment: triage_decision,
-          medical_data: structured_data,
-          ...metadata
-        }
-      }
-    };
-
-    return JSON.stringify(suggestion, null, 2);
-  } catch (error) {
     return JSON.stringify({
       type: 'ERROR',
-      error: error instanceof Error ? error.message : 'Failed to create case suggestion'
-    }, null, 2);
+      error: error instanceof Error ? error.message : 'Failed to create case'
+    });
   }
 }, {
-  name: "suggestCaseCreation",
-  description: "Signals that enough information has been gathered to create a case.",
+  name: "createCase",
+  description: "Creates a medical case from an OPQRST summary.",
   schema: z.object({
-    title: z.string().describe("Clear summary of chief complaint"),
-    description: z.string().describe("Detailed description from gathered medical info"),
-    category: z.enum(['general', 'followup', 'prescription', 'test_results', 'emergency']).describe("Case category"),
-    priority: z.enum(['low', 'medium', 'high', 'urgent']).describe("Case priority based on triage"),
-    triage_decision: z.object({
-      decision: z.string(),
-      confidence: z.number(),
-      reasoning: z.string()
-    }).describe("Triage assessment results"),
-    structured_data: z.record(z.any()).optional().describe("Structured OPQRST and other medical data"),
-    metadata: z.record(z.any()).optional().describe("Additional metadata about the case")
+    summary: z.string().describe("The OPQRST summary to create a case from")
   })
 });
 
 // Combine all tools
-const tools = [
-  assessTriage,
-  extractMedicalData,
-  suggestCaseCreation
-];
+const tools = [createCase];
 
 // Create a map of tools by name for easy lookup
 const toolsByName = Object.fromEntries(tools.map((tool) => [tool.name, tool]));
@@ -225,8 +256,18 @@ const callTool = task(
       throw new Error(`Tool ${toolCall.name} not found`);
     }
     
-    // Pass the entire toolCall to the tool for invocation
-    return tool.invoke(toolCall);
+    // Parse the args as JSON if it's a string
+    const args = typeof toolCall.args === 'string' ? 
+      JSON.parse(toolCall.args) : toolCall.args;
+    
+    // Invoke the tool with parsed args
+    const result = await tool.invoke(args);
+    
+    return new ToolMessage({
+      tool_call_id: toolCall.id ?? `${toolCall.name}_${Date.now()}`,
+      name: toolCall.name,
+      content: result
+    });
   }
 );
 
