@@ -1,13 +1,23 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Archive, MessageSquare, Plus, MessagesSquare } from 'lucide-react'
+import { Archive, MessageSquare, Plus, MessagesSquare, MoreVertical } from 'lucide-react'
 import { type UIMedicalConversation } from '@/types/domain/ui'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,8 +47,29 @@ export function ConversationList({
   setActiveConversationId
 }: ConversationListProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   const activeConversationRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setConversationToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (conversationToDelete && onDeleteConversation) {
+      onDeleteConversation(conversationToDelete)
+    }
+    setDeleteDialogOpen(false)
+    setConversationToDelete(null)
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false)
+    setConversationToDelete(null)
+  }
 
   // Scroll active conversation into view when it changes
   useEffect(() => {
@@ -72,90 +103,118 @@ export function ConversationList({
   const hasConversations = conversations.length > 0
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea ref={scrollAreaRef} className="flex-1">
-        <div className="space-y-1 p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-center mb-2"
-            onClick={onCreateConversation}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Conversation
-          </Button>
-
-          {!hasConversations ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <MessagesSquare className="h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-sm font-medium">No conversations yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Start a new conversation to begin your medical consultation.
-              </p>
-            </div>
-          ) : conversations.map((conversation: UIMedicalConversation) => (
-            <Card
-              key={conversation.id}
-              ref={conversation.id === activeId ? activeConversationRef : undefined}
-              className={cn(
-                'flex items-center justify-between p-3 transition-colors hover:bg-accent',
-                activeId === conversation.id && 'bg-accent',
-                conversation.status === 'archived' && 'opacity-70'
-              )}
-              role="button"
-              onClick={() => setActiveConversationId?.(conversation.id)}
-              onMouseEnter={() => setHoveredId(conversation.id)}
-              onMouseLeave={() => setHoveredId(null)}
+    <>
+      <div className="flex flex-col h-full">
+        <ScrollArea ref={scrollAreaRef} className="flex-1">
+          <div className="space-y-1 p-4">
+            <Button
+              variant="outline"
+              className="w-full justify-center mb-2"
+              onClick={onCreateConversation}
             >
-              <div className="flex items-center space-x-3 min-w-0 flex-1">
-                <MessageSquare className="h-5 w-5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">
-                    {conversation.topic || 'Medical Consultation'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {new Date(conversation.updated_at || conversation.created_at).toLocaleDateString()}
-                  </p>
-                </div>
+              <Plus className="mr-2 h-4 w-4" />
+              New Conversation
+            </Button>
+
+            {!hasConversations ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <MessagesSquare className="h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mt-4 text-sm font-medium">No conversations yet</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Start a new conversation to begin your medical consultation.
+                </p>
               </div>
-              {(hoveredId === conversation.id || activeId === conversation.id) && (onUpdateStatus || onDeleteConversation) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="shrink-0 ml-2">
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {onUpdateStatus && (
-                      <DropdownMenuItem
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation()
-                          onUpdateStatus(
-                            conversation.id,
-                            conversation.status === 'active' ? 'archived' : 'active'
-                          )
-                        }}
+            ) : conversations.map((conversation: UIMedicalConversation) => (
+              <Card
+                key={conversation.id}
+                ref={conversation.id === activeId ? activeConversationRef : undefined}
+                className={cn(
+                  'group flex items-center justify-between p-3 transition-colors hover:bg-accent',
+                  activeId === conversation.id && 'bg-accent',
+                  conversation.status === 'archived' && 'opacity-70'
+                )}
+                role="button"
+                onClick={() => setActiveConversationId?.(conversation.id)}
+                onMouseEnter={() => setHoveredId(conversation.id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <MessageSquare className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
+                      {conversation.topic || 'Medical Consultation'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {new Date(conversation.updated_at || conversation.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {(onUpdateStatus || onDeleteConversation) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn(
+                          "shrink-0 ml-2 h-8 w-8",
+                          hoveredId === conversation.id || activeId === conversation.id 
+                            ? "opacity-100" 
+                            : "opacity-0 group-hover:opacity-100"
+                        )}
                       >
-                        {conversation.status === 'active' ? 'Archive' : 'Activate'}
-                      </DropdownMenuItem>
-                    )}
-                    {onDeleteConversation && (
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation()
-                          onDeleteConversation(conversation.id)
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </Card>
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {onUpdateStatus && (
+                        <DropdownMenuItem
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            onUpdateStatus(
+                              conversation.id,
+                              conversation.status === 'active' ? 'archived' : 'active'
+                            )
+                          }}
+                        >
+                          {conversation.status === 'active' ? 'Archive' : 'Activate'}
+                        </DropdownMenuItem>
+                      )}
+                      {onDeleteConversation && (
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => handleDeleteClick(conversation.id, e)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 } 

@@ -226,27 +226,38 @@ export async function deleteConversation(conversationId: string) {
   try {
     const supabase = await createClient()
 
+    console.log('Starting deletion process for conversation:', conversationId)
+
     // Delete all messages first (due to foreign key constraint)
-    const { error: messagesError } = await supabase
+    const { data: deletedMessages, error: messagesError } = await supabase
       .from('medical_messages')
       .delete()
       .eq('conversation_id', conversationId)
+      .select()
 
     if (messagesError) {
+      console.error('Failed to delete messages:', messagesError)
       return { success: false, error: 'Failed to delete messages' }
     }
 
+    console.log('Successfully deleted messages:', deletedMessages?.length || 0)
+
     // Then delete the conversation
-    const { error: conversationError } = await supabase
+    const { data: deletedConversation, error: conversationError } = await supabase
       .from('medical_conversations')
       .delete()
       .eq('id', conversationId)
+      .select()
+      .single()
 
     if (conversationError) {
+      console.error('Failed to delete conversation:', conversationError)
       return { success: false, error: 'Failed to delete conversation' }
     }
 
-    return { success: true }
+    console.log('Successfully deleted conversation:', deletedConversation)
+
+    return { success: true, data: { deletedConversation, deletedMessages } }
   } catch (error) {
     console.error('Delete conversation error:', error)
     return { success: false, error: 'Failed to delete conversation' }

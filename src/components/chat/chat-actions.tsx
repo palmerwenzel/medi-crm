@@ -6,11 +6,12 @@ import { MessageMetadata } from '@/types/domain/chat';
 import { UIMessage } from '@/types/domain/ui';
 import { canCreateCase, createCaseFromChat } from '@/lib/services/case-from-chat';
 import { ConsentDialog } from './consent-dialog';
-import { generateChatResponse } from '@/lib/ai/openai';
+import { medicalAgent } from '@/lib/ai/langchain/medical-agent';
 import { CONSENT_REQUEST_PROMPT } from '@/lib/ai/prompts';
 import { isAIProcessingMetadata } from '@/types/domain/ai';
 import type { CaseSummary } from '@/types/domain/ui'
 import { useAuth } from '@/providers/auth-provider';
+import { BaseMessageLike, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 interface ChatActionsProps {
   conversationId: string;
@@ -46,12 +47,37 @@ export function ChatActions({
         return;
       }
 
+      // Convert messages to LangChain format
+      const formattedMessages: BaseMessageLike[] = [
+        new SystemMessage({ content: CONSENT_REQUEST_PROMPT }),
+        ...messages.map(msg => 
+          msg.role === 'user' 
+            ? new HumanMessage({ content: msg.content })
+            : new SystemMessage({ content: msg.content })
+        )
+      ];
+
       // Generate AI response explaining case creation
       console.log('Generating AI response');
-      const consentResponse = await generateChatResponse([
-        ...messages,
-        { role: 'system', content: CONSENT_REQUEST_PROMPT }
-      ]);
+      const stream = await medicalAgent.stream(formattedMessages, {
+        configurable: {
+          thread_id: conversationId
+        }
+      });
+
+      // Process the stream to get the last AI message
+      let lastMessage = null;
+      for await (const chunk of stream) {
+        if (chunk.value) {
+          lastMessage = chunk;
+        }
+      }
+
+      if (!lastMessage?.value) {
+        throw new Error('No AI response received');
+      }
+
+      const consentResponse = lastMessage.value.content;
       console.log('Got AI response', { consentResponse });
 
       // Add AI's consent request to message history
@@ -60,12 +86,11 @@ export function ChatActions({
 
       // Show consent dialog with case summary
       console.log('Checking if case can be created', { metadata });
-      const { canCreate, missingInfo, confidence } = await canCreateCase(messages, metadata);
-      console.log('Case creation check result', { canCreate, missingInfo, confidence });
+      const { canCreate, missingInfo } = await canCreateCase(messages, metadata);
+      console.log('Case creation check result', { canCreate, missingInfo });
       
       if (!canCreate) {
-        const error = `Cannot create case yet. Missing information: ${missingInfo.join(', ')}. ` +
-          `Confidence: ${Math.round(confidence * 100)}%`;
+        const error = `Cannot create case yet. Missing information: ${missingInfo.join(', ')}`;
         console.log('Cannot create case', { error });
         setError(error);
         return;

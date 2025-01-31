@@ -8,9 +8,13 @@ import {
   type BaseMessage,
 } from "@langchain/core/messages";
 import { entrypoint, addMessages, MemorySaver, getPreviousState } from "@langchain/langgraph";
+import { Client } from "langsmith";
 
 // Import tools and tasks
 import { callModel, callTool } from "./medical-tools";
+
+// Initialize LangSmith client
+new Client();
 
 /**
  * Thread-Level Persistence Setup
@@ -21,9 +25,9 @@ const checkpointer = new MemorySaver();
  * Medical Agent Definition
  * 
  * Features:
- * - Conversation persistence across interactions
+ * - Natural OPQRST-based conversation
  * - Medical context maintenance
- * - Parallel tool execution
+ * - Targeted tool usage for triage and case creation
  * - Structured medical data collection
  */
 const medicalAgent = entrypoint({
@@ -35,30 +39,31 @@ const medicalAgent = entrypoint({
   
   // Combine previous and new messages
   let currentMessages = addMessages(previous, messages);
-  let llmResponse = await callModel(currentMessages);
 
-  while (true) {
-    // If no tool calls, we're done
-    if (!llmResponse.tool_calls?.length) {
-      break;
-    }
+  // Process the current message
+  const llmResponse = await callModel(currentMessages);
 
-    // Execute all tool calls in parallel
+  // If there are tool calls, process them sequentially
+  if (llmResponse.tool_calls?.length) {
     const toolResults = await Promise.all(
       llmResponse.tool_calls.map((toolCall) => callTool(toolCall))
     );
 
-    // Add the LLM response and tool results to the message list
+    // Add tool results to conversation
     currentMessages = addMessages(currentMessages, [llmResponse, ...toolResults]);
 
-    // Call model again with updated context
-    llmResponse = await callModel(currentMessages);
+    // Get final response after tool usage
+    const finalResponse = await callModel(currentMessages);
+    currentMessages = addMessages(currentMessages, finalResponse);
+
+    return entrypoint.final({
+      value: finalResponse,
+      save: currentMessages,
+    });
   }
 
-  // Add final response to conversation history
+  // If no tool calls, return the response directly
   currentMessages = addMessages(currentMessages, llmResponse);
-
-  // Return final response and save conversation state
   return entrypoint.final({
     value: llmResponse,
     save: currentMessages,

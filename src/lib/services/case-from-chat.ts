@@ -1,6 +1,6 @@
 import { MessageMetadata } from '@/types/domain/chat';
 import { ChatRequest } from '@/types/domain/ai';
-import { generateChatResponse } from '@/lib/ai/openai';
+import { medicalAgent } from '@/lib/ai/langchain/medical-agent';
 import { createCase } from '@/lib/actions/cases';
 import { createClient } from '@/utils/supabase/client';
 import { MEDICAL_SUMMARY_PROMPT } from '@/lib/ai/prompts';
@@ -11,6 +11,7 @@ import { log, logPerformance } from '@/lib/utils/logging';
 import { createAssessmentFromMetadata } from './case-assessments';
 import { isAIProcessingMetadata } from '@/types/domain/ai';
 import { TriageDecision } from '@/types/domain/chat';
+import { BaseMessageLike, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 interface ChatSummary {
   title: string;
@@ -42,55 +43,41 @@ async function generateChatSummary(messages: ChatRequest['messages']): Promise<C
   const startTime = performance.now();
   log('Generating chat summary from messages:', messages.length, 'messages');
 
-  const summaryPrompt = `${MEDICAL_SUMMARY_PROMPT}
-  Return a JSON object with the following structure:
-  {
-    "domain_data": {
-      "title": "Brief, descriptive title for the case",
-      "description": "Detailed summary of the patient's situation",
-      "key_symptoms": ["list", "of", "main", "symptoms"],
-      "severity": "Description of severity",
-      "duration": "How long issues have been present",
-      "existing_provider": "Name of provider if mentioned",
-      "recommended_specialties": ["relevant", "medical", "specialties"],
-      "urgency_level": "routine" | "urgent" | "emergency",
-      "clinical_details": {
-        "progression": "How symptoms have changed over time",
-        "impact_on_daily_life": "How this affects the patient",
-        "previous_treatments": ["list", "of", "treatments"],
-        "medical_history": ["relevant", "history", "items"],
-        "risk_factors": ["identified", "risk", "factors"]
-      },
-      "patient_context": {
-        "treatment_preferences": ["patient's", "preferences"],
-        "access_to_care": "Any access considerations",
-        "support_system": "Available support"
-      }
-    },
-    "internal_metrics": {
-      "field_confidence": {
-        "symptoms": 0.0-1.0,
-        "severity": 0.0-1.0,
-        "duration": 0.0-1.0,
-        "urgency": 0.0-1.0,
-        "clinical_details": 0.0-1.0,
-        "patient_context": 0.0-1.0
-      },
-      "missing_info": ["list", "of", "missing", "fields"],
-      "uncertainty_flags": ["areas", "needing", "clarification"],
-      "suggested_questions": ["follow-up", "questions"],
-      "triage_hints": ["areas", "needing", "clarification"]
-    }
-  }`;
+  // Convert messages to LangChain format
+  const formattedMessages: BaseMessageLike[] = [
+    new SystemMessage({ content: MEDICAL_SUMMARY_PROMPT }),
+    ...messages.map(msg => 
+      msg.role === 'user' 
+        ? new HumanMessage({ content: msg.content })
+        : new SystemMessage({ content: msg.content })
+    )
+  ];
 
   try {
-    const response = await generateChatResponse([
-      ...messages,
-      { role: 'assistant', content: summaryPrompt }
-    ], { 
-      temperature: 0,
-      maxTokens: 1000
+    // Use a temporary thread ID for summary generation
+    const tempThreadId = `summary_${Date.now()}`;
+    const stream = await medicalAgent.stream(formattedMessages, {
+      configurable: {
+        thread_id: tempThreadId
+      }
     });
+
+    // Process the stream to get the last AI message
+    let lastMessage = null;
+    for await (const chunk of stream) {
+      if (chunk.value) {
+        lastMessage = chunk;
+      }
+    }
+
+    if (!lastMessage?.value) {
+      throw new Error('No AI response received');
+    }
+
+    const response = lastMessage.value.content;
+    if (typeof response !== 'string') {
+      throw new Error('Invalid response format from AI');
+    }
 
     const fullResponse = JSON.parse(response);
     

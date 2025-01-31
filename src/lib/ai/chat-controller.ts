@@ -1,7 +1,7 @@
 import { ChatSession, MessageMetadata, TriageDecision, ChatAccess } from '@/types/domain/chat';
 import { UIMessage, MessageStatus } from '@/types/domain/ui';
 import { UserId } from '@/types/domain/users';
-import { processMessage } from './llm-controller';
+import { processMessage } from '@/lib/actions/medical-chat-actions';
 import { createClient } from '@/utils/supabase/client';
 
 export class ChatController {
@@ -21,7 +21,8 @@ export class ChatController {
         messageHistory: this.session.messages.map(m => ({
           role: m.role,
           content: m.content
-        }))
+        })),
+        conversationId: this.session.id
       });
 
       if (!llmResponse?.metadata) {

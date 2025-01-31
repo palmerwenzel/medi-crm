@@ -3,7 +3,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getMessages, sendMessage } from '@/lib/actions/chat'
-import { processAIMessage } from '@/lib/actions/ai'
+import { processMessage } from '@/lib/actions/medical-chat-actions'
 import { medicalMessagesInsertSchema } from '@/lib/validations/medical-messages'
 import { MEDICAL_INTAKE_PROMPT } from '@/lib/ai/prompts'
 import { rawToUserIdSchema } from '@/lib/validations/shared-schemas'
@@ -103,24 +103,28 @@ export async function POST(
           const history = await getMessages(message.conversation_id, 1, 10)
           if (!history.success || !history.data) throw new Error('Failed to get message history')
 
-          // Filter messages to only include user and assistant roles and cast types
-          const messages: Message[] = history.data
+          // Format message history for AI processing
+          const messageHistory = history.data
             .filter(msg => msg.role === 'user' || msg.role === 'assistant')
             .map(msg => ({
-              ...msg,
               role: msg.role as 'user' | 'assistant',
-              metadata: msg.metadata as MessageMetadata
+              content: msg.content
             }))
-          const aiResult = await processAIMessage(messages, MEDICAL_INTAKE_PROMPT)
-          
-          if (!aiResult.success || !aiResult.data) throw new Error(aiResult.error || 'AI processing failed')
+
+          // Process through medical agent
+          const aiResult = await processMessage({
+            content: message.content,
+            messageCount: messageHistory.length,
+            messageHistory,
+            conversationId: message.conversation_id
+          })
 
           // Store AI response with metadata
           await sendMessage(
-            aiResult.data.message,
+            aiResult.message,
             message.conversation_id,
             'assistant',
-            aiResult.data.metadata
+            aiResult.metadata
           )
         } catch (error) {
           console.error('AI response error:', error)

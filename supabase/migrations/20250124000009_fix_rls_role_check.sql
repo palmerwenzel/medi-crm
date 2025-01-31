@@ -65,6 +65,11 @@ WITH CHECK (
   ))
 );
 
+CREATE POLICY "Users can delete own conversations"
+ON medical_conversations
+FOR DELETE
+USING (auth.uid() = patient_id);
+
 -- Staff policies
 CREATE POLICY "Staff can select assigned conversations"
 ON medical_conversations
@@ -102,6 +107,24 @@ USING (
   )
 )
 WITH CHECK (
+  auth.jwt() ->> 'role' = 'staff'
+  AND (
+    assigned_staff_id = auth.uid()
+    OR (
+      case_id IS NOT NULL 
+      AND EXISTS (
+        SELECT 1 FROM cases
+        WHERE id = medical_conversations.case_id
+        AND assigned_to = auth.uid()
+      )
+    )
+  )
+);
+
+CREATE POLICY "Staff can delete assigned conversations"
+ON medical_conversations
+FOR DELETE
+USING (
   auth.jwt() ->> 'role' = 'staff'
   AND (
     assigned_staff_id = auth.uid()

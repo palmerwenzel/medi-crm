@@ -7,11 +7,6 @@ import { ChatOpenAI } from "@langchain/openai";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { type Message } from "@/types/domain/chat";
-import { 
-  generateClinicalInterviewResponse,
-  makeTriageDecision as aiMakeTriageDecision,
-  extractStructuredData 
-} from "@/lib/ai/openai";
 import {
   type BaseMessageLike,
   type BaseMessage,
@@ -20,8 +15,11 @@ import {
 } from "@langchain/core/messages";
 import { type ToolCall } from "@langchain/core/messages/tool";
 import { task } from "@langchain/langgraph";
-import { createCase } from "@/lib/actions/cases";
 import type { CaseCategory, CasePriority, CaseStatus } from "@/types/domain/cases";
+import { 
+  MEDICAL_AGENT_PROMPT,
+  MEDICAL_SUMMARY_PROMPT
+} from "@/lib/ai/prompts";
 
 // Initialize the model
 const model = new ChatOpenAI({
@@ -33,29 +31,61 @@ const model = new ChatOpenAI({
  * Tool Definitions
  */
 
-// Clinical Interview Tool
-const conductClinicalInterview = tool(async ({ messages }) => {
-  const response = await generateClinicalInterviewResponse(messages);
-  return response;
-}, {
-  name: "conductClinicalInterview",
-  description: "Conducts a clinical interview following OPQRST framework and standard medical questioning protocols.",
-  schema: z.object({
-    messages: z.array(z.object({
-      role: z.enum(['system', 'user', 'assistant']),
-      content: z.string()
-    })).describe("Array of conversation messages to analyze")
-  })
-});
-
 // Triage Assessment Tool
 const assessTriage = tool(async ({ messages }) => {
-  const { decision, confidence, reasoning } = await aiMakeTriageDecision(messages);
-  return JSON.stringify({
-    decision,
-    confidence,
-    reasoning
-  });
+  try {
+    const systemPrompt = {
+      role: "system",
+      content: `Assess the medical situation using standard triage criteria:
+
+EMERGENCY (immediate attention needed):
+- Life-threatening conditions
+- Severe chest pain, difficulty breathing
+- Stroke symptoms
+- Severe trauma
+
+URGENT (within 24 hours):
+- Moderate trauma
+- Persistent fever
+- Severe pain
+- Worsening chronic conditions
+
+NON_URGENT (within 72 hours):
+- Minor injuries
+- Mild symptoms
+- Routine follow-up
+- Medication refills
+
+SELF_CARE:
+- Minor cold symptoms
+- Simple first aid
+- General wellness
+
+Return a JSON object with:
+- decision: One of the above categories
+- confidence: 0-1 score
+- reasoning: Brief explanation`
+    };
+
+    const response = await model.invoke([systemPrompt, ...messages]);
+    const content = response.content;
+    
+    // Parse the response if it's not already JSON
+    if (typeof content === 'string' && !content.startsWith('{')) {
+      return JSON.stringify({
+        decision: content.includes('EMERGENCY') ? 'EMERGENCY' :
+                 content.includes('URGENT') ? 'URGENT' :
+                 content.includes('NON_URGENT') ? 'NON_URGENT' : 'SELF_CARE',
+        confidence: 0.8,
+        reasoning: content
+      });
+    }
+    
+    return content;
+  } catch (error) {
+    console.error('Triage assessment error:', error);
+    throw error;
+  }
 }, {
   name: "assessTriage",
   description: "Assesses the medical situation and makes a triage decision (EMERGENCY, URGENT, NON_URGENT, SELF_CARE).",
@@ -70,25 +100,40 @@ const assessTriage = tool(async ({ messages }) => {
 // Medical Data Extraction Tool
 const extractMedicalData = tool(async ({ content }) => {
   try {
-    const data = await extractStructuredData(content);
-    return JSON.stringify(data, null, 2);
+    const systemPrompt = {
+      role: "system",
+      content: MEDICAL_SUMMARY_PROMPT
+    };
+
+    const response = await model.invoke([
+      systemPrompt,
+      { role: "user", content }
+    ]);
+    
+    // Ensure response is properly formatted JSON
+    const responseContent = response.content;
+    if (typeof responseContent === 'string' && !responseContent.startsWith('{')) {
+      return JSON.stringify({
+        chief_complaint: content,
+        structured: false,
+        raw_text: responseContent
+      });
+    }
+    
+    return responseContent;
   } catch (error) {
-    // If structured extraction fails, return a simpler format
-    return JSON.stringify({
-      content,
-      error: "Could not extract structured data",
-      raw_text: true
-    }, null, 2);
+    console.error('Medical data extraction error:', error);
+    throw error;
   }
 }, {
   name: "extractMedicalData",
-  description: "Extracts structured medical information from conversation text, including symptoms, duration, severity, etc.",
+  description: "Extracts structured medical information from conversation text.",
   schema: z.object({
     content: z.string().describe("Text content to extract medical information from")
   })
 });
 
-// Case Suggestion Tool
+// Case Creation Suggestion Tool
 const suggestCaseCreation = tool(async ({ 
   title,
   description,
@@ -99,7 +144,6 @@ const suggestCaseCreation = tool(async ({
   metadata = {}
 }) => {
   try {
-    // Format the suggestion in a consistent way
     const suggestion = {
       type: 'SUGGEST_CASE_CREATION',
       suggestion: {
@@ -125,7 +169,7 @@ const suggestCaseCreation = tool(async ({
   }
 }, {
   name: "suggestCaseCreation",
-  description: "Signals to the application that enough information has been gathered to create a case, and provides the structured case data for user confirmation.",
+  description: "Signals that enough information has been gathered to create a case.",
   schema: z.object({
     title: z.string().describe("Clear summary of chief complaint"),
     description: z.string().describe("Detailed description from gathered medical info"),
@@ -143,7 +187,6 @@ const suggestCaseCreation = tool(async ({
 
 // Combine all tools
 const tools = [
-  conductClinicalInterview,
   assessTriage,
   extractMedicalData,
   suggestCaseCreation
@@ -160,28 +203,9 @@ const toolsByName = Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 const callModel = task("callModel", async (messages: BaseMessageLike[]) => {
   // Add medical system prompt to guide the model's behavior
   const medicalSystemPrompt: BaseMessageLike = {
-    role: "system",
-    content: `You are a medical assistant trained to:
-1. Conduct clinical interviews using OPQRST framework
-2. Assess medical situations for triage
-3. Extract structured medical information
-4. Suggest case creation when sufficient information is gathered
-5. Provide clear, accurate medical guidance within scope
-
-Use available tools to gather information and make assessments.
-Always err on the side of caution for patient safety.
-If you detect any emergency indicators, prioritize immediate medical attention.
-
-When suggesting case creation:
-- Ensure you have gathered comprehensive OPQRST information
-- Include a clear title that captures the chief complaint
-- Provide detailed description with all relevant medical details
-- Set appropriate priority based on triage assessment
-- Choose appropriate category based on context
-- Include all structured data and triage assessment
-
-Only suggest case creation when you have gathered sufficient information to make an informed assessment.
-For emergency situations, suggest case creation as soon as you have confirmed the emergency indicators.`
+    type: "system",
+    content: MEDICAL_AGENT_PROMPT,
+    additional_kwargs: {}
   };
 
   // Combine system prompt with existing messages
